@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  distDir: 'dist',
+  ...(process.env.EXPORT_STATIC === "true" && {
+    output: "export" as const,
+    distDir: "dist",
+  }),
 };
 
 export default nextConfig;
