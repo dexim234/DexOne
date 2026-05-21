@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
+const isStatic = process.env.EXPORT_STATIC === "true";
+
 const nextConfig: NextConfig = {
-  ...(process.env.EXPORT_STATIC === "true" && {
+  ...(isStatic && {
     output: "export" as const,
     distDir: "dist",
   }),
