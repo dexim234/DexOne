@@ -1,5 +1,5 @@
 import ComingSoon from "@/components/ComingSoon";
 
-export default function MarketHubPage() {
+export default function Home() {
   return <ComingSoon title="Market HUB" />;
 }
