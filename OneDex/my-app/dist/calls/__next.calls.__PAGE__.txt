@@ -1,6 +1,0 @@
-1:"$Sreact.fragment"
-2:I[49628,["/_next/static/chunks/091w4pctzw0ri.js","/_next/static/chunks/0pg5ukr7ok72t.js","/_next/static/chunks/0akgugy~du~ez.js","/_next/static/chunks/0u67thfq1701_.js"],"default"]
-3:I[10314,["/_next/static/chunks/091w4pctzw0ri.js","/_next/static/chunks/0pg5ukr7ok72t.js","/_next/static/chunks/0akgugy~du~ez.js"],"OutletBoundary"]
-4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"title":"Calls"}],[["$","script","script-0",{"src":"/_next/static/chunks/0u67thfq1701_.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"F0YLTaez28A_7Lexgz7C8"}
-5:null
