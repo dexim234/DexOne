@@ -65,20 +65,23 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-4 lg:px-8">
         {/* Logo */}
-        <Link href="/market-hub" className="flex items-center gap-2.5 shrink-0 mr-8">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-lg">
+        <Link href="/market-hub" className="flex items-center gap-3 shrink-0 mr-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden shadow-lg ring-1 ring-border/50">
             <Image 
               src="/Логотип.png" 
               alt="OneDex Logo" 
-              width={36} 
-              height={36}
+              width={44} 
+              height={44}
               className="object-contain"
             />
           </div>
-          <span className="text-xl font-bold tracking-tight text-foreground">
+          <span className="text-2xl font-bold tracking-tight text-foreground">
             One<span className="bg-gradient-to-r from-teal to-teal-light bg-clip-text text-transparent">Dex</span>
           </span>
         </Link>
+
+        {/* Vertical separator */}
+        <div className="w-px h-10 bg-border/50 mx-2" />
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-0.5">
@@ -89,14 +92,14 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative group flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                className={`relative group flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                   active
                     ? "text-teal bg-gradient-to-r from-teal-muted/80 to-teal-muted/40"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/80"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                <span>{item.label}</span>
+                <Icon className="h-4 w-4 transition-transform group-hover:scale-110" />
+                <span className="tracking-wide">{item.label}</span>
                 {active && (
                   <span className="absolute inset-0 rounded-lg ring-2 ring-teal/20" />
                 )}
@@ -128,17 +131,62 @@ export default function Header() {
             <Bell className="h-5 w-5" />
           </Button>
 
-          {/* Wallet dropdown */}
+          {/* Wallet dropdown with theme and language */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="hidden sm:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground bg-muted/30 border-border/50 cursor-pointer px-3.5 py-2 rounded-lg hover:bg-accent/50 transition-all"
+              className="hidden sm:flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground bg-muted/30 border-border/50 cursor-pointer px-4 py-2 rounded-lg hover:bg-accent/50 transition-all"
             >
               <Wallet className="h-4 w-4" />
               <span className="max-w-[80px] truncate">Connect</span>
               <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="gap-3">
+            <DropdownMenuContent align="end" className="w-64 p-3 gap-1">
+              {/* Theme toggle */}
+              <div className="px-2 py-2 border-b border-border/50 mb-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Theme</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTheme(theme === "dark" ? "light" : "dark");
+                    }}
+                    className="h-8 gap-2"
+                  >
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <span className="text-xs">{theme === "dark" ? "Dark" : "Light"}</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Language selector */}
+              <div className="px-2 py-2 border-b border-border/50 mb-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Language</span>
+                  <div className="flex gap-1">
+                    {['EN', 'RU', 'UK'].map((lang) => (
+                      <Button
+                        key={lang}
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                        className={`h-7 px-2 text-xs font-semibold ${
+                          lang === 'RU' 
+                            ? 'bg-teal text-white' 
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {lang}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Wallet options */}
+              <DropdownMenuItem className="gap-3 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-center h-7 w-7 rounded-lg overflow-hidden bg-[#AB9FF2]">
                   <Image 
                     src="/phantom.webp" 
@@ -148,9 +196,9 @@ export default function Header() {
                     className="object-contain"
                   />
                 </div>
-                <span>Phantom</span>
+                <span className="font-medium">Phantom</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-3">
+              <DropdownMenuItem className="gap-3 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-center h-7 w-7 rounded-lg overflow-hidden bg-[#000]">
                   <Image 
                     src="/Solflare.svg" 
@@ -160,37 +208,13 @@ export default function Header() {
                     className="object-contain"
                   />
                 </div>
-                <span>Solflare</span>
+                <span className="font-medium">Solflare</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+              <DropdownMenuItem className="gap-3 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Profile</span>
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Theme toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg transition-all"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          </Button>
-
-          {/* Language */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex items-center justify-center h-9.5 w-9.5 text-muted-foreground hover:text-foreground bg-muted/30 border-border/50 cursor-pointer rounded-lg hover:bg-accent/50 transition-all"
-            >
-              <Globe className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>English</DropdownMenuItem>
-              <DropdownMenuItem>Русский</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

@@ -59,14 +59,14 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
                   active
                     ? "text-teal bg-teal-muted ring-2 ring-teal/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <Icon className="h-4 w-4" />
+                <span className="tracking-wide hidden sm:inline">{item.label}</span>
               </Link>
             );
           })}
@@ -74,30 +74,32 @@ export default function Footer() {
 
         {/* Right side */}
         <div className="flex items-center gap-4 shrink-0 ml-4">
-          {/* SOL Price */}
-          <div className="hidden sm:flex items-center gap-2.5 text-sm bg-muted/30 px-3.5 py-1.5 rounded-lg border border-border/50">
-            <div className="flex items-center justify-center h-5 w-5 rounded overflow-hidden">
+          {/* SOL Price - improved design */}
+          <div className="hidden sm:flex items-center gap-3 bg-muted/30 px-4 py-2 rounded-xl border border-border/50 shadow-sm">
+            <div className="flex items-center justify-center h-6 w-6 rounded-lg overflow-hidden ring-1 ring-border/50">
               <Image 
                 src="/solanaLogoMark.svg" 
                 alt="Solana" 
-                width={20} 
-                height={20}
+                width={24} 
+                height={24}
                 className="object-contain"
               />
             </div>
-            <div className="flex flex-col">
-              <span className="text-muted-foreground text-[10px] font-medium">SOL</span>
-              <span className="font-semibold text-foreground text-xs">${solPrice?.price || "Loading..."}</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">Solana</span>
+              <span className="font-bold text-foreground text-sm">${solPrice?.price || "Loading..."}</span>
             </div>
-            <span className={`font-medium text-xs ${isPositive ? "text-teal" : "text-red-500"}`}>
-              {isPositive ? "+" : ""}{solPrice?.change || "0.0"}%
-            </span>
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold ${
+              isPositive ? "bg-teal/10 text-teal" : "bg-red-500/10 text-red-500"
+            }`}>
+              {isPositive ? "↑" : "↓"} {Math.abs(parseFloat(solPrice?.change || "0"))}%
+            </div>
           </div>
 
           {/* About */}
           <Link
             href="/about"
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent/50"
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-accent/50"
           >
             About
           </Link>
