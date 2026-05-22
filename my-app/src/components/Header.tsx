@@ -13,7 +13,6 @@ import {
   Moon,
   Sun,
   Menu,
-  Hexagon,
   TrendingUp,
   Phone,
   BellRing,
@@ -21,6 +20,7 @@ import {
   Brain,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,8 +66,14 @@ export default function Header() {
       <div className="flex h-16 items-center px-4 lg:px-8">
         {/* Logo */}
         <Link href="/market-hub" className="flex items-center gap-2.5 shrink-0 mr-8">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal to-teal-dark shadow-lg shadow-teal/20">
-            <Hexagon className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden shadow-lg">
+            <Image 
+              src="/Логотип.png" 
+              alt="OneDex Logo" 
+              width={36} 
+              height={36}
+              className="object-contain"
+            />
           </div>
           <span className="text-xl font-bold tracking-tight text-foreground">
             One<span className="bg-gradient-to-r from-teal to-teal-light bg-clip-text text-transparent">Dex</span>
@@ -133,14 +139,26 @@ export default function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem className="gap-3">
-                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-[#AB9FF2] text-white">
-                  {phantomIcon}
+                <div className="flex items-center justify-center h-7 w-7 rounded-lg overflow-hidden bg-[#AB9FF2]">
+                  <Image 
+                    src="/phantom.webp" 
+                    alt="Phantom" 
+                    width={28} 
+                    height={28}
+                    className="object-contain"
+                  />
                 </div>
                 <span>Phantom</span>
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-3">
-                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-[#000] text-white">
-                  {solflareIcon}
+                <div className="flex items-center justify-center h-7 w-7 rounded-lg overflow-hidden bg-[#000]">
+                  <Image 
+                    src="/Solflare.svg" 
+                    alt="Solflare" 
+                    width={28} 
+                    height={28}
+                    className="object-contain"
+                  />
                 </div>
                 <span>Solflare</span>
               </DropdownMenuItem>

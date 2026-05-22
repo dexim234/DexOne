@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Activity, Brain, Bell, Phone, BarChart3 } from "lucide-react";
+import Image from "next/image";
 
 const leftItems = [
   { label: "Tracker", href: "/tracker", icon: Activity },
@@ -26,15 +27,16 @@ export default function Footer() {
   useEffect(() => {
     async function fetchSolPrice() {
       try {
-        const response = await fetch('https://api.coincap.io/v2/assets/solana');
+        // Fetch from Binance API
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT');
         const data = await response.json();
-        if (data?.data) {
-          const price = parseFloat(data.data.priceUsd).toFixed(2);
-          const change24h = parseFloat(data.data.changePercent24Hr).toFixed(2);
-          setSolPrice({ price, change: change24h });
+        if (data) {
+          const price = parseFloat(data.lastPrice).toFixed(2);
+          const changePercent = parseFloat(data.priceChangePercent).toFixed(2);
+          setSolPrice({ price, change: changePercent });
         }
       } catch (error) {
-        console.error('Failed to fetch SOL price:', error);
+        console.error('Failed to fetch SOL price from Binance:', error);
         setSolPrice({ price: "142.35", change: "2.4" });
       }
     }
@@ -74,8 +76,14 @@ export default function Footer() {
         <div className="flex items-center gap-4 shrink-0 ml-4">
           {/* SOL Price */}
           <div className="hidden sm:flex items-center gap-2.5 text-sm bg-muted/30 px-3.5 py-1.5 rounded-lg border border-border/50">
-            <div className="flex items-center justify-center h-5 w-5 rounded bg-gradient-to-br from-[#9945FF] to-[#14F195]">
-              {solflareIcon}
+            <div className="flex items-center justify-center h-5 w-5 rounded overflow-hidden">
+              <Image 
+                src="/solanaLogoMark.svg" 
+                alt="Solana" 
+                width={20} 
+                height={20}
+                className="object-contain"
+              />
             </div>
             <div className="flex flex-col">
               <span className="text-muted-foreground text-[10px] font-medium">SOL</span>
