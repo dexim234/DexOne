@@ -40,7 +40,6 @@ const navItems = [
   { label: "Tracker", href: "/tracker", icon: Activity },
   { label: "Smart", href: "/smart", icon: Brain },
   { label: "Predict HUB", href: "/predict-hub", icon: Sparkles },
-  { label: "Profile", href: "/profile", icon: User },
 ];
 
 const phantomIcon = (
@@ -65,7 +64,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-4 lg:px-8">
         {/* Logo */}
-        <Link href="/market-hub" className="flex items-center gap-3 shrink-0 mr-6">
+        <Link href="/market-hub" className="flex items-center gap-3 shrink-0 mr-10">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden shadow-lg">
             <Image 
               src="/Логотип.png" 
@@ -75,8 +74,8 @@ export default function Header() {
               className="object-contain"
             />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-white">
-            OneDex
+          <span className="text-2xl font-extrabold tracking-tight text-foreground">
+            One<span className="text-teal">Dex</span>
           </span>
         </Link>
 
@@ -84,7 +83,7 @@ export default function Header() {
         <div className="w-px h-10 bg-border/50 mx-2" />
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-0.5">
+        <nav className="hidden md:flex items-center gap-1 ml-4">
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -92,17 +91,16 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative group flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`group flex items-center gap-2 px-4.5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-300 ${
                   active
-                    ? "text-teal bg-gradient-to-r from-teal-muted/80 to-teal-muted/40"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/80"
+                    ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
                 }`}
               >
-                <Icon className="h-4 w-4 transition-transform group-hover:scale-110" />
+                <Icon className={`h-4.5 w-4.5 transition-all duration-300 ${
+                  active ? "text-white scale-110" : "group-hover:scale-110"
+                }`} />
                 <span className="tracking-wide">{item.label}</span>
-                {active && (
-                  <span className="absolute inset-0 rounded-lg ring-2 ring-teal/20" />
-                )}
               </Link>
             );
           })}

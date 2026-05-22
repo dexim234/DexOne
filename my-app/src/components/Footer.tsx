@@ -44,7 +44,7 @@ export default function Footer() {
     <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30">
       <div className="flex h-14 items-center justify-between px-4 lg:px-6">
         {/* Left nav - compact with icons only on mobile */}
-        <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        <nav className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {leftItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -52,14 +52,16 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all duration-300 ${
                   active
-                    ? "bg-teal text-white shadow-lg shadow-teal/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
                 }`}
               >
-                <Icon className={`h-4 w-4 ${active ? "text-white" : ""}`} />
-                <span className="hidden sm:inline tracking-wide">{item.label}</span>
+                <Icon className={`h-4 w-4 transition-all duration-300 ${
+                  active ? "text-white scale-110" : "group-hover:scale-110"
+                }`} />
+                <span className="hidden sm:inline tracking-tight">{item.label}</span>
               </Link>
             );
           })}
@@ -68,7 +70,7 @@ export default function Footer() {
         {/* Right side - SOL Price ticker */}
         <div className="flex items-center gap-3 ml-4">
           {/* SOL Price - compact ticker style */}
-          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#9945FF]/10 to-[#14F195]/10 px-4 py-2 rounded-xl border border-[#9945FF]/20">
+          <div className="hidden sm:flex items-center gap-2.5 bg-gradient-to-r from-[#9945FF]/10 to-[#14F195]/10 px-4 py-2 rounded-xl border border-[#9945FF]/20">
             <div className="flex items-center justify-center h-5 w-5">
               <Image 
                 src="/solanaLogoMark.svg" 
@@ -80,11 +82,6 @@ export default function Footer() {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="font-bold text-foreground text-sm">${solPrice?.price || "Loading..."}</span>
-            </div>
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
-              isPositive ? "bg-[#14F195]/20 text-white" : "bg-[#9945FF]/20 text-white"
-            }`}>
-              {isPositive ? "↑" : "↓"} {Math.abs(parseFloat(solPrice?.change || "0")).toFixed(2)}%
             </div>
           </div>
 
@@ -98,9 +95,6 @@ export default function Footer() {
               className="object-contain"
             />
             <span className="font-bold text-foreground text-xs">${solPrice?.price || "-"}</span>
-            <span className={`text-xs font-bold ${isPositive ? "text-[#14F195]" : "text-[#9945FF]"}`}>
-              {isPositive ? "+" : ""}{solPrice?.change || "0"}%
-            </span>
           </div>
 
           {/* About link */}
