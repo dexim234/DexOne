@@ -4,7 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { TrendingUp, BarChart3, Activity, DollarSign, Users } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-// Mock data для демонстрации
+// Mock data for demonstration
 const MOCK_BUCKETS = Array.from({ length: 24 }, (_, i) => ({
   ts: new Date(Date.now() - (23 - i) * 3600000).toISOString(),
   launched: Math.floor(Math.random() * 50) + 10,
