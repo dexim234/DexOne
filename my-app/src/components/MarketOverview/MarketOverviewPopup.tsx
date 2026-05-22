@@ -204,7 +204,9 @@ const KpiCard = ({ label, value, subValue, subPre, subPost, accent, icon: Icon }
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <Icon className="h-4 w-4" style={{ color: accent }} />
+            <div style={{ color: accent }}>
+              <Icon className="h-4 w-4" />
+            </div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
           </div>
           <div
