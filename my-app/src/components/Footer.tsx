@@ -14,12 +14,6 @@ const leftItems = [
   { label: "MarketView", href: "/market-hub", icon: BarChart3 },
 ];
 
-const solflareIcon = (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-    <path d="M13.8 2h-3.6l-6 18h3.6l1.4-4.2h4.8l1.4 4.2h3.6l-6-18zm-1.8 9l-2.1-6.3 2.1 6.3zm1.8 5.4h-3.6l1.8-5.4 1.8 5.4z"/>
-  </svg>
-);
-
 export default function Footer() {
   const pathname = usePathname();
   const [solPrice, setSolPrice] = useState<{ price: string; change: string } | null>(null);
@@ -27,7 +21,6 @@ export default function Footer() {
   useEffect(() => {
     async function fetchSolPrice() {
       try {
-        // Fetch from Binance API
         const response = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT');
         const data = await response.json();
         if (data) {
@@ -48,9 +41,9 @@ export default function Footer() {
   const isPositive = solPrice ? parseFloat(solPrice.change) >= 0 : true;
 
   return (
-    <footer className="fixed bottom-0 z-50 w-full border-t border-border/30 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center justify-between px-4 lg:px-8">
-        {/* Left nav */}
+    <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30">
+      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
+        {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {leftItems.map((item) => {
             const active = pathname === item.href;
@@ -59,47 +52,61 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
                   active
-                    ? "text-teal bg-teal-muted ring-2 ring-teal/20"
+                    ? "bg-teal text-white shadow-lg shadow-teal/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                <span className="tracking-wide hidden sm:inline">{item.label}</span>
+                <Icon className={`h-4 w-4 ${active ? "text-white" : ""}`} />
+                <span className="hidden sm:inline tracking-wide">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Right side */}
-        <div className="flex items-center gap-4 shrink-0 ml-4">
-          {/* SOL Price - improved design */}
-          <div className="hidden sm:flex items-center gap-3 bg-muted/30 px-4 py-2 rounded-xl border border-border/50 shadow-sm">
-            <div className="flex items-center justify-center h-6 w-6 rounded-lg overflow-hidden ring-1 ring-border/50">
+        {/* Right side - SOL Price ticker */}
+        <div className="flex items-center gap-3 ml-4">
+          {/* SOL Price - compact ticker style */}
+          <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#9945FF]/10 to-[#14F195]/10 px-4 py-2 rounded-xl border border-[#9945FF]/20">
+            <div className="flex items-center justify-center h-5 w-5">
               <Image 
                 src="/solanaLogoMark.svg" 
                 alt="Solana" 
-                width={24} 
-                height={24}
+                width={20} 
+                height={20}
                 className="object-contain"
               />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">Solana</span>
               <span className="font-bold text-foreground text-sm">${solPrice?.price || "Loading..."}</span>
             </div>
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold ${
-              isPositive ? "bg-teal/10 text-teal" : "bg-red-500/10 text-red-500"
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
+              isPositive ? "bg-[#14F195]/20 text-white" : "bg-[#9945FF]/20 text-white"
             }`}>
-              {isPositive ? "↑" : "↓"} {Math.abs(parseFloat(solPrice?.change || "0"))}%
+              {isPositive ? "↑" : "↓"} {Math.abs(parseFloat(solPrice?.change || "0")).toFixed(2)}%
             </div>
           </div>
 
-          {/* About */}
+          {/* Mobile SOL price - minimal */}
+          <div className="sm:hidden flex items-center gap-1.5 bg-muted/30 px-2.5 py-1.5 rounded-lg border border-border/50">
+            <Image 
+              src="/solanaLogoMark.svg" 
+              alt="Solana" 
+              width={14} 
+              height={14}
+              className="object-contain"
+            />
+            <span className="font-bold text-foreground text-xs">${solPrice?.price || "-"}</span>
+            <span className={`text-xs font-bold ${isPositive ? "text-[#14F195]" : "text-[#9945FF]"}`}>
+              {isPositive ? "+" : ""}{solPrice?.change || "0"}%
+            </span>
+          </div>
+
+          {/* About link */}
           <Link
             href="/about"
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-accent/50"
+            className="hidden sm:inline-flex text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-accent/50"
           >
             About
           </Link>

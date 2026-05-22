@@ -66,7 +66,7 @@ export default function Header() {
       <div className="flex h-16 items-center px-4 lg:px-8">
         {/* Logo */}
         <Link href="/market-hub" className="flex items-center gap-3 shrink-0 mr-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden shadow-lg ring-1 ring-border/50">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden shadow-lg">
             <Image 
               src="/Логотип.png" 
               alt="OneDex Logo" 
@@ -75,8 +75,8 @@ export default function Header() {
               className="object-contain"
             />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-foreground">
-            One<span className="bg-gradient-to-r from-teal to-teal-light bg-clip-text text-transparent">Dex</span>
+          <span className="text-2xl font-bold tracking-tight text-white">
+            OneDex
           </span>
         </Link>
 
@@ -140,7 +140,7 @@ export default function Header() {
               <span className="max-w-[80px] truncate">Connect</span>
               <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-3 gap-1">
+            <DropdownMenuContent align="end" className="w-72 p-3 gap-1">
               {/* Theme toggle */}
               <div className="px-2 py-2 border-b border-border/50 mb-1">
                 <div className="flex items-center justify-between">
@@ -152,11 +152,11 @@ export default function Header() {
                       e.stopPropagation();
                       setTheme(theme === "dark" ? "light" : "dark");
                     }}
-                    className="h-8 gap-2"
+                    className="h-8 gap-2 pl-3 pr-3"
                   >
                     <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="text-xs">{theme === "dark" ? "Dark" : "Light"}</span>
+                    <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <span className="text-xs font-semibold">{theme === "dark" ? "Dark" : "Light"}</span>
                   </Button>
                 </div>
               </div>
@@ -166,16 +166,16 @@ export default function Header() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Language</span>
                   <div className="flex gap-1">
-                    {['EN', 'RU', 'UK'].map((lang) => (
+                    {['EN', 'RU'].map((lang) => (
                       <Button
                         key={lang}
                         variant="ghost"
                         size="sm"
                         onClick={(e) => e.stopPropagation()}
-                        className={`h-7 px-2 text-xs font-semibold ${
-                          lang === 'RU' 
-                            ? 'bg-teal text-white' 
-                            : 'text-muted-foreground hover:text-foreground'
+                        className={`h-7 px-3 text-xs font-semibold transition-all ${
+                          lang === 'EN' 
+                            ? 'bg-teal text-white hover:bg-teal hover:text-white' 
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                         }`}
                       >
                         {lang}
@@ -196,7 +196,7 @@ export default function Header() {
                     className="object-contain"
                   />
                 </div>
-                <span className="font-medium">Phantom</span>
+                <span className="font-medium text-sm">Phantom</span>
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-3 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-center h-7 w-7 rounded-lg overflow-hidden bg-[#000]">
@@ -208,12 +208,18 @@ export default function Header() {
                     className="object-contain"
                   />
                 </div>
-                <span className="font-medium">Solflare</span>
+                <span className="font-medium text-sm">Solflare</span>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="my-1" />
               <DropdownMenuItem className="gap-3 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Profile</span>
+                <span className="font-medium text-sm">Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-3 cursor-pointer text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={(e) => e.stopPropagation()}>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="font-medium text-sm">Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
