@@ -1,8 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { TrendingUp, BarChart3, Activity, DollarSign, Users } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useState } from "react";
+import { TrendingUp, BarChart3, Activity, DollarSign, Users, X } from "lucide-react";
 
 // Mock data for demonstration
 const MOCK_BUCKETS = Array.from({ length: 24 }, (_, i) => ({
@@ -55,9 +54,7 @@ export const MarketOverviewPopup = ({ isOpen, onClose }: MarketOverviewPopupProp
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-accent/50 transition-colors"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -78,16 +75,27 @@ interface MarketOverviewContentProps {
 export const MarketOverviewContent = ({ interval, onIntervalChange }: MarketOverviewContentProps) => {
   const data = MOCK_BUCKETS;
 
+  const totals = {
+    launched: data.reduce((sum, b) => sum + b.launched, 0),
+    migrated: data.reduce((sum, b) => sum + b.migrated, 0),
+    vol_pre: data.reduce((sum, b) => sum + b.vol_pre, 0),
+    vol_post: data.reduce((sum, b) => sum + b.vol_post, 0),
+    traders_pre: data.reduce((sum, b) => sum + b.traders_pre, 0),
+    traders_post: data.reduce((sum, b) => sum + b.traders_post, 0),
+    fee_pre: data.reduce((sum, b) => sum + b.fee_pre, 0),
+    fee_post: data.reduce((sum, b) => sum + b.fee_post, 0),
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Interval tabs */}
       <IntervalTabs value={interval} onChange={onIntervalChange} />
 
       {/* KPI Row */}
-      <KpiRow buckets={data} />
+      <KpiRow totals={totals} />
 
-      {/* Charts Grid */}
-      <ChartsGrid buckets={data} />
+      {/* Charts Grid - simplified bars */}
+      <ChartsGrid data={data} />
     </div>
   );
 };
@@ -119,35 +127,24 @@ const IntervalTabs = ({ value, onChange }: IntervalTabsProps) => (
 
 // KPI cards
 interface KpiRowProps {
-  buckets: typeof MOCK_BUCKETS;
+  totals: {
+    launched: number;
+    migrated: number;
+    vol_pre: number;
+    vol_post: number;
+    traders_pre: number;
+    traders_post: number;
+    fee_pre: number;
+    fee_post: number;
+  };
 }
 
-const KpiRow = ({ buckets }: KpiRowProps) => {
-  const totals = useMemo(() => ({
-    launched: buckets.reduce((sum, b) => sum + b.launched, 0),
-    migrated: buckets.reduce((sum, b) => sum + b.migrated, 0),
-    vol_pre: buckets.reduce((sum, b) => sum + b.vol_pre, 0),
-    vol_post: buckets.reduce((sum, b) => sum + b.vol_post, 0),
-    traders_pre: buckets.reduce((sum, b) => sum + b.traders_pre, 0),
-    traders_post: buckets.reduce((sum, b) => sum + b.traders_post, 0),
-    fee_pre: buckets.reduce((sum, b) => sum + b.fee_pre, 0),
-    fee_post: buckets.reduce((sum, b) => sum + b.fee_post, 0),
-  }), [buckets]);
-
-  const series = useMemo(() => ({
-    launched: buckets.map((b) => b.launched),
-    migrated: buckets.map((b) => b.migrated),
-    volume: buckets.map((b) => b.vol_pre + b.vol_post),
-    traders: buckets.map((b) => b.traders_pre + b.traders_post),
-    fees: buckets.map((b) => b.fee_pre + b.fee_post),
-  }), [buckets]);
-
+const KpiRow = ({ totals }: KpiRowProps) => {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       <KpiCard
         label="Launched"
         value={fmtInt(totals.launched)}
-        sparkline={series.launched}
         accent={COLOR_PRE}
         icon={TrendingUp}
       />
@@ -155,7 +152,6 @@ const KpiRow = ({ buckets }: KpiRowProps) => {
         label="Migrated"
         value={fmtInt(totals.migrated)}
         subValue={`${((totals.migrated / totals.launched) * 100).toFixed(1)}% rate`}
-        sparkline={series.migrated}
         accent={COLOR_POST}
         icon={Activity}
       />
@@ -164,7 +160,6 @@ const KpiRow = ({ buckets }: KpiRowProps) => {
         value={`${fmtCompact(totals.vol_pre + totals.vol_post)} SOL`}
         subPre={`Pre: ${fmtCompact(totals.vol_pre)}`}
         subPost={`Post: ${fmtCompact(totals.vol_post)}`}
-        sparkline={series.volume}
         accent={COLOR_POST}
         icon={DollarSign}
       />
@@ -173,7 +168,6 @@ const KpiRow = ({ buckets }: KpiRowProps) => {
         value={fmtInt(totals.traders_pre + totals.traders_post)}
         subPre={`Pre: ${fmtInt(totals.traders_pre)}`}
         subPost={`Post: ${fmtInt(totals.traders_post)}`}
-        sparkline={series.traders}
         accent={COLOR_POST}
         icon={Users}
       />
@@ -182,7 +176,6 @@ const KpiRow = ({ buckets }: KpiRowProps) => {
         value={`${fmtCompact(totals.fee_pre + totals.fee_post)} SOL`}
         subPre={`Pre: ${fmtCompact(totals.fee_pre)}`}
         subPost={`Post: ${fmtCompact(totals.fee_post)}`}
-        sparkline={series.fees}
         accent={COLOR_POST}
         icon={DollarSign}
       />
@@ -196,14 +189,11 @@ interface KpiCardProps {
   subValue?: string;
   subPre?: string;
   subPost?: string;
-  sparkline?: number[];
   accent: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const KpiCard = ({ label, value, subValue, subPre, subPost, sparkline, accent, icon: Icon }: KpiCardProps) => {
-  const hasSpark = sparkline && sparkline.length > 1;
-
+const KpiCard = ({ label, value, subValue, subPre, subPost, accent, icon: Icon }: KpiCardProps) => {
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-border/50 bg-muted/30 p-4"
@@ -233,93 +223,85 @@ const KpiCard = ({ label, value, subValue, subPre, subPost, sparkline, accent, i
             </div>
           )}
         </div>
-        {hasSpark && (
-          <div className="h-8 w-12 shrink-0">
-            <Sparkline data={sparkline} color={accent} />
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-interface SparklineProps {
-  data: number[];
-  color: string;
-}
-
-const Sparkline = ({ data, color }: SparklineProps) => {
-  const id = useId().replace(/:/g, "");
-  const rows = data.map((v, i) => ({ i, v }));
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={rows} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-        <defs>
-          <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.55} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area
-          type="monotone"
-          dataKey="v"
-          stroke={color}
-          strokeWidth={1.5}
-          fill={`url(#spark-${id})`}
-          isAnimationActive={false}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-};
-
-// Charts grid
+// Charts grid - simplified without recharts
 interface ChartsGridProps {
-  buckets: typeof MOCK_BUCKETS;
+  data: typeof MOCK_BUCKETS;
 }
 
-const ChartsGrid = ({ buckets }: ChartsGridProps) => {
-  const series = buckets.map((b, i) => ({
-    label: `${i}:00`,
-    ...b,
-  }));
-
+const ChartsGrid = ({ data }: ChartsGridProps) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <ChartCard title="Launched" accent={COLOR_PRE}>
-        <SingleBarChart data={series} dataKey="launched" color={COLOR_PRE} />
+        <SimpleBarChart data={data.slice(-12)} dataKey="launched" color={COLOR_PRE} />
       </ChartCard>
       <ChartCard title="Migrated" accent={COLOR_POST}>
-        <SingleBarChart data={series} dataKey="migrated" color={COLOR_POST} />
+        <SimpleBarChart data={data.slice(-12)} dataKey="migrated" color={COLOR_POST} />
       </ChartCard>
-      <ChartCard title="Volume" accent={COLOR_POST}>
-        <StackedBarChart
-          data={series}
-          keys={[
-            { key: "vol_pre", color: COLOR_PRE, label: "Pre" },
-            { key: "vol_post", color: COLOR_POST, label: "Post" },
-          ]}
-        />
+      <ChartCard title="Volume" accent={COLOR_POST} fullWidth>
+        <SimpleStackedBarChart data={data.slice(-12)} />
       </ChartCard>
-      <ChartCard title="Traders" accent={COLOR_POST}>
-        <TwoAreaChart
-          data={series}
-          lines={[
-            { key: "traders_pre", color: COLOR_PRE, label: "Pre" },
-            { key: "traders_post", color: COLOR_POST, label: "Post" },
-          ]}
-        />
-      </ChartCard>
-      <ChartCard title="Fees" accent={COLOR_POST} fullWidth>
-        <StackedBarChart
-          data={series}
-          keys={[
-            { key: "fee_pre", color: COLOR_PRE, label: "Pre" },
-            { key: "fee_post", color: COLOR_POST, label: "Post" },
-          ]}
-        />
-      </ChartCard>
+    </div>
+  );
+};
+
+// Simple bar chart without recharts
+const SimpleBarChart = ({ data, dataKey, color }: { data: typeof MOCK_BUCKETS; dataKey: keyof typeof MOCK_BUCKETS[0]; color: string }) => {
+  const max = Math.max(...data.map(d => Number(d[dataKey])));
+  
+  return (
+    <div className="h-[200px] flex items-end gap-1 px-2">
+      {data.map((d, i) => {
+        const value = Number(d[dataKey]);
+        const height = (value / max) * 100;
+        return (
+          <div
+            key={i}
+            className="flex-1 rounded-t transition-all hover:opacity-80"
+            style={{
+              height: `${height}%`,
+              background: `linear-gradient(to top, ${color}66, ${color})`,
+              minHeight: '4px'
+            }}
+            title={`${d.ts}: ${value}`}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+const SimpleStackedBarChart = ({ data }: { data: typeof MOCK_BUCKETS }) => {
+  return (
+    <div className="h-[200px] flex items-end gap-1 px-2">
+      {data.slice(-12).map((d, i) => {
+        const total = d.vol_pre + d.vol_post;
+        const prePct = (d.vol_pre / total) * 100;
+        return (
+          <div key={i} className="flex-1 flex flex-col-reverse rounded-t overflow-hidden" style={{ height: '100%' }}>
+            <div 
+              className="flex-1 transition-all hover:opacity-80"
+              style={{
+                background: `linear-gradient(to top, ${COLOR_PRE}66, ${COLOR_PRE})`,
+                height: `${prePct}%`,
+                minHeight: '2px'
+              }}
+            />
+            <div 
+              className="flex-1 transition-all hover:opacity-80"
+              style={{
+                background: `linear-gradient(to top, ${COLOR_POST}66, ${COLOR_POST})`,
+                height: `${100 - prePct}%`,
+                minHeight: '2px'
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -353,172 +335,6 @@ const ChartCard = ({ title, accent, children, fullWidth }: ChartCardProps) => (
     <div className="h-[200px]">{children}</div>
   </div>
 );
-
-// Chart components
-type SeriesRow = typeof MOCK_BUCKETS[0] & { label: string };
-
-const SingleBarChart = ({ data, dataKey, color }: { data: SeriesRow[]; dataKey: keyof SeriesRow; color: string }) => {
-  const id = useId().replace(/:/g, "");
-  const gradId = `bar-${id}`;
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={1} />
-            <stop offset="100%" stopColor={color} stopOpacity={0.15} />
-          </linearGradient>
-        </defs>
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip content={<FancyTooltip />} />
-        <Bar
-          dataKey={dataKey as string}
-          fill={`url(#${gradId})`}
-          radius={[4, 4, 0, 0]}
-          maxBarSize={28}
-          animationDuration={650}
-        />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-};
-
-interface StackedKey {
-  key: string;
-  color: string;
-  label: string;
-}
-
-const StackedBarChart = ({ data, keys }: { data: SeriesRow[]; keys: StackedKey[] }) => {
-  const id = useId().replace(/:/g, "");
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          {keys.map((k, i) => (
-            <linearGradient key={k.key} id={`stack-${id}-${i}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={k.color} stopOpacity={0.95} />
-              <stop offset="100%" stopColor={k.color} stopOpacity={0.2} />
-            </linearGradient>
-          ))}
-        </defs>
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip content={<FancyTooltip />} />
-        {keys.map((k, i) => {
-          const isTop = i === keys.length - 1;
-          return (
-            <Bar
-              key={k.key}
-              dataKey={k.key}
-              name={k.label}
-              stackId="s"
-              fill={`url(#stack-${id}-${i})`}
-              radius={isTop ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-              maxBarSize={28}
-              animationDuration={650}
-            />
-          );
-        })}
-      </BarChart>
-    </ResponsiveContainer>
-  );
-};
-
-const TwoAreaChart = ({ data, lines }: { data: SeriesRow[]; lines: StackedKey[] }) => {
-  const id = useId().replace(/:/g, "");
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          {lines.map((l, i) => (
-            <linearGradient key={l.key} id={`area-${id}-${i}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={l.color} stopOpacity={0.45} />
-              <stop offset="100%" stopColor={l.color} stopOpacity={0} />
-            </linearGradient>
-          ))}
-        </defs>
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip content={<FancyTooltip />} />
-        {lines.map((l, i) => (
-          <Area
-            key={l.key}
-            type="monotone"
-            dataKey={l.key}
-            name={l.label}
-            stroke={l.color}
-            strokeWidth={2}
-            fill={`url(#area-${id}-${i})`}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 0, fill: l.color }}
-            animationDuration={700}
-          />
-        ))}
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-};
-
-const FancyTooltip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div
-      className="rounded-xl px-3 py-2 text-xs shadow-lg"
-      style={{
-        background: "rgba(20, 20, 20, 0.95)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-      }}
-    >
-      <div className="flex flex-col gap-1.5">
-        {payload.map((p: any, i: number) => (
-          <div key={i} className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ background: p.color, boxShadow: `0 0 6px ${p.color}` }}
-            />
-            <span className="text-muted-foreground">{p.name}</span>
-            <span className="ml-auto font-bold tabular-nums">{Math.round(p.value ?? 0).toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // Formatters
 const fmtInt = (n: number): string => {
