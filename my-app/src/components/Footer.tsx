@@ -5,18 +5,20 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Activity, Brain, Bell, Phone, BarChart3 } from "lucide-react";
 import Image from "next/image";
+import { MarketOverviewPopup } from "@/components/MarketOverview/MarketOverviewPopup";
 
 const leftItems = [
   { label: "Tracker", href: "/tracker", icon: Activity },
   { label: "Smart", href: "/smart", icon: Brain },
   { label: "Alerts", href: "/alerts", icon: Bell },
   { label: "Calls", href: "/calls", icon: Phone },
-  { label: "MarketView", href: "/market-hub", icon: BarChart3 },
+  { label: "MarketView", href: "/market-view", icon: BarChart3 },
 ];
 
 export default function Footer() {
   const pathname = usePathname();
   const [solPrice, setSolPrice] = useState<{ price: string; change: string } | null>(null);
+  const [isMarketOverviewOpen, setIsMarketOverviewOpen] = useState(false);
 
   useEffect(() => {
     async function fetchSolPrice() {
@@ -40,6 +42,11 @@ export default function Footer() {
 
   const isPositive = solPrice ? parseFloat(solPrice.change) >= 0 : true;
 
+  const handleMarketViewClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsMarketOverviewOpen(true);
+  };
+
   return (
     <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30">
       <div className="flex h-14 items-center justify-between px-4 lg:px-6">
@@ -48,6 +55,26 @@ export default function Footer() {
           {leftItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
+            
+            if (item.label === "MarketView") {
+              return (
+                <button
+                  key={item.href}
+                  onClick={handleMarketViewClick}
+                  className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all duration-300 ${
+                    isMarketOverviewOpen
+                      ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 transition-all duration-300 ${
+                    isMarketOverviewOpen ? "text-white scale-110" : "group-hover:scale-110"
+                  }`} />
+                  <span className="hidden sm:inline tracking-tight">{item.label}</span>
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
@@ -106,6 +133,12 @@ export default function Footer() {
           </Link>
         </div>
       </div>
+
+      {/* Market Overview Modal */}
+      <MarketOverviewPopup 
+        isOpen={isMarketOverviewOpen} 
+        onClose={() => setIsMarketOverviewOpen(false)} 
+      />
     </footer>
   );
 }
