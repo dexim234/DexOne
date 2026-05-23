@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Activity, Brain, Bell, Phone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronDown } from "lucide-react";
+import { Activity, Brain, Bell, Phone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -17,11 +17,12 @@ const leftItems = [
   { label: "Smart", href: "/smart", icon: Brain },
   { label: "Alerts", href: "/alerts", icon: Bell },
   { label: "Calls", href: "/calls", icon: Phone },
+  { label: "MarketView", href: "/market-view", icon: BarChart3 },
 ];
 
 const aboutMenuItems = [
   { label: "Twitter", href: "#", icon: TwitterIcon },
-  { label: "TG MiniApp", href: "#", icon: MessageCircle },
+  { label: "Support", href: "#", icon: MessageCircle },
   { label: "EN Community", href: "#", icon: Globe },
   { label: "RU Community", href: "#", icon: MessageCircle },
   { label: "Charts by TradingView", href: "#", icon: BarChart2 },
@@ -32,6 +33,11 @@ const aboutMenuItems = [
 export default function Footer() {
   const pathname = usePathname();
   const [solPrice, setSolPrice] = useState<{ price: string; change: string } | null>(null);
+  const [activeMenu, setActiveMenu] = useState<"top" | "bottom" | null>(null);
+
+  const handleNavClick = () => {
+    setActiveMenu("bottom");
+  };
 
   useEffect(() => {
     async function fetchSolPrice() {
@@ -67,8 +73,9 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleNavClick}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
-                  active
+                  active && activeMenu !== "top"
                     ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
                 }`}
@@ -115,7 +122,7 @@ export default function Footer() {
             <DropdownMenuTrigger>
               <button className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent/50">
                 <span>About</span>
-                <ChevronDown className="h-3 w-3 opacity-50" />
+                <ChevronUp className="h-3 w-3 opacity-50" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 p-2 gap-0.5">

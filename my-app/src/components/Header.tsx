@@ -63,6 +63,11 @@ export default function Header() {
   const { theme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<"top" | "bottom" | null>(null);
+
+  const handleNavClick = () => {
+    setActiveMenu("top");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -79,7 +84,7 @@ export default function Header() {
             />
           </div>
           <span className="text-xl font-extrabold tracking-tight text-foreground">
-            One<span className="text-teal">Dex</span>
+            One<span className="text-foreground dark:text-white">Dex</span>
           </span>
         </Link>
 
@@ -95,14 +100,15 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleNavClick}
                 className={`group flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${
-                  active
+                  active && activeMenu !== "bottom"
                     ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
                 }`}
               >
                 <Icon className={`h-4 w-4 transition-all duration-300 ${
-                  active ? "text-white scale-110" : "group-hover:scale-110"
+                  (active && activeMenu !== "bottom") ? "text-white scale-110" : "group-hover:scale-110"
                 }`} />
                 <span className="tracking-wide">{item.label}</span>
               </Link>
@@ -142,87 +148,119 @@ export default function Header() {
               <span className="max-w-[70px] truncate">Connect</span>
               <ChevronDown className="h-3 w-3 opacity-50" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 p-3 gap-1">
-              {/* Theme toggle */}
-              <div className="px-2 py-2 border-b border-border/50 mb-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Theme</span>
+            <DropdownMenuContent align="end" className="w-80 p-4">
+              {/* Header */}
+              <div className="mb-4 pb-3 border-b border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Settings</span>
+                </div>
+                
+                {/* Theme toggle */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Theme</span>
+                  </div>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       setTheme(theme === "dark" ? "light" : "dark");
                     }}
-                    className="h-7 gap-2 pl-2.5 pr-2.5"
+                    className="h-7 gap-1.5 px-2.5"
                   >
                     <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Moon className="h-3.5 w-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <span className="text-xs font-semibold">{theme === "dark" ? "Dark" : "Light"}</span>
                   </Button>
                 </div>
-              </div>
 
-              {/* Language selector */}
-              <div className="px-2 py-2 border-b border-border/50 mb-1">
+                {/* Language selector */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Language</span>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Language</span>
+                  </div>
+                  <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
                     {['EN', 'RU'].map((lang) => (
-                      <Button
+                      <button
                         key={lang}
-                        variant="ghost"
-                        size="sm"
                         onClick={(e) => e.stopPropagation()}
-                        className={`h-6.5 px-2.5 text-xs font-bold transition-all ${
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                           lang === 'EN' 
-                            ? 'bg-teal text-white hover:bg-teal hover:text-white' 
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                            ? 'bg-teal text-white shadow-sm' 
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         {lang}
-                      </Button>
+                      </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Wallet options */}
-              <DropdownMenuItem className="gap-2.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-center h-6.5 w-6.5 rounded-md overflow-hidden bg-[#AB9FF2]">
-                  <Image 
-                    src="/phantom.webp" 
-                    alt="Phantom" 
-                    width={26} 
-                    height={26}
-                    className="object-contain"
-                  />
+              {/* Wallet connections */}
+              <div className="mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                  Connect Wallet
+                </span>
+                <div className="space-y-2">
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-[#AB9FF2]/10">
+                      <Image 
+                        src="/phantom.webp" 
+                        alt="Phantom" 
+                        width={28} 
+                        height={28}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Phantom</div>
+                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20">
+                      <Image 
+                        src="/Solflare.svg" 
+                        alt="Solflare" 
+                        width={24} 
+                        height={24}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Solflare</div>
+                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                  </DropdownMenuItem>
                 </div>
-                <span className="font-medium text-sm">Phantom</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-center h-6.5 w-6.5 rounded-md overflow-hidden bg-[#000]">
-                  <Image 
-                    src="/Solflare.svg" 
-                    alt="Solflare" 
-                    width={26} 
-                    height={26}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="font-medium text-sm">Solflare</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-1" />
-              <DropdownMenuItem className="gap-2.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="font-medium text-sm">Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2.5 cursor-pointer text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={(e) => e.stopPropagation()}>
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span className="font-medium text-sm">Logout</span>
-              </DropdownMenuItem>
+              </div>
+
+              {/* Account actions */}
+              <DropdownMenuSeparator className="my-3" />
+              <div className="space-y-1">
+                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span className="font-medium text-sm">Logout</span>
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
