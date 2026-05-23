@@ -62,19 +62,16 @@ export default function Footer() {
         {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {leftItems.map((item) => {
-            const active = pathname === item.href;
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
-                  active
-                    ? "text-teal"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
+                  "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${active ? "text-teal" : ""}`} />
+                <Icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline tracking-tight">{item.label}</span>
               </Link>
             );

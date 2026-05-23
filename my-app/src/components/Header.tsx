@@ -94,7 +94,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${
+                className={`group flex items-center gap-2 px-3.5 py-2 text-base font-bold rounded-lg transition-all duration-300 ${
                   active
                     ? "bg-accent/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
