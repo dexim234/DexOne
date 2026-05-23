@@ -67,9 +67,7 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
-                  "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
-                }`}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline tracking-tight">{item.label}</span>

@@ -89,16 +89,11 @@ export default function Header() {
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1 ml-3">
           {navItems.map((item) => {
-            const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-2 px-3.5 py-2 text-base font-bold rounded-lg transition-all duration-300 ${
-                  active
-                    ? "bg-accent/50"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
-                }`}
+                className="group flex items-center gap-2 px-3.5 py-2 text-base font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
               >
                 <span className="tracking-wide">{item.label}</span>
               </Link>
@@ -275,17 +270,12 @@ export default function Header() {
                 </div>
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {
-                    const active = pathname === item.href;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className={`flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold rounded-lg transition-all ${
-                          active
-                            ? "bg-accent/50"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        }`}
+                        className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold rounded-lg transition-all tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50"
                       >
                         {item.label}
                       </Link>
