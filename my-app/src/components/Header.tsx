@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -61,8 +62,8 @@ const solflareIcon = (
 export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const [search, setSearch] = useState("");
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = React.useState("");
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -235,10 +236,12 @@ export default function Header() {
               {/* Account actions */}
               <DropdownMenuSeparator className="my-3" />
               <div className="space-y-1">
-                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium text-sm">Profile</span>
-                </DropdownMenuItem>
+                <Link href="/profile" className="block">
+                  <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">Profile</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -287,10 +290,12 @@ export default function Header() {
                     <Wallet className="h-3.5 w-3.5" />
                     Connect Wallet
                   </Button>
-                  <Button variant="outline" className="justify-start gap-2.5 h-9">
-                    <User className="h-3.5 w-3.5" />
-                    Profile
-                  </Button>
+                  <Link href="/profile" className="block">
+                    <Button variant="outline" className="justify-start gap-2.5 h-9">
+                      <User className="h-3.5 w-3.5" />
+                      Profile
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </SheetContent>
