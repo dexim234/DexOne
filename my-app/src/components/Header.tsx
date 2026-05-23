@@ -90,20 +90,16 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-1 ml-3">
           {navItems.map((item) => {
             const active = pathname === item.href;
-            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`group flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-lg transition-all duration-300 ${
                   active
-                    ? "text-teal"
+                    ? "bg-accent/50"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
                 }`}
               >
-                <Icon className={`h-4 w-4 transition-all duration-300 ${
-                  active ? "text-teal scale-110" : "group-hover:scale-110"
-                }`} />
                 <span className="tracking-wide">{item.label}</span>
               </Link>
             );
@@ -223,12 +219,12 @@ export default function Header() {
                     className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#000]">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
                       <Image 
                         src="/Solflare.svg" 
                         alt="Solflare" 
-                        width={24} 
-                        height={24}
+                        width={32} 
+                        height={32}
                         className="object-contain"
                       />
                     </div>
@@ -280,7 +276,6 @@ export default function Header() {
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {
                     const active = pathname === item.href;
-                    const Icon = item.icon;
                     return (
                       <Link
                         key={item.href}
@@ -288,11 +283,10 @@ export default function Header() {
                         onClick={() => setMobileOpen(false)}
                         className={`flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold rounded-lg transition-all ${
                           active
-                            ? "text-teal bg-teal-muted"
+                            ? "bg-accent/50"
                             : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                         }`}
                       >
-                        <Icon className="h-4 w-4" />
                         {item.label}
                       </Link>
                     );
