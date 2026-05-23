@@ -18,9 +18,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "OneDex — Solana DEX Terminal",
   description: "Advanced DEX trading terminal for Solana",
-  icons: {
-    icon: '/Логотип.png',
-  },
 };
 
 export default function RootLayout({
