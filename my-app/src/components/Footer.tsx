@@ -33,11 +33,6 @@ const aboutMenuItems = [
 export default function Footer() {
   const pathname = usePathname();
   const [solPrice, setSolPrice] = useState<{ price: string; change: string } | null>(null);
-  const [activeMenu, setActiveMenu] = useState<"top" | "bottom" | null>(null);
-
-  const handleNavClick = () => {
-    setActiveMenu("bottom");
-  };
 
   useEffect(() => {
     async function fetchSolPrice() {
@@ -73,14 +68,13 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={handleNavClick}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
-                  active && activeMenu !== "top"
-                    ? "bg-gradient-to-r from-teal to-teal-light text-white shadow-lg shadow-teal/25 scale-105"
+                  active
+                    ? "text-teal"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className={`h-3.5 w-3.5 ${active ? "text-teal" : ""}`} />
                 <span className="hidden sm:inline tracking-tight">{item.label}</span>
               </Link>
             );
