@@ -35,52 +35,42 @@ export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const [cryptoPrices, setCryptoPrices] = useState<{
-    SOL: { price: string; change: string };
-    BTC: { price: string; change: string };
-    ETH: { price: string; change: string };
-    BNB: { price: string; change: string };
+    SOL: { price: string };
+    BTC: { price: string };
+    ETH: { price: string };
+    BNB: { price: string };
   } | null>(null);
 
   useEffect(() => {
     async function fetchCryptoPrices() {
       try {
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT');
-        const solData = await response.json();
-        
-        const btcResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT');
-        const btcData = await btcResponse.json();
-        
-        const ethResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT');
-        const ethData = await ethResponse.json();
-        
-        const bnbResponse = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT');
-        const bnbData = await bnbResponse.json();
-        
+        const [solRes, btcRes, ethRes, bnbRes] = await Promise.all([
+          fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT'),
+        ]);
+
+        const [solData, btcData, ethData, bnbData] = await Promise.all([
+          solRes.json(),
+          btcRes.json(),
+          ethRes.json(),
+          bnbRes.json(),
+        ]);
+
         setCryptoPrices({
-          SOL: {
-            price: parseFloat(solData.lastPrice).toFixed(2),
-            change: parseFloat(solData.priceChangePercent).toFixed(2),
-          },
-          BTC: {
-            price: parseFloat(btcData.lastPrice).toFixed(2),
-            change: parseFloat(btcData.priceChangePercent).toFixed(2),
-          },
-          ETH: {
-            price: parseFloat(ethData.lastPrice).toFixed(2),
-            change: parseFloat(ethData.priceChangePercent).toFixed(2),
-          },
-          BNB: {
-            price: parseFloat(bnbData.lastPrice).toFixed(2),
-            change: parseFloat(bnbData.priceChangePercent).toFixed(2),
-          },
+          SOL: { price: parseFloat(solData.price).toFixed(2) },
+          BTC: { price: parseFloat(btcData.price).toFixed(2) },
+          ETH: { price: parseFloat(ethData.price).toFixed(2) },
+          BNB: { price: parseFloat(bnbData.price).toFixed(2) },
         });
       } catch (error) {
         console.error('Failed to fetch crypto prices from Binance:', error);
         setCryptoPrices({
-          SOL: { price: "142.35", change: "2.4" },
-          BTC: { price: "67,432.50", change: "1.8" },
-          ETH: { price: "3,542.80", change: "2.1" },
-          BNB: { price: "598.45", change: "0.9" },
+          SOL: { price: "142.35" },
+          BTC: { price: "67432.50" },
+          ETH: { price: "3542.80" },
+          BNB: { price: "598.45" },
         });
       }
     }
@@ -91,7 +81,7 @@ export default function Footer() {
 
   return (
     <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30">
-      <div className="flex h-12 items-center justify-between px-4 lg:px-6">
+      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
         {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           {leftItems.map((item) => {
@@ -100,9 +90,9 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
+                className="flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
               </Link>
             );
@@ -120,40 +110,32 @@ export default function Footer() {
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png' },
             ].map(({ coin, file }) => {
               const price = cryptoPrices?.[coin as keyof typeof cryptoPrices];
-              const isPositive = price ? parseFloat(price.change) >= 0 : true;
               return (
                 <div
                   key={coin}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 px-2.5 py-1.5 rounded-lg border border-border/30 hover:border-border/50 transition-all"
+                  className="flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 px-3 py-2 rounded-lg border border-border/30 hover:border-border/50 transition-all"
                 >
-                  <div className="flex items-center justify-center h-3.5 w-3.5">
+                  <div className="flex items-center justify-center h-4 w-4">
                     <Image 
                       src={`/${file}`} 
                       alt={coin} 
-                      width={14} 
-                      height={14}
+                      width={16} 
+                      height={16}
                       className="object-contain"
                     />
                   </div>
                   <div className="flex flex-col leading-tight">
-                    <span className="font-bold text-foreground text-xs">
+                    <span className="font-bold text-foreground text-sm">
                       ${price?.price || "Loading..."}
                     </span>
                   </div>
-                  <span
-                    className={`text-xs font-semibold ${
-                      isPositive ? "text-green-500" : "text-red-500"
-                    }`}
-                  >
-                    {price?.change || "-"}%
-                  </span>
                 </div>
               );
             })}
           </div>
 
           {/* Mobile crypto prices - minimal scrollable */}
-          <div className="lg:hidden flex items-center gap-1 overflow-x-auto no-scrollbar bg-muted/30 px-2 py-1 rounded-md border border-border/50">
+          <div className="lg:hidden flex items-center gap-1 overflow-x-auto no-scrollbar bg-muted/30 px-2 py-1.5 rounded-md border border-border/50">
             {[
               { coin: 'SOL', file: 'solanaLogoMark.svg' },
               { coin: 'BTC', file: 'Bitcoin.svg.png' },
@@ -161,7 +143,6 @@ export default function Footer() {
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png' },
             ].map(({ coin, file }) => {
               const price = cryptoPrices?.[coin as keyof typeof cryptoPrices];
-              const isPositive = price ? parseFloat(price.change) >= 0 : true;
               return (
                 <div
                   key={coin}
@@ -170,19 +151,12 @@ export default function Footer() {
                   <Image 
                     src={`/${file}`} 
                     alt={coin} 
-                    width={10} 
-                    height={10}
+                    width={12} 
+                    height={12}
                     className="object-contain"
                   />
-                  <span className="font-bold text-foreground text-[10px]">
+                  <span className="font-bold text-foreground text-xs">
                     ${price?.price || "-"}
-                  </span>
-                  <span
-                    className={`text-[9px] font-semibold ${
-                      isPositive ? "text-green-500" : "text-red-500"
-                    }`}
-                  >
-                    {price?.change ? `${price.change}%` : ""}
                   </span>
                 </div>
               );
