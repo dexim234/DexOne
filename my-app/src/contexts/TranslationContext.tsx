@@ -174,8 +174,6 @@ const translations: Record<Language, Record<string, string>> = {
     "account.verified": "Верифицировано",
     "account.twoFa": "Статус 2FA",
     "account.enabled": "Включено",
-  },
-  ru: {
     // Navigation
     "nav.marketHub": "Торговый Хаб",
     "nav.calls": "Коллы",
