@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd my-app && npm run build -- --turbopack",
-  "installCommand": "cd my-app && npm install",
-  "framework": "nextjs"
-}
