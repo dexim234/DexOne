@@ -174,18 +174,6 @@ const translations: Record<Language, Record<string, string>> = {
     "account.verified": "Верифицировано",
     "account.twoFa": "Статус 2FA",
     "account.enabled": "Включено",
-    
-    // Market Hub
-    "marketHub.format": "Format",
-    "marketHub.selectFormat": "Select Format",
-    "marketHub.tradingUnderDevelopment": "Trading Under Development",
-    "marketHub.tradingDescription": "This trading section is currently under development. Stay tuned for updates!",
-    "marketHub.trenches.new": "New",
-    "marketHub.trenches.soon": "Soon",
-    "marketHub.trenches.migrated": "Migrated",
-    "marketHub.trenches.newContent": "New trenches content will appear here.",
-    "marketHub.trenches.soonContent": "Coming soon trenches will be displayed here.",
-    "marketHub.trenches.migratedContent": "Migrated trenches history is shown here.",
   },
   ru: {
     // Navigation
