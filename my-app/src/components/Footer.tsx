@@ -11,13 +11,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 const leftItems = [
-  { label: "Tracker", href: "/tracker", icon: Activity },
-  { label: "Smart", href: "/smart", icon: Brain },
-  { label: "Alerts", href: "/alerts", icon: Bell },
-  { label: "Calls", href: "/calls", icon: Phone },
-  { label: "MarketView", href: "/market-view", icon: BarChart3 },
+  { label: "Tracker", href: "/tracker", icon: Activity, transKey: "footer.tracker" },
+  { label: "Smart", href: "/smart", icon: Brain, transKey: "footer.smart" },
+  { label: "Alerts", href: "/alerts", icon: Bell, transKey: "footer.alerts" },
+  { label: "Calls", href: "/calls", icon: Phone, transKey: "footer.calls" },
+  { label: "MarketView", href: "/market-view", icon: BarChart3, transKey: "footer.marketView" },
 ];
 
 const aboutMenuItems = [
@@ -32,6 +33,7 @@ const aboutMenuItems = [
 
 export default function Footer() {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [solPrice, setSolPrice] = useState<{ price: string; change: string } | null>(null);
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function Footer() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
               >
                 <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline tracking-tight">{item.label}</span>
+                <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
               </Link>
             );
           })}

@@ -37,14 +37,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 const navItems = [
-  { label: "Market HUB", href: "/market-hub", icon: TrendingUp },
-  { label: "Calls", href: "/calls", icon: Phone },
-  { label: "Alerts", href: "/alerts", icon: BellRing },
-  { label: "Tracker", href: "/tracker", icon: Activity },
-  { label: "Smart", href: "/smart", icon: Brain },
-  { label: "Predict HUB", href: "/predict-hub", icon: Sparkles },
+  { label: "Market HUB", href: "/market-hub", icon: TrendingUp, transKey: "nav.marketHub" },
+  { label: "Calls", href: "/calls", icon: Phone, transKey: "nav.calls" },
+  { label: "Alerts", href: "/alerts", icon: BellRing, transKey: "nav.alerts" },
+  { label: "Tracker", href: "/tracker", icon: Activity, transKey: "nav.tracker" },
+  { label: "Smart", href: "/smart", icon: Brain, transKey: "nav.smart" },
+  { label: "Assets", href: "/assets", icon: BarChart2, transKey: "nav.assets" },
+  { label: "Predict HUB", href: "/predict-hub", icon: Sparkles, transKey: "nav.predictHub" },
 ];
 
 const phantomIcon = (
@@ -62,6 +64,7 @@ const solflareIcon = (
 export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useTranslation();
   const [search, setSearch] = React.useState("");
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -96,7 +99,7 @@ export default function Header() {
                 href={item.href}
                 className="group flex items-center gap-2 px-3.5 py-2 text-base font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
               >
-                <span className="tracking-wide">{item.label}</span>
+                <span className="tracking-wide">{t(item.transKey)}</span>
               </Link>
             );
           })}
@@ -109,7 +112,7 @@ export default function Header() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search CA / Wallet..."
+              placeholder={t("search.placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-8.5 bg-muted/30 border-border/50 focus-visible:ring-teal/50 focus-visible:border-teal/50 transition-all"
@@ -138,14 +141,14 @@ export default function Header() {
               {/* Header */}
               <div className="mb-4 pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Settings</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("connect.settings")}</span>
                 </div>
                 
                 {/* Theme toggle */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Moon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-foreground">Theme</span>
+                    <span className="text-sm font-semibold text-foreground">{t("connect.theme")}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -165,15 +168,18 @@ export default function Header() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-foreground">Language</span>
+                    <span className="text-sm font-semibold text-foreground">{t("connect.language")}</span>
                   </div>
                   <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
-                    {['EN', 'RU'].map((lang) => (
+                    {(['EN', 'RU'] as const).map((lang) => (
                       <button
                         key={lang}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLanguage(lang === 'EN' ? 'en' : 'ru');
+                        }}
                         className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
-                          lang === 'EN' 
+                          (lang === 'EN' && language === 'en') || (lang === 'RU' && language === 'ru')
                             ? 'bg-teal text-white shadow-sm' 
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
@@ -188,7 +194,7 @@ export default function Header() {
               {/* Wallet connections */}
               <div className="mb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
-                  Connect Wallet
+                  {t("connect.connectWallet")}
                 </span>
                 <div className="space-y-2">
                   <DropdownMenuItem 
@@ -205,8 +211,8 @@ export default function Header() {
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Phantom</div>
-                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
+                      <div className="font-semibold text-sm text-foreground">{t("connect.phantom")}</div>
+                      <div className="text-xs text-muted-foreground">{t("connect.phantomDesc")}</div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
                   </DropdownMenuItem>
@@ -225,8 +231,8 @@ export default function Header() {
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Solflare</div>
-                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
+                      <div className="font-semibold text-sm text-foreground">{t("connect.solflare")}</div>
+                      <div className="text-xs text-muted-foreground">{t("connect.solflareDesc")}</div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
                   </DropdownMenuItem>
@@ -239,14 +245,14 @@ export default function Header() {
                 <Link href="/profile" className="block">
                   <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">Profile</span>
+                    <span className="font-medium text-sm">{t("connect.profile")}</span>
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  <span className="font-medium text-sm">Logout</span>
+                  <span className="font-medium text-sm">{t("connect.logout")}</span>
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>
@@ -265,7 +271,7 @@ export default function Header() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Search CA / Wallet..."
+                    placeholder={t("search.placeholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-9 h-8.5"
@@ -288,12 +294,12 @@ export default function Header() {
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" className="justify-start gap-2.5 h-9">
                     <Wallet className="h-3.5 w-3.5" />
-                    Connect Wallet
+                    {t("connect.wallet")}
                   </Button>
                   <Link href="/profile" className="block">
                     <Button variant="outline" className="justify-start gap-2.5 h-9">
                       <User className="h-3.5 w-3.5" />
-                      Profile
+                      {t("connect.profile")}
                     </Button>
                   </Link>
                 </div>
