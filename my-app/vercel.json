@@ -1,7 +1,0 @@
-{
-  "buildCommand": "npm run build -- --turbopack",
-  "devCommand": "next dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "root": "my-app"
-}
