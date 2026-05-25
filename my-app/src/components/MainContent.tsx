@@ -4,25 +4,31 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { TranslationProvider } from "@/contexts/TranslationContext";
-import SplashScreen from "@/components/SplashScreen";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function MainContent({ children }: { children: React.ReactNode }) {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showLoading, setShowLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    // Hide loading screen after 2.5 seconds
+    const timer = setTimeout(() => {
+      setShowLoading(false);
+    }, 2500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <>
-      {isClient && showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
+      {isClient && showLoading && <LoadingScreen />}
       <TranslationProvider>
-        {isClient && !showSplash && <Header />}
-        <main className={`flex-1 pb-14 ${isClient && showSplash ? 'hidden' : ''}`}>
+        {isClient && !showLoading && <Header />}
+        <main className={`flex-1 pb-14 ${isClient && showLoading ? 'hidden' : ''}`}>
           {children}
         </main>
-        {isClient && !showSplash && <Footer />}
+        {isClient && !showLoading && <Footer />}
       </TranslationProvider>
     </>
   );

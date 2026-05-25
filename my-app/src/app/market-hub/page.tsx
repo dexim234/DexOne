@@ -167,9 +167,9 @@ export default function MarketHubPage() {
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-3" align="end">
+              <PopoverContent className="w-80 p-3" align="end">
                 <div className="mb-2">
-                  <h4 className="font-semibold text-sm mb-1">Choose which metrics to display on token cards</h4>
+                  <h4 className="font-semibold text-sm mb-1">Choose which metrics to display</h4>
                   <p className="text-xs text-muted-foreground">Select metrics to show on token cards</p>
                 </div>
                 <Separator className="mb-3" />
@@ -184,11 +184,11 @@ export default function MarketHubPage() {
                         id={metric.id}
                         checked={selectedMetrics.includes(metric.id)}
                         onCheckedChange={() => toggleMetric(metric.id)}
-                        className="h-4 w-4"
+                        className="h-3.5 w-3.5"
                       />
                       <label 
                         htmlFor={metric.id}
-                        className="text-sm font-medium leading-none cursor-pointer select-none"
+                        className="text-xs font-medium leading-none cursor-pointer select-none"
                       >
                         {metric.label}
                       </label>
