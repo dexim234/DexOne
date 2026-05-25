@@ -56,7 +56,7 @@ export default function TrenchColumn({
           onClick={() => setSortBy("rank")}
           className={`px-2 py-0.5 rounded transition-colors ${sortBy === "rank" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
         >
-          Rank
+          #
         </button>
         <button
           onClick={() => setSortBy("mc")}
@@ -68,7 +68,7 @@ export default function TrenchColumn({
           onClick={() => setSortBy("volume")}
           className={`px-2 py-0.5 rounded transition-colors ${sortBy === "volume" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
         >
-          24h Vol
+          Vol
         </button>
       </div>
 

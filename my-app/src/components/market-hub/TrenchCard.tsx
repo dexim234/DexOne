@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Copy, ExternalLink, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TrenchCardProps {
   rank: string;
@@ -55,6 +55,11 @@ export default function TrenchCard({
   dexScreenerData,
 }: TrenchCardProps) {
   const [copied, setCopied] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [logo]);
 
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
   const isNegative = (val: string) => val.includes("-");
@@ -110,27 +115,27 @@ export default function TrenchCard({
           </div>
         );
       case "devTokensHistory":
-        return <div key="devTokensHistory" className="flex items-center gap-1"><span className="text-muted-foreground">Dev Hist</span><span className="font-medium">-</span></div>;
+        return <div key="devTokensHistory" className="flex items-center gap-1"><span className="text-muted-foreground">Dev</span><span className="font-medium">-</span></div>;
       case "holders":
         return <div key="holders" className="flex items-center gap-1"><span className="text-muted-foreground">Holders</span><span className="font-medium">{holders}</span></div>;
       case "botTraders":
         return <div key="botTraders" className="flex items-center gap-1"><span className="text-muted-foreground">Bots</span><span className="font-medium">-</span></div>;
       case "botFee":
-        return <div key="botFee" className="flex items-center gap-1"><span className="text-muted-foreground">Bot Fee</span><span className="font-medium">-</span></div>;
+        return <div key="botFee" className="flex items-center gap-1"><span className="text-muted-foreground">Fee</span><span className="font-medium">-</span></div>;
       case "globalFees":
         return <div key="globalFees" className="flex items-center gap-1"><span className="text-muted-foreground">Fees</span><span className="font-medium">-</span></div>;
       case "top10Hold":
         return <div key="top10Hold" className="flex items-center gap-1"><span className="text-muted-foreground">Top10</span><span className="font-medium">-</span></div>;
       case "devHold":
-        return <div key="devHold" className="flex items-center gap-1"><span className="text-muted-foreground">Dev</span><span className="font-medium">-</span></div>;
+        return <div key="devHold" className="flex items-center gap-1"><span className="text-muted-foreground">Dev%</span><span className="font-medium">-</span></div>;
       case "bundlers":
-        return <div key="bundlers" className="flex items-center gap-1"><span className="text-muted-foreground">Bundlers</span><span className="font-medium">-</span></div>;
+        return <div key="bundlers" className="flex items-center gap-1"><span className="text-muted-foreground">Bundles</span><span className="font-medium">-</span></div>;
       case "snipers":
         return <div key="snipers" className="flex items-center gap-1"><span className="text-muted-foreground">Snipers</span><span className="font-medium">-</span></div>;
       case "freshWallets":
         return <div key="freshWallets" className="flex items-center gap-1"><span className="text-muted-foreground">Fresh</span><span className="font-medium">-</span></div>;
       case "lpBurn":
-        return <div key="lpBurn" className="flex items-center gap-1"><span className="text-muted-foreground">LP Burn</span><span className="font-medium">-</span></div>;
+        return <div key="lpBurn" className="flex items-center gap-1"><span className="text-muted-foreground">LP</span><span className="font-medium">-</span></div>;
       case "dexTax":
         return <div key="dexTax" className="flex items-center gap-1"><span className="text-muted-foreground">Tax</span><span className="font-medium">-</span></div>;
       default:
@@ -144,15 +149,22 @@ export default function TrenchCard({
       <div className="flex items-start gap-2 mb-2">
         {/* Logo */}
         <div className="relative h-10 w-10 flex-shrink-0">
+          {!imageLoaded && (
+            <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
+          )}
           <Image
             src={logo}
             alt={name}
             width={40}
             height={40}
-            className="rounded-lg object-cover"
+            className={`rounded-lg object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               e.currentTarget.src = "/placeholder.png";
+              setImageLoaded(true);
             }}
+            loading="eager"
+            priority
           />
         </div>
 
@@ -166,7 +178,7 @@ export default function TrenchCard({
               </svg>
             )}
           </div>
-
+          
           {/* Address with Copy */}
           <div className="flex items-center gap-1.5">
             <button

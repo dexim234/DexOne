@@ -37,14 +37,22 @@ const DISPLAY_METRICS = [
 
 export default function MarketHubPage() {
   const [buyMode, setBuyMode] = useState<string>("buy");
-  const [displayMode, setDisplayMode] = useState<string>("list");
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
-    "volume", "holders", "priceChange"
-  ]);
+  const [displayMode, setDisplayMode] = useState<string>("trenches");
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("selectedMetrics");
+      return saved ? JSON.parse(saved) : ["volume", "holders", "priceChange"];
+    }
+    return ["volume", "holders", "priceChange"];
+  });
   const [timeframe, setTimeframe] = useState<string>("1m");
   const [priceInput, setPriceInput] = useState<string>("0.0024");
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("selectedMetrics", JSON.stringify(selectedMetrics));
+  }, [selectedMetrics]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -104,7 +112,7 @@ export default function MarketHubPage() {
                 onClick={() => setBuyMode("buy")}
               >
                 <Wallet className="h-3.5 w-3.5 mr-1.5" />
-                Buy
+                Quick Buy
               </Button>
               <div className="flex items-center gap-1.5">
                 {isEditing ? (

@@ -41,9 +41,9 @@ const bingxLinks = {
 
 // Exchange rates (placeholder - should be fetched from API)
 const exchangeRates = {
-  USD_TO_RUB: 92.5,
-  USD_TO_EUR: 0.92,
-  USD_TO_CNY: 7.24,
+  USD_TO_RUB: 97.5,
+  USD_TO_EUR: 0.93,
+  USD_TO_CNY: 7.28,
 };
 
 export default function Footer() {
@@ -131,7 +131,11 @@ export default function Footer() {
         return priceUSD;
     }
     
-    return `${symbol}${(price * rate).toFixed(2)}`;
+    const converted = price * rate;
+    if (converted >= 1000) {
+      return `${symbol}${converted.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+    }
+    return `${symbol}${converted.toFixed(2)}`;
   };
 
   if (!cryptoPrices) {

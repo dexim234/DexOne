@@ -95,18 +95,13 @@ export default function Header() {
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-tight ${
-                  isActive
-                    ? "bg-gradient-to-r from-teal-500/20 to-purple-600/20 text-teal-500 shadow-lg shadow-teal-500/20"
-                    : "text-foreground hover:bg-accent/50 hover:scale-105"
-                }`}
+                className="group flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-tight text-foreground hover:bg-accent/50 hover:scale-105"
               >
-                <item.icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${isActive ? "text-teal-500" : "text-muted-foreground"}`} />
+                <item.icon className="h-4 w-4 text-muted-foreground transition-transform group-hover:scale-110 group-hover:text-foreground" />
                 <span className="tracking-wide">{t(item.transKey)}</span>
               </Link>
             );
@@ -213,10 +208,10 @@ export default function Header() {
                 </span>
                 <div className="space-y-2">
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-3 rounded-xl hover:bg-accent/50 transition-all"
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden bg-[#AB9FF2]">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
                       <Image 
                         src="/phantom.webp" 
                         alt="Phantom" 
@@ -226,30 +221,30 @@ export default function Header() {
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-bold text-sm text-foreground">Phantom</div>
+                      <div className="font-semibold text-sm text-foreground">Phantom</div>
                       <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-3 rounded-xl hover:bg-accent/50 transition-all"
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
                       <Image 
                         src="/Solflare.svg" 
                         alt="Solflare" 
-                        width={28} 
-                        height={28}
+                        width={32} 
+                        height={32}
                         className="object-contain"
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-bold text-sm text-foreground">Solflare</div>
+                      <div className="font-semibold text-sm text-foreground">Solflare</div>
                       <div className="text-xs text-muted-foreground">Native Solana wallet</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
                 </div>
               </div>
@@ -258,18 +253,16 @@ export default function Header() {
               <DropdownMenuSeparator className="my-3" />
               <div className="space-y-1">
                 <Link href="/profile" className="block">
-                  <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2.5 rounded-xl hover:bg-accent/50">
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="font-bold text-sm text-foreground">Profile</span>
+                  <DropdownMenuItem className="gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-sm">Profile</span>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2.5 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <DropdownMenuItem className="gap-2 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  <span className="font-bold text-sm">Logout</span>
+                  <span className="font-medium text-sm">Logout</span>
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>
@@ -296,17 +289,12 @@ export default function Header() {
                 </div>
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {
-                    const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all tracking-tight ${
-                          isActive
-                            ? "bg-gradient-to-r from-teal-500/20 to-purple-600/20 text-teal-500"
-                            : "text-foreground hover:bg-accent/50"
-                        }`}
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all tracking-tight text-foreground hover:bg-accent/50"
                       >
                         <item.icon className="h-4 w-4" />
                         {item.label}
