@@ -264,33 +264,13 @@ export class PumpFunApiService {
    * Получить URL изображения токена
    */
   private getTokenImageUrl(token: PumpToken): string {
-    const placeholder = '/placeholder.png';
-    
-    // 1. Если есть imageUrl - используем его
-    if (token.imageUrl) {
-      return this.normalizeImageUrl(token.imageUrl);
-    }
-    
-    // 2. Если есть mint address - пробуем использовать img.pump.fun
+    // Pump.fun использует img.pump.fun с путем /images/{mint}
     if (token.mint) {
-      // Pump.fun использует этот паттерн для изображений
-      const pumpImageUrl = `https://img.pump.fun/images/${token.mint}`;
-      return pumpImageUrl;
+      return `https://img.pump.fun/${token.mint}`;
     }
-    
-    // 3. Если есть metadataUri - пробуем нормализовать
-    if (token.metadataUri) {
-      return this.normalizeImageUrl(token.metadataUri);
-    }
-    
-    // 4. Если есть uri - пробуем нормализовать
-    if (token.uri) {
-      return this.normalizeImageUrl(token.uri);
-    }
-    
-    return placeholder;
+    return '/placeholder.png';
   }
-
+    
   /**
    * Нормализация URL изображения
    */
