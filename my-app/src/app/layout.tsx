@@ -3,9 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { TranslationProvider } from "@/contexts/TranslationContext";
+import MainContent from "@/components/MainContent";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -41,11 +39,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TranslationProvider>
-            <Header />
-            <main className="flex-1 pb-14">{children}</main>
-            <Footer />
-          </TranslationProvider>
+          <MainContent>{children}</MainContent>
         </ThemeProvider>
       </body>
     </html>
