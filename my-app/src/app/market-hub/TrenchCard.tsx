@@ -78,17 +78,6 @@ export default function TrenchCard({
 
   const displayImage = getImageSrc(imageUrl || logo || '');
 
-  // Функция для обработки IPFS изображений
-  const getImageSrc = (src: string) => {
-    if (src.startsWith('ipfs://')) {
-      return src.replace('ipfs://', 'https://cloudflare-ipfs.com/ipfs/');
-    }
-    if (!src.startsWith('http') && !src.startsWith('/')) {
-      return `https://cloudflare-ipfs.com/ipfs/${src}`;
-    }
-    return src;
-  };
-
   return (
     <div 
       className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer"
@@ -160,5 +149,3 @@ export default function TrenchCard({
     </div>
   );
 }
-
-console.log('Token data:', { imageUrl: token.imageUrl, metadataUri: token.metadataUri, uri: token.uri });
