@@ -75,9 +75,17 @@ export interface TokenMarketData {
 export class PumpFunApiService {
   private baseUrl: string;
   private authToken: string | null = null;
+  public useProxy: boolean = true; // Использовать прокси для обхода CORS
 
   constructor(baseUrl: string = 'https://frontend-api-v3.pump.fun') {
     this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Включить/выключить прокси
+   */
+  setProxyEnabled(enabled: boolean) {
+    this.useProxy = enabled;
   }
 
   /**
@@ -94,7 +102,6 @@ export class PumpFunApiService {
     const config: any = {
       headers: {
         'Accept': 'application/json',
-        'Origin': 'https://pump.fun',
       }
     };
 
@@ -106,21 +113,40 @@ export class PumpFunApiService {
   }
 
   /**
+   * Получить URL для запроса (с прокси или напрямую)
+   */
+  private getApiUrl(path: string, params?: URLSearchParams): string {
+    if (this.useProxy) {
+      const proxyUrl = '/api/pump-proxy';
+      const fullParams = new URLSearchParams(params?.toString() || '');
+      fullParams.set('endpoint', path);
+      return `${proxyUrl}?${fullParams.toString()}`;
+    }
+    
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      url.search = params.toString();
+    }
+    return url.toString();
+  }
+
+  /**
    * Получить список токенов с фильтрами
    */
   async getCoins(params?: PumpCoinsParams): Promise<PumpCoinsResponse> {
-    const url = new URL(`${this.baseUrl}/coins`);
+    const urlSearchParams = new URLSearchParams();
     
     if (params) {
-      if (params.orderBy) url.searchParams.append('orderBy', params.orderBy);
-      if (params.orderDirection) url.searchParams.append('orderDirection', params.orderDirection);
-      if (params.limit) url.searchParams.append('limit', params.limit.toString());
-      if (params.cursor) url.searchParams.append('cursor', params.cursor);
-      if (params.createdAtGte) url.searchParams.append('createdAtGte', params.createdAtGte.toString());
-      if (params.createdAtLte) url.searchParams.append('createdAtLte', params.createdAtLte.toString());
+      if (params.orderBy) urlSearchParams.append('orderBy', params.orderBy);
+      if (params.orderDirection) urlSearchParams.append('orderDirection', params.orderDirection);
+      if (params.limit) urlSearchParams.append('limit', params.limit.toString());
+      if (params.cursor) urlSearchParams.append('cursor', params.cursor);
+      if (params.createdAtGte) urlSearchParams.append('createdAtGte', params.createdAtGte.toString());
+      if (params.createdAtLte) urlSearchParams.append('createdAtLte', params.createdAtLte.toString());
     }
 
-    const response = await axios.get<PumpCoinsResponse>(url.toString(), this.getAxiosConfig());
+    const url = this.getApiUrl('/coins', urlSearchParams);
+    const response = await axios.get<PumpCoinsResponse>(url, this.getAxiosConfig());
     return response.data;
   }
 
@@ -128,10 +154,11 @@ export class PumpFunApiService {
    * Получить трендовые токены
    */
   async getTrendingCoins(limit: number = 50): Promise<PumpToken[]> {
-    const response = await axios.get<PumpCoinsResponse>(
-      `${this.baseUrl}/coins/trending`,
-      { ...this.getAxiosConfig(), params: { limit } }
-    );
+    const urlSearchParams = new URLSearchParams();
+    urlSearchParams.append('limit', limit.toString());
+    
+    const url = this.getApiUrl('/coins/trending', urlSearchParams);
+    const response = await axios.get<PumpCoinsResponse>(url, this.getAxiosConfig());
     return response.data.coins || [];
   }
 
@@ -146,16 +173,14 @@ export class PumpFunApiService {
       cursor,
     });
   }
-
+    
   /**
    * Получить токены по конкретному ID/mint address
    */
   async getCoinById(mint: string): Promise<PumpToken | null> {
     try {
-      const response = await axios.get<PumpToken>(
-        `${this.baseUrl}/coins/${mint}`,
-        this.getAxiosConfig()
-      );
+      const url = this.getApiUrl(`/coins/${mint}`);
+      const response = await axios.get<PumpToken>(url, this.getAxiosConfig());
       return response.data;
     } catch (error) {
       console.error(`Error fetching coin ${mint}:`, error);
@@ -276,4 +301,6 @@ export class PumpFunApiService {
 
 // Экспорт singleton instance
 export const pumpFunApi = new PumpFunApiService();
+// Принудительно включаем прокси
+pumpFunApi.setProxyEnabled(true);
 
