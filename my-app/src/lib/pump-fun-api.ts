@@ -236,9 +236,15 @@ export class PumpFunApiService {
       return `$${num.toFixed(2)}`;
     };
 
+    // Формируем полный URL изображения
+    let imageUrl = token.imageUrl || '/placeholder.png';
+    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+      imageUrl = `https://cloudflare-ipfs.com/ipfs/${imageUrl}`;
+    }
+
     return {
       rank: rank.toString(),
-      logo: token.imageUrl || token.metadataUri || '/placeholder.png',
+      logo: imageUrl,
       name: token.name || token.symbol || 'Unknown',
       symbol: token.symbol || '',
       mint: token.mint,
@@ -252,7 +258,7 @@ export class PumpFunApiService {
       trades: (token.trades || token.trades24h || 0).toString(),
       holders: (token.holders || 0).toString(),
       isVerified: token.isVerified || false,
-      imageUrl: token.imageUrl,
+      imageUrl: imageUrl,
       metadataUri: token.metadataUri,
     };
   }
