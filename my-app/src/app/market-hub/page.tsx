@@ -144,22 +144,28 @@ export default function MarketHubPage() {
 
       {/* Three Columns of Trenches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* New Column (was Trending) */}
+        {/* New Column - получает новые токены в реальном времени */}
         <TrenchColumn
           title="New"
-          icon={<TrendingUp className="h-5 w-5" />}
+          columnType="new"
+          enableAutoRefresh={true}
+          refreshInterval={5000}
         />
 
-        {/* Soon Column (was New) */}
+        {/* Soon Column - получает трендовые токены */}
         <TrenchColumn
           title="Soon"
-          icon={<Flame className="h-5 w-5" />}
+          columnType="soon"
+          enableAutoRefresh={true}
+          refreshInterval={10000}
         />
 
-        {/* Migration Column (was Recent) */}
+        {/* Migration Column - получает токены близкие к миграции */}
         <TrenchColumn
           title="Migration"
-          icon={<Clock className="h-5 w-5" />}
+          columnType="migration"
+          enableAutoRefresh={true}
+          refreshInterval={15000}
         />
       </div>
     </div>

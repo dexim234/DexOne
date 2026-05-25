@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { formatSolanaAddress, getSolanaExplorerUrl } from "@/lib/solana-config";
 
 interface TrenchCardProps {
   rank: string;
@@ -16,6 +17,8 @@ interface TrenchCardProps {
   trades: string;
   holders: string;
   isVerified?: boolean;
+  mint?: string;
+  imageUrl?: string;
 }
 
 export default function TrenchCard({
@@ -32,18 +35,32 @@ export default function TrenchCard({
   trades,
   holders,
   isVerified = false,
+  mint,
+  imageUrl,
 }: TrenchCardProps) {
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
   const isNegative = (val: string) => val.includes("-");
 
+  const handleCardClick = () => {
+    if (mint) {
+      const url = getSolanaExplorerUrl(mint);
+      window.open(url, '_blank');
+    }
+  };
+
+  const displayImage = imageUrl || logo || '/placeholder.png';
+
   return (
-    <div className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer">
+    <div 
+      className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer"
+      onClick={handleCardClick}
+    >
       {/* Header with Rank, Logo, Name */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs text-muted-foreground w-4">{rank}</span>
         <div className="relative h-8 w-8 flex-shrink-0">
           <Image
-            src={logo}
+            src={displayImage}
             alt={name}
             width={32}
             height={32}
