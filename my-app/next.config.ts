@@ -10,11 +10,15 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'img.pump.fun',
+        hostname: 'cloudflare-ipfs.com',
       },
       {
         protocol: 'https',
-        hostname: 'cloudflare-ipfs.com',
+        hostname: 'ipfs.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'arweave.net',
       },
     ],
   },
