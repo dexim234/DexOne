@@ -73,21 +73,41 @@ export default function TrenchColumn({ title, icon, room }: TrenchColumnProps) {
   const [tokens, setTokens] = useState<PumpPortalToken[]>([]);
 
   useEffect(() => {
-    if (!room) return;
+    // Подписываемся на все обновления токенов
+    const handleAllTokens = (_receivedRoom: Rooms, newTokens: PumpPortalToken[]) => {
+      setTokens((prev) => {
+        const existingAddresses = new Set(prev.map((t) => t.address));
+        const uniqueNew = newTokens.filter((t) => !existingAddresses.has(t.address));
+        
+        let filtered = [...uniqueNew, ...prev].slice(0, 50);
 
-    const handleTokenUpdate = (receivedRoom: Rooms, newTokens: PumpPortalToken[]) => {
-      if (receivedRoom === room) {
-        setTokens((prev) => {
-          const existingAddresses = new Set(prev.map((t) => t.address));
-          const uniqueNew = newTokens.filter((t) => !existingAddresses.has(t.address));
-          return [...uniqueNew, ...prev].slice(0, 50);
-        });
-      }
+        // Фильтрация по типу колонки
+        if (room === Rooms.NEW_PAIRS) {
+          // New: последние 20 токенов
+          filtered = filtered.slice(0, 20);
+        } else if (room === Rooms.SOON) {
+          // Soon: токены от 1 до 10 минут
+          const now = Date.now();
+          filtered = filtered.filter((t) => {
+            const age = Math.floor((now - new Date(t.created_at).getTime()) / 1000);
+            return age >= 60 && age < 600;
+          });
+        } else if (room === Rooms.RECENT) {
+          // Recent/Migration: токены старше 10 минут
+          const now = Date.now();
+          filtered = filtered.filter((t) => {
+            const age = Math.floor((now - new Date(t.created_at).getTime()) / 1000);
+            return age >= 600;
+          });
+        }
+
+        return filtered;
+      });
     };
 
     const client = getWebSocketClient(WS_CONFIG.URL);
     client.connect();
-    const unsubscribe = client.subscribe(room, handleTokenUpdate);
+    const unsubscribe = client.subscribe(Rooms.NEW_PAIRS, handleAllTokens);
 
     return () => {
       unsubscribe();
@@ -98,7 +118,11 @@ export default function TrenchColumn({ title, icon, room }: TrenchColumnProps) {
     if (tokens.length === 0) {
       return (
         <div className="text-center py-8 text-muted-foreground text-sm">
-          Ожидание новых токенов...
+          {room === Rooms.NEW_PAIRS 
+            ? "Ожидание новых токенов..." 
+            : room === Rooms.SOON
+            ? "Нет токенов 1-10 мин"
+            : "Нет токенов >10 мин"}
         </div>
       );
     }
