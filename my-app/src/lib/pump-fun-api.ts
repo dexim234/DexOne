@@ -277,5 +277,3 @@ export class PumpFunApiService {
 // Экспорт singleton instance
 export const pumpFunApi = new PumpFunApiService();
 
-// Экспорт типов
-export type { PumpToken, PumpCoinsResponse, PumpCoinsParams, TokenMarketData };
