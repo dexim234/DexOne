@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Activity, Brain, Bell, Phone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import {
@@ -30,25 +31,107 @@ const aboutMenuItems = [
   { label: "Terms of Use", href: "#", icon: FileText },
 ];
 
-// BingX trading links
+// BingX price links (correct format)
 const bingxLinks = {
-  SOL: "https://bingx.com/ru-ru/spot/trade/SOL_USDT/",
-  BTC: "https://bingx.com/ru-ru/spot/trade/BTC_USDT/",
-  ETH: "https://bingx.com/ru-ru/spot/trade/ETH_USDT/",
-  BNB: "https://bingx.com/ru-ru/spot/trade/BNB_USDT/",
+  SOL: "https://bingx.com/ru/price/solana/",
+  BTC: "https://bingx.com/ru/price/bitcoin/",
+  ETH: "https://bingx.com/ru/price/ethereum/",
+  BNB: "https://bingx.com/ru/price/bnb/",
 };
 
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
+  const [cryptoPrices, setCryptoPrices] = useState<{
+    SOL: { price: string; change: string };
+    BTC: { price: string; change: string };
+    ETH: { price: string; change: string };
+    BNB: { price: string; change: string };
+  } | null>(null);
 
-  // Default crypto prices (no loading state, static data)
-  const cryptoPrices = {
-    SOL: { price: "142.35", change: "+2.4%" },
-    BTC: { price: "67432.50", change: "+1.8%" },
-    ETH: { price: "3542.80", change: "+3.2%" },
-    BNB: { price: "598.45", change: "+0.9%" },
-  };
+  useEffect(() => {
+    async function fetchCryptoPrices() {
+      try {
+        // Fetch price and 24h change from Binance
+        const [solRes, btcRes, ethRes, bnbRes] = await Promise.all([
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT'),
+          fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT'),
+        ]);
+
+        const [solData, btcData, ethData, bnbData] = await Promise.all([
+          solRes.json(),
+          btcRes.json(),
+          ethRes.json(),
+          bnbRes.json(),
+        ]);
+
+        setCryptoPrices({
+          SOL: { 
+            price: parseFloat(solData.lastPrice).toFixed(2), 
+            change: `${parseFloat(solData.priceChangePercent).toFixed(2)}%` 
+          },
+          BTC: { 
+            price: parseFloat(btcData.lastPrice).toFixed(2), 
+            change: `${parseFloat(btcData.priceChangePercent).toFixed(2)}%` 
+          },
+          ETH: { 
+            price: parseFloat(ethData.lastPrice).toFixed(2), 
+            change: `${parseFloat(ethData.priceChangePercent).toFixed(2)}%` 
+          },
+          BNB: { 
+            price: parseFloat(bnbData.lastPrice).toFixed(2), 
+            change: `${parseFloat(bnbData.priceChangePercent).toFixed(2)}%` 
+          },
+        });
+      } catch (error) {
+        console.error('Failed to fetch crypto prices from Binance:', error);
+        // Fallback prices
+        setCryptoPrices({
+          SOL: { price: "142.35", change: "+2.4%" },
+          BTC: { price: "67432.50", change: "+1.8%" },
+          ETH: { price: "3542.80", change: "+3.2%" },
+          BNB: { price: "598.45", change: "+0.9%" },
+        });
+      }
+    }
+    
+    fetchCryptoPrices();
+    const interval = setInterval(fetchCryptoPrices, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!cryptoPrices) {
+    return (
+      <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30 font-outfit">
+        <div className="flex h-14 items-center justify-between px-4 lg:px-6">
+          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {leftItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-foreground hover:bg-accent/50 hover:scale-102"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="flex items-center gap-2.5 ml-4">
+            <div className="hidden lg:flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-muted/30 px-3 py-2 rounded-xl border border-border/30">
+                <span className="text-sm font-medium text-muted-foreground">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30 font-outfit">
@@ -81,7 +164,7 @@ export default function Footer() {
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
             ].map(({ coin, file, bingxLink }) => {
               const price = cryptoPrices[coin as keyof typeof cryptoPrices];
-              const isPositive = price.change.startsWith('+');
+              const isPositive = !price.change.startsWith('-');
               return (
                 <a
                   key={coin}
@@ -149,6 +232,9 @@ export default function Footer() {
                   />
                   <span className="font-extrabold text-foreground text-xs">
                     ${price.price}
+                  </span>
+                  <span className={`text-[9px] font-bold ${price.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>
+                    {price.change}
                   </span>
                 </a>
               );
