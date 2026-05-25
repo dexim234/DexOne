@@ -110,18 +110,27 @@ export class WebSocketClient {
     // Обработка сообщений от pumpportal.fun
     const { event, method, ...rest } = data;
     
-    // Обрабатываем разные типы событий
-    if (event === 'newToken') {
-      const token: PumpPortalToken = rest;
+    // PumpPortal отправляет newToken как метод или event
+    if (method === 'newToken' || event === 'newToken' || event === 'new_pair') {
+      const token: PumpPortalToken = { ...data, method: undefined, event: undefined };
       this.emitToRoom(Rooms.NEW_PAIRS, [token]);
-    } else if (event === 'trade') {
-      const trade: PumpPortalTrade = rest;
+    } else if (event === 'trade' || method === 'trade') {
+      const trade: PumpPortalTrade = data;
       this.emitToRoom(Rooms.RECENT, [trade]);
-    } else if (event === 'migration') {
+    } else if (event === 'migration' || method === 'migration') {
       console.log('[Migration]', data);
+    } else if (event === 'add_list' || method === 'add_list') {
+      // Обработка списка токенов
+      if (data.tokens && Array.isArray(data.tokens)) {
+        this.emitToRoom(Rooms.NEW_PAIRS, data.tokens);
+      }
     } else if (method) {
       // Ответ на подписку
       console.log('[Subscribe Response]', method, data);
+    } else if (data.name && data.symbol && data.address) {
+      // Универсальный токен без event/method
+      const token: PumpPortalToken = data;
+      this.emitToRoom(Rooms.NEW_PAIRS, [token]);
     } else {
       // Универсальная обработка
       console.log('[WebSocket Message]', data);
@@ -130,7 +139,9 @@ export class WebSocketClient {
 
   private emitToRoom(room: Rooms, tokens: any[]): void {
     const handlers = this.handlers.get('all');
-    handlers?.forEach(handler => handler(room, tokens));
+    if (handlers) {
+      handlers.forEach(handler => handler(room, tokens));
+    }
   }
 
   subscribe(room: Rooms, handler: TokenHandler): () => void {
