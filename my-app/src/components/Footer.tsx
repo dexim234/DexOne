@@ -80,7 +80,7 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30">
+    <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30 font-outfit">
       <div className="flex h-14 items-center justify-between px-4 lg:px-6">
         {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -90,7 +90,7 @@ export default function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-102"
+                className="flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-foreground hover:bg-accent/50 hover:scale-102"
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
@@ -166,7 +166,7 @@ export default function Footer() {
           {/* About dropdown menu */}
           <DropdownMenu>
             <DropdownMenuTrigger>
-              <button className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent/50">
+              <button className="inline-flex items-center gap-1 text-xs font-extrabold text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-accent/50">
                 <span>About</span>
                 <ChevronUp className="h-3 w-3 opacity-50" />
               </button>
@@ -175,7 +175,7 @@ export default function Footer() {
               {aboutMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <DropdownMenuItem key={item.href} className="gap-2.5 cursor-pointer px-3 py-2 text-xs font-semibold rounded-md hover:bg-accent/50">
+                  <DropdownMenuItem key={item.href} className="gap-2.5 cursor-pointer px-3 py-2 text-xs font-extrabold rounded-md hover:bg-accent/50">
                     <Icon className="h-3.5 w-3.5" />
                     {item.label}
                   </DropdownMenuItem>

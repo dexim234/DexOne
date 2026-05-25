@@ -97,7 +97,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="group flex items-center gap-2 px-3.5 py-2 text-base font-extrabold rounded-lg transition-all duration-300 tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/80 hover:scale-102"
+                className="group flex items-center gap-2 px-3.5 py-2 text-base font-extrabold rounded-lg transition-all duration-300 tracking-tight text-foreground hover:bg-accent/80 hover:scale-102"
               >
                 <span className="tracking-wide">{t(item.transKey)}</span>
               </Link>
@@ -123,7 +123,7 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg transition-all h-9 w-9"
+            className="relative text-foreground hover:bg-accent/50 rounded-lg transition-all h-9 w-9"
           >
             <Bell className="h-4.5 w-4.5" />
           </Button>
@@ -131,23 +131,23 @@ export default function Header() {
           {/* Wallet dropdown with theme and language */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="hidden sm:flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/30 border-border/50 cursor-pointer px-3.5 py-2 rounded-lg hover:bg-accent/50 transition-all"
+              className="hidden sm:flex items-center gap-2 text-xs font-bold text-foreground bg-muted/30 border-border/50 cursor-pointer px-3.5 py-2 rounded-lg hover:bg-accent/50 transition-all"
             >
-              <Wallet className="h-3.5 w-3.5" />
+              <Wallet className="h-3.5 w-3.5 text-foreground" />
               <span className="max-w-[70px] truncate">Connect</span>
-              <ChevronDown className="h-3 w-3 opacity-50" />
+              <ChevronDown className="h-3 w-3 text-foreground opacity-50" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-4">
               {/* Header */}
               <div className="mb-4 pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("connect.settings")}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">{t("connect.settings")}</span>
                 </div>
                 
                 {/* Theme toggle */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Moon className="h-3.5 w-3.5 text-foreground" />
                     <span className="text-sm font-semibold text-foreground">{t("connect.theme")}</span>
                   </div>
                   <Button
@@ -167,7 +167,7 @@ export default function Header() {
                 {/* Language selector */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Globe className="h-3.5 w-3.5 text-foreground" />
                     <span className="text-sm font-semibold text-foreground">{t("connect.language")}</span>
                   </div>
                   <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
@@ -193,7 +193,7 @@ export default function Header() {
 
               {/* Wallet connections */}
               <div className="mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 block">
                   {t("connect.connectWallet")}
                 </span>
                 <div className="space-y-2">
@@ -212,9 +212,9 @@ export default function Header() {
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-sm text-foreground">{t("connect.phantom")}</div>
-                      <div className="text-xs text-muted-foreground">{t("connect.phantomDesc")}</div>
+                      <div className="text-xs text-foreground">{t("connect.phantomDesc")}</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
@@ -232,9 +232,9 @@ export default function Header() {
                     </div>
                     <div className="flex-1">
                       <div className="font-semibold text-sm text-foreground">{t("connect.solflare")}</div>
-                      <div className="text-xs text-muted-foreground">{t("connect.solflareDesc")}</div>
+                      <div className="text-xs text-foreground">{t("connect.solflareDesc")}</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
                 </div>
               </div>
@@ -261,14 +261,14 @@ export default function Header() {
           {/* Mobile menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
-              className="md:hidden inline-flex items-center justify-center h-8.5 w-8.5 text-muted-foreground hover:text-foreground bg-muted/30 border-border/50 cursor-pointer rounded-lg hover:bg-accent/50 transition-all"
+              className="md:hidden inline-flex items-center justify-center h-8.5 w-8.5 text-foreground bg-muted/30 border-border/50 cursor-pointer rounded-lg hover:bg-accent/50 transition-all"
             >
               <Menu className="h-4.5 w-4.5" />
             </SheetTrigger>
             <SheetContent side="right" className="w-80 bg-background/95 backdrop-blur-xl">
               <div className="flex flex-col gap-5 mt-5">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground" />
                   <Input
                     type="text"
                     placeholder={t("search.placeholder")}
@@ -284,7 +284,7 @@ export default function Header() {
                         key={item.href}
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold rounded-lg transition-all tracking-tight text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold rounded-lg transition-all tracking-tight text-foreground hover:bg-accent/50"
                       >
                         {item.label}
                       </Link>
