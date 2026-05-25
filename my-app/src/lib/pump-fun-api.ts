@@ -148,6 +148,21 @@ export class PumpFunApiService {
     const url = this.getApiUrl('/coins', urlSearchParams);
     const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
     
+    // Логируем структуру первого токена для отладки
+    const data = Array.isArray(response.data) ? response.data : (response.data.coins || []);
+    if (data.length > 0) {
+      const first = data[0];
+      console.log('[Pump API] Raw token keys:', Object.keys(first));
+      console.log('[Pump API] First token:', {
+        mint: first.mint,
+        name: first.name,
+        imageUrl: first.imageUrl,
+        metadataUri: first.metadataUri,
+        uri: first.uri,
+        profile: (first as any).profile,
+      });
+    }
+    
     // Обработка разных форматов ответа
     if (Array.isArray(response.data)) {
       return {
@@ -159,10 +174,9 @@ export class PumpFunApiService {
   }
 
   /**
-   * Получить трендовые токены (используем /coins с сортировкой)
+   * Получить трендовые токены (топ по объему)
    */
   async getTrendingCoins(limit: number = 50): Promise<PumpToken[]> {
-    // /coins/trending не работает, используем /coins с сортировкой по объему
     const response = await this.getCoins({
       orderBy: 'volume24h',
       orderDirection: 'desc',
@@ -256,66 +270,52 @@ export class PumpFunApiService {
    * Получить URL изображения токена
    */
   private getTokenImageUrl(token: PumpToken): string {
-    // 1. Если есть uri с metadata - пробуем получить image оттуда
-    if (token.uri && token.uri.startsWith('https://arweave.net')) {
-      // Arweave metadata
-      return `https://arweave.net/${token.uri.replace('https://arweave.net/', '')}/image`;
+    // Проверяем profile.image (часто используется в Pump.fun API)
+    const anyToken = token as any;
+    if (anyToken.profile?.image) {
+      return this.normalizeIpfsUrl(anyToken.profile.image);
     }
     
-    // 2. Если есть metadataUri с IPFS
-    if (token.metadataUri) {
-      if (token.metadataUri.startsWith('ipfs://')) {
-        return `https://cloudflare-ipfs.com/ipfs/${token.metadataUri.replace('ipfs://', '')}`;
-      }
-      if (token.metadataUri.includes('ipfs/')) {
-        return token.metadataUri;
-      }
-    }
-    
-    // 3. Если есть imageUrl
+    // 1. Если есть imageUrl
     if (token.imageUrl) {
-      return token.imageUrl;
+      return this.normalizeIpfsUrl(token.imageUrl);
     }
     
-    // 4. Если есть uri
+    // 2. Если есть metadataUri
+    if (token.metadataUri) {
+      return this.normalizeIpfsUrl(token.metadataUri);
+    }
+    
+    // 3. Если есть uri
     if (token.uri) {
-      if (token.uri.startsWith('ipfs://')) {
-        return `https://cloudflare-ipfs.com/ipfs/${token.uri.replace('ipfs://', '')}`;
-      }
-      return token.uri;
+      return this.normalizeIpfsUrl(token.uri);
     }
     
     return '/placeholder.png';
   }
     
   /**
-   * Нормализация URL изображения
+   * Нормализация IPFS URL
    */
-  private normalizeImageUrl(url: string): string {
+  private normalizeIpfsUrl(url: string): string {
     if (!url) return '/placeholder.png';
     
-    // Если уже полный HTTP URL
+    // Уже HTTP(S)
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    // IPFS через Cloudflare
+    // IPFS протокол
     if (url.startsWith('ipfs://')) {
-      return `https://cloudflare-ipfs.com/ipfs/${url.replace('ipfs://', '')}`;
+      return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
     }
     
-    // IPFS с /ipfs/
-    if (url.includes('/ipfs/')) {
-      return url.replace('ipfs:', 'https:').replace('//ipfs/', '/ipfs/');
+    // Хэш IPFS (44 символа для base58)
+    if (url.length === 44 || url.length === 46) {
+      return `https://pump.mypinata.cloud/ipfs/${url}`;
     }
     
-    // Просто хэш IPFS
-    if (url.length === 44 || url.length === 43) {
-      return `https://cloudflare-ipfs.com/ipfs/${url}`;
-    }
-    
-    // Относительный путь - пробуем IPFS
-    return `https://cloudflare-ipfs.com/ipfs/${url}`;
+    return url;
   }
 
   /**
