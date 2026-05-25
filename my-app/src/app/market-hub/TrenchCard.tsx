@@ -48,35 +48,7 @@ export default function TrenchCard({
     }
   };
 
-  // Функция для обработки IPFS изображений
-  const getImageSrc = (src: string) => {
-    if (!src) return '/placeholder.png';
-    
-    // Если уже полный HTTP URL
-    if (src.startsWith('http://') || src.startsWith('https://')) {
-      return src;
-    }
-    
-    // IPFS через Cloudflare
-    if (src.startsWith('ipfs://')) {
-      return `https://cloudflare-ipfs.com/ipfs/${src.replace('ipfs://', '')}`;
-    }
-    
-    // IPFS с /ipfs/
-    if (src.includes('/ipfs/')) {
-      return src.replace('ipfs:', 'https:').replace('//ipfs/', '/ipfs/');
-    }
-    
-    // Просто хэш IPFS (43-44 символа)
-    if (src.length === 44 || src.length === 43) {
-      return `https://cloudflare-ipfs.com/ipfs/${src}`;
-    }
-    
-    // Относительный путь - пробуем IPFS
-    return `https://cloudflare-ipfs.com/ipfs/${src}`;
-  };
-
-  const displayImage = getImageSrc(imageUrl || logo || '');
+  const displayImage = imageUrl || logo || '';
 
   return (
     <div 
@@ -88,7 +60,7 @@ export default function TrenchCard({
         <span className="text-xs text-muted-foreground w-4">{rank}</span>
         <div className="relative h-8 w-8 flex-shrink-0">
           <Image
-            src={displayImage || '/placeholder.png'}
+            src={displayImage}
             alt={name}
             width={32}
             height={32}
