@@ -72,7 +72,7 @@ export interface TokenMarketData {
   metadataUri?: string;
 }
 
-class PumpFunApiService {
+export class PumpFunApiService {
   private baseUrl: string;
   private authToken: string | null = null;
 
