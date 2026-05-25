@@ -236,10 +236,20 @@ export class PumpFunApiService {
       return `$${num.toFixed(2)}`;
     };
 
-    // Формируем полный URL изображения
-    let imageUrl = token.imageUrl || '/placeholder.png';
-    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
-      imageUrl = `https://cloudflare-ipfs.com/ipfs/${imageUrl}`;
+    // Формируем URL изображения - пробуем несколько источников
+    let imageUrl = '/placeholder.png';
+    
+    // 1. Проверка imageUrl
+    if (token.imageUrl) {
+      imageUrl = this.normalizeImageUrl(token.imageUrl);
+    }
+    // 2. Проверка metadataUri с ipfs:// prefix
+    else if (token.metadataUri) {
+      imageUrl = this.normalizeImageUrl(token.metadataUri);
+    }
+    // 3. URI из токена
+    else if (token.uri) {
+      imageUrl = this.normalizeImageUrl(token.uri);
     }
 
     return {
@@ -261,6 +271,36 @@ export class PumpFunApiService {
       imageUrl: imageUrl,
       metadataUri: token.metadataUri,
     };
+  }
+
+  /**
+   * Нормализация URL изображения
+   */
+  private normalizeImageUrl(url: string): string {
+    if (!url) return '/placeholder.png';
+    
+    // Если уже полный HTTP URL
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // IPFS через Cloudflare
+    if (url.startsWith('ipfs://')) {
+      return `https://cloudflare-ipfs.com/ipfs/${url.replace('ipfs://', '')}`;
+    }
+    
+    // IPFS с /ipfs/
+    if (url.includes('/ipfs/')) {
+      return url.replace('ipfs:', 'https:').replace('//ipfs/', '/ipfs/');
+    }
+    
+    // Просто хэш IPFS
+    if (url.length === 44 || url.length === 43) {
+      return `https://cloudflare-ipfs.com/ipfs/${url}`;
+    }
+    
+    // Относительный путь - пробуем IPFS
+    return `https://cloudflare-ipfs.com/ipfs/${url}`;
   }
 
   /**
