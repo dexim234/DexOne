@@ -151,16 +151,21 @@ export class PumpFunApiService {
     // Логируем структуру первого токена для отладки
     const data = Array.isArray(response.data) ? response.data : (response.data.coins || []);
     if (data.length > 0) {
-      const first = data[0];
-      console.log('[Pump API] Raw token keys:', Object.keys(first));
-      console.log('[Pump API] First token:', {
+      const first = data[0] as any;
+      console.log('[Pump API] Token keys:', Object.keys(first).join(', '));
+      console.log('[Pump API] Token data:', JSON.stringify({
         mint: first.mint,
         name: first.name,
+        symbol: first.symbol,
         imageUrl: first.imageUrl,
         metadataUri: first.metadataUri,
         uri: first.uri,
-        profile: (first as any).profile,
-      });
+        profileImage: first.profile?.image,
+        profileImageUrl: first.profile?.imageUrl,
+        profileUri: first.profile?.uri,
+        creatorImage: first.creator?.image,
+        image: first.image,
+      }, null, 2));
     }
     
     // Обработка разных форматов ответа
