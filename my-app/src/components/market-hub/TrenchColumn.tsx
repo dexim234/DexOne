@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, Star } from "lucide-react";
+import { Filter } from "lucide-react";
 
 interface TrenchData {
   rank: string;
@@ -21,24 +21,21 @@ interface TrenchData {
 interface TrenchColumnProps {
   title: string;
   icon: React.ReactNode;
-  trenches: TrenchData[];
+  trenches?: TrenchData[];
 }
 
 export default function TrenchColumn({ title, icon }: TrenchColumnProps) {
   return (
-    <div className="bg-card rounded-lg border p-3">
+    <div className="bg-card rounded-xl border p-4">
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
           {icon}
-          <h3 className="font-semibold text-sm">{title}</h3>
+          <h3 className="font-semibold text-base">{title}</h3>
         </div>
         <div className="flex items-center gap-1">
-          <button className="p-1 hover:bg-accent rounded transition-colors">
-            <Filter className="h-3 w-3 text-muted-foreground" />
-          </button>
-          <button className="p-1 hover:bg-accent rounded transition-colors">
-            <Star className="h-3 w-3 text-muted-foreground" />
+          <button className="p-1.5 hover:bg-accent rounded-lg transition-colors">
+            <Filter className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
       </div>
