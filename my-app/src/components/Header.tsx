@@ -69,7 +69,7 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 font-outfit">
       <div className="flex h-14 items-center px-4 lg:px-8">
         {/* Logo */}
         <Link href="/market-hub" className="flex items-center gap-2.5 shrink-0 mr-8">

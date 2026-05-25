@@ -126,13 +126,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                 <motion.div
                   key={i}
                   initial={{ 
-                    x: Math.random() * window.innerWidth,
-                    y: window.innerHeight + 50,
+                    x: `${10 + i * 15}%`,
+                    y: '110%',
                     opacity: 0
                   }}
                   animate={{ 
-                    y: -50,
-                    opacity: [0, 0.3, 0]
+                    y: '-10%',
+                    opacity: [0, 0.5, 0]
                   }}
                   transition={{
                     duration: 4 + Math.random() * 2,
@@ -141,9 +141,6 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                     ease: "linear"
                   }}
                   className="absolute w-2 h-2 rounded-full bg-gradient-to-r from-teal to-purple"
-                  style={{
-                    left: `${10 + i * 15}%`,
-                  }}
                 />
               ))}
             </div>
