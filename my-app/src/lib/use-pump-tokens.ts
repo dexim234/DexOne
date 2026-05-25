@@ -2,10 +2,19 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
 import { pumpWebSocket, PumpEventType } from './pump-websocket';
 
-interface UsePumpTokensOptions {
+export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
-  refreshInterval?: number; // Интервал опроса в миллисекундах
-  enableWebSocket?: boolean; // Включить WebSocket для реального времени
+  refreshInterval?: number;
+  enableWebSocket?: boolean;
+}
+
+export interface UsePumpTokensReturn {
+  tokens: TokenMarketData[];
+  isLoading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+  lastUpdate: Date | null;
+  wsConnected: boolean;
 }
 
 interface UsePumpTokensReturn {
