@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Flame, Clock, TrendingUp, Wallet, Eye, Save, EyeOff } from "lucide-react";
+import { Wallet, Eye, Save, EyeOff } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 
 export default function MarketHubPage() {
