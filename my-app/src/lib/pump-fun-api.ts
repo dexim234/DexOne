@@ -2,23 +2,26 @@ import axios from 'axios';
 
 // Типы данных для токенов Pump.fun
 export interface PumpToken {
-  uri: string;
+  uri?: string;
   name: string;
   symbol: string;
-  metadataUri: string;
+  metadataUri?: string;
+  metadata_uri?: string;
+  image_uri?: string;
   mint: string;
-  mintAuthority: string;
-  freezeAuthority: string | null;
-  decimals: number;
-  createdTimestamp: number;
-  showHowToUse: boolean;
-  family: string;
+  mintAuthority?: string;
+  freezeAuthority?: string | null;
+  decimals?: number;
+  createdTimestamp?: number;
+  showHowToUse?: boolean;
+  family?: string;
   virtualSolReserves?: number;
   virtualTokenReserves?: number;
   realSolReserves?: number;
   realTokenReserves?: number;
   totalSupply?: number;
   marketCap?: number;
+  usd_market_cap?: number;
   price?: number;
   priceChange1h?: number;
   priceChange24h?: number;
@@ -32,6 +35,10 @@ export interface PumpToken {
   liquidity?: number;
   isVerified?: boolean;
   imageUrl?: string;
+  description?: string;
+  twitter?: string;
+  creator?: string;
+  complete?: boolean;
 }
 
 // Интерфейс для ответа API
@@ -148,26 +155,6 @@ export class PumpFunApiService {
     const url = this.getApiUrl('/coins', urlSearchParams);
     const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
     
-    // Логируем структуру первого токена для отладки
-    const data = Array.isArray(response.data) ? response.data : (response.data.coins || []);
-    if (data.length > 0) {
-      const first = data[0] as any;
-      console.log('[Pump API] Token keys:', Object.keys(first).join(', '));
-      console.log('[Pump API] Token data:', JSON.stringify({
-        mint: first.mint,
-        name: first.name,
-        symbol: first.symbol,
-        imageUrl: first.imageUrl,
-        metadataUri: first.metadataUri,
-        uri: first.uri,
-        profileImage: first.profile?.image,
-        profileImageUrl: first.profile?.imageUrl,
-        profileUri: first.profile?.uri,
-        creatorImage: first.creator?.image,
-        image: first.image,
-      }, null, 2));
-    }
-    
     // Обработка разных форматов ответа
     if (Array.isArray(response.data)) {
       return {
@@ -250,13 +237,16 @@ export class PumpFunApiService {
 
     const imageUrl = this.getTokenImageUrl(token);
 
+    const anyToken = token as any;
+    const marketCap = anyToken.usd_market_cap || token.marketCap || token.virtualSolReserves || 0;
+    
     return {
       rank: rank.toString(),
       logo: imageUrl,
       name: token.name || token.symbol || 'Unknown',
       symbol: token.symbol || '',
       mint: token.mint,
-      mc: formatNumber(token.marketCap || token.virtualSolReserves || 0),
+      mc: formatNumber(marketCap),
       mcChange: formatPercent(token.mcChange || token.priceChange24h),
       volume24h: formatVolume(token.volume24h),
       volumeChange: formatPercent(token.volumeChange),
@@ -267,7 +257,7 @@ export class PumpFunApiService {
       holders: (token.holders || 0).toString(),
       isVerified: token.isVerified || false,
       imageUrl: imageUrl,
-      metadataUri: token.metadataUri,
+      metadataUri: token.metadataUri || anyToken.metadata_uri,
     };
   }
 
@@ -275,23 +265,24 @@ export class PumpFunApiService {
    * Получить URL изображения токена
    */
   private getTokenImageUrl(token: PumpToken): string {
-    // Проверяем profile.image (часто используется в Pump.fun API)
     const anyToken = token as any;
-    if (anyToken.profile?.image) {
-      return this.normalizeIpfsUrl(anyToken.profile.image);
+    
+    // 1. Поле image_uri (основное поле в Pump.fun API)
+    if (anyToken.image_uri) {
+      return this.normalizeIpfsUrl(anyToken.image_uri);
     }
     
-    // 1. Если есть imageUrl
+    // 2. Поле imageUrl (альтернативное)
     if (token.imageUrl) {
       return this.normalizeIpfsUrl(token.imageUrl);
     }
     
-    // 2. Если есть metadataUri
+    // 3. Поле metadataUri
     if (token.metadataUri) {
       return this.normalizeIpfsUrl(token.metadataUri);
     }
     
-    // 3. Если есть uri
+    // 4. Поле uri
     if (token.uri) {
       return this.normalizeIpfsUrl(token.uri);
     }
