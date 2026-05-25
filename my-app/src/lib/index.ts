@@ -5,7 +5,7 @@ export { pumpFunApi, PumpFunApiService } from './pump-fun-api';
 export type { PumpToken, PumpCoinsResponse, PumpCoinsParams, TokenMarketData } from './pump-fun-api';
 
 export { usePumpTokens } from './use-pump-tokens';
-export type { UsePumpTokensOptions, UsePumpTokensReturn } from './use-pump-tokens';
+// Убираем export type для UsePumpTokensOptions и UsePumpTokensReturn - они уже экспортируются как interface
 
 export { pumpWebSocket, PumpWebSocketClient } from './pump-websocket';
 export type { 
