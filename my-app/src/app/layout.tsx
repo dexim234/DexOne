@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OneDex — Solana DEX Terminal",
-  description: "Advanced DEX trading terminal for Solana",
+  title: "OneDex — Pump.fun Terminal",
+  description: "Мониторинг токенов pump.fun через WebSocket в реальном времени",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

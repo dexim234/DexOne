@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Flame, Clock, TrendingUp, Wallet, Eye, Save, EyeOff } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
+import { Rooms } from "@/types/websocket";
 
 export default function MarketHubPage() {
   const [buyMode, setBuyMode] = useState<string>("buy");
@@ -144,22 +145,25 @@ export default function MarketHubPage() {
 
       {/* Three Columns of Trenches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* New Column (was Trending) */}
+        {/* New Column - получает токены через WebSocket */}
         <TrenchColumn
           title="New"
           icon={<TrendingUp className="h-5 w-5" />}
+          room={Rooms.NEW_PAIRS}
         />
 
-        {/* Soon Column (was New) */}
+        {/* Soon Column */}
         <TrenchColumn
           title="Soon"
           icon={<Flame className="h-5 w-5" />}
+          room={Rooms.SOON}
         />
 
-        {/* Migration Column (was Recent) */}
+        {/* Migration Column */}
         <TrenchColumn
           title="Migration"
           icon={<Clock className="h-5 w-5" />}
+          room={Rooms.RECENT}
         />
       </div>
     </div>
