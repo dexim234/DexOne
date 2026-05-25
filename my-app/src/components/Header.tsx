@@ -69,36 +69,44 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 font-outfit">
-      <div className="flex h-14 items-center px-4 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/80 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 font-outfit">
+      <div className="flex h-16 items-center px-4 lg:px-8 gap-6">
         {/* Logo */}
-        <Link href="/market-hub" className="flex items-center gap-2.5 shrink-0 mr-8">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg">
-            <Image 
-              src="/Логотип.png" 
-              alt="OneDex Logo" 
-              width={36} 
-              height={36}
-              className="object-contain"
-            />
+        <Link href="/market-hub" className="flex items-center gap-3 shrink-0 group">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-purple-600 p-0.5 group-hover:scale-105 transition-transform duration-300">
+            <div className="flex h-full w-full items-center justify-center rounded-lg bg-background">
+              <Image 
+                src="/Логотип.png" 
+                alt="OneDex Logo" 
+                width={36} 
+                height={36}
+                className="object-contain"
+              />
+            </div>
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-foreground">
-            One<span className="text-foreground dark:text-white">Dex</span>
+          <span className="text-2xl font-black tracking-tight text-foreground">
+            One<span className="bg-gradient-to-r from-teal-500 to-purple-600 bg-clip-text text-transparent">Dex</span>
           </span>
         </Link>
 
         {/* Vertical separator */}
-        <div className="w-px h-8 bg-border/50 mx-2" />
+        <div className="w-px h-10 bg-gradient-to-b from-transparent via-border to-transparent" />
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1 ml-3">
+        <nav className="hidden lg:flex items-center gap-1">
           {navItems.map((item) => {
+            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="group flex items-center gap-2 px-3.5 py-2 text-base font-extrabold rounded-lg transition-all duration-300 tracking-tight text-foreground hover:bg-accent/80 hover:scale-102"
+                className={`group flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 tracking-tight ${
+                  isActive
+                    ? "bg-gradient-to-r from-teal-500/20 to-purple-600/20 text-teal-500 shadow-lg shadow-teal-500/20"
+                    : "text-foreground hover:bg-accent/50 hover:scale-105"
+                }`}
               >
+                <item.icon className={`h-4 w-4 transition-transform group-hover:scale-110 ${isActive ? "text-teal-500" : "text-muted-foreground"}`} />
                 <span className="tracking-wide">{t(item.transKey)}</span>
               </Link>
             );
@@ -106,16 +114,16 @@ export default function Header() {
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-3 ml-auto">
           {/* Search */}
-          <div className="hidden sm:flex relative w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <div className="hidden sm:flex relative w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors focus-within:text-teal-500" />
             <Input
               type="text"
               placeholder={t("search.placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-8.5 bg-muted/30 border-border/50 focus-visible:ring-teal/50 focus-visible:border-teal/50 transition-all"
+              className="pl-10 h-10 bg-muted/30 border-border/50 focus-visible:ring-2 focus-visible:ring-teal-500/50 focus-visible:border-teal-500/50 transition-all rounded-xl"
             />
           </div>
 
@@ -123,32 +131,37 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative text-foreground hover:bg-accent/50 rounded-lg transition-all h-9 w-9"
+            className="relative text-foreground hover:bg-accent/50 rounded-xl transition-all h-10 w-10 group"
           >
-            <Bell className="h-4.5 w-4.5" />
+            <Bell className="h-5 w-5 transition-transform group-hover:scale-110" />
+            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
           </Button>
 
           {/* Wallet dropdown with theme and language */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="hidden sm:flex items-center gap-2 text-xs font-bold text-foreground bg-muted/30 border-border/50 cursor-pointer px-3.5 py-2 rounded-lg hover:bg-accent/50 transition-all"
+              className="hidden sm:flex items-center gap-2.5 text-sm font-bold text-foreground bg-gradient-to-r from-muted/50 to-muted/30 border-border/50 cursor-pointer px-4 py-2.5 rounded-xl hover:from-teal-500/20 hover:to-purple-600/20 transition-all duration-300 group"
             >
-              <Wallet className="h-3.5 w-3.5 text-foreground" />
-              <span className="max-w-[70px] truncate">Connect</span>
-              <ChevronDown className="h-3 w-3 text-foreground opacity-50" />
+              <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-teal-500 to-purple-600 group-hover:scale-110 transition-transform">
+                <Wallet className="h-3.5 w-3.5 text-white" />
+              </div>
+              <span className="max-w-[80px] truncate">Connect</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-4">
+            <DropdownMenuContent align="end" className="w-80 p-4 rounded-2xl shadow-xl">
               {/* Header */}
               <div className="mb-4 pb-3 border-b border-border/50">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">{t("connect.settings")}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Settings</span>
                 </div>
                 
                 {/* Theme toggle */}
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Moon className="h-3.5 w-3.5 text-foreground" />
-                    <span className="text-sm font-semibold text-foreground">{t("connect.theme")}</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
+                      <Moon className="h-4 w-4 text-foreground" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Theme</span>
                   </div>
                   <Button
                     variant="outline"
@@ -157,20 +170,22 @@ export default function Header() {
                       e.stopPropagation();
                       setTheme(theme === "dark" ? "light" : "dark");
                     }}
-                    className="h-7 gap-1.5 px-2.5"
+                    className="h-8 gap-1.5 px-3 rounded-xl"
                   >
-                    <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="h-3.5 w-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   </Button>
                 </div>
 
                 {/* Language selector */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-3.5 w-3.5 text-foreground" />
-                    <span className="text-sm font-semibold text-foreground">{t("connect.language")}</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
+                      <Globe className="h-4 w-4 text-foreground" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Language</span>
                   </div>
-                  <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
+                  <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
                     {(['EN', 'RU'] as const).map((lang) => (
                       <button
                         key={lang}
@@ -178,9 +193,9 @@ export default function Header() {
                           e.stopPropagation();
                           setLanguage(lang === 'EN' ? 'en' : 'ru');
                         }}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                           (lang === 'EN' && language === 'en') || (lang === 'RU' && language === 'ru')
-                            ? 'bg-teal text-white shadow-sm' 
+                            ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white shadow-sm' 
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -193,15 +208,15 @@ export default function Header() {
 
               {/* Wallet connections */}
               <div className="mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground mb-3 block">
-                  {t("connect.connectWallet")}
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                  Connect Wallet
                 </span>
                 <div className="space-y-2">
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    className="gap-3 cursor-pointer px-3 py-3 rounded-xl hover:bg-accent/50 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden bg-[#AB9FF2]">
                       <Image 
                         src="/phantom.webp" 
                         alt="Phantom" 
@@ -211,30 +226,30 @@ export default function Header() {
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">{t("connect.phantom")}</div>
-                      <div className="text-xs text-foreground">{t("connect.phantomDesc")}</div>
+                      <div className="font-bold text-sm text-foreground">Phantom</div>
+                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
                   </DropdownMenuItem>
                   
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    className="gap-3 cursor-pointer px-3 py-3 rounded-xl hover:bg-accent/50 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
                       <Image 
                         src="/Solflare.svg" 
                         alt="Solflare" 
-                        width={32} 
-                        height={32}
+                        width={28} 
+                        height={28}
                         className="object-contain"
                       />
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">{t("connect.solflare")}</div>
-                      <div className="text-xs text-foreground">{t("connect.solflareDesc")}</div>
+                      <div className="font-bold text-sm text-foreground">Solflare</div>
+                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground rotate-90" />
                   </DropdownMenuItem>
                 </div>
               </div>
@@ -243,16 +258,18 @@ export default function Header() {
               <DropdownMenuSeparator className="my-3" />
               <div className="space-y-1">
                 <Link href="/profile" className="block">
-                  <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">{t("connect.profile")}</span>
+                  <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2.5 rounded-xl hover:bg-accent/50">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="font-bold text-sm text-foreground">Profile</span>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                <DropdownMenuItem className="gap-2.5 cursor-pointer px-3 py-2.5 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  <span className="font-medium text-sm">{t("connect.logout")}</span>
+                  <span className="font-bold text-sm">Logout</span>
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>
@@ -261,44 +278,50 @@ export default function Header() {
           {/* Mobile menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
-              className="md:hidden inline-flex items-center justify-center h-8.5 w-8.5 text-foreground bg-muted/30 border-border/50 cursor-pointer rounded-lg hover:bg-accent/50 transition-all"
+              className="lg:hidden inline-flex items-center justify-center h-10 w-10 text-foreground bg-muted/30 border-border/50 cursor-pointer rounded-xl hover:bg-accent/50 transition-all"
             >
-              <Menu className="h-4.5 w-4.5" />
+              <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 bg-background/95 backdrop-blur-xl">
+            <SheetContent side="right" className="w-80 bg-background/95 backdrop-blur-2xl">
               <div className="flex flex-col gap-5 mt-5">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder={t("search.placeholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-8.5"
+                    className="pl-10 h-10 rounded-xl"
                   />
                 </div>
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {
+                    const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold rounded-lg transition-all tracking-tight text-foreground hover:bg-accent/50"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-bold rounded-xl transition-all tracking-tight ${
+                          isActive
+                            ? "bg-gradient-to-r from-teal-500/20 to-purple-600/20 text-teal-500"
+                            : "text-foreground hover:bg-accent/50"
+                        }`}
                       >
+                        <item.icon className="h-4 w-4" />
                         {item.label}
                       </Link>
                     );
                   })}
                 </nav>
                 <div className="flex flex-col gap-2">
-                  <Button variant="outline" className="justify-start gap-2.5 h-9">
-                    <Wallet className="h-3.5 w-3.5" />
+                  <Button variant="outline" className="justify-start gap-2.5 h-10 rounded-xl">
+                    <Wallet className="h-4 w-4" />
                     {t("connect.wallet")}
                   </Button>
                   <Link href="/profile" className="block">
-                    <Button variant="outline" className="justify-start gap-2.5 h-9">
-                      <User className="h-3.5 w-3.5" />
+                    <Button variant="outline" className="justify-start gap-2.5 h-10 rounded-xl">
+                      <User className="h-4 w-4" />
                       {t("connect.profile")}
                     </Button>
                   </Link>

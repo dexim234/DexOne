@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Star, RefreshCw, Clock } from "lucide-react";
+import { Filter } from "lucide-react";
 import TrenchCard from "./TrenchCard";
 import { usePumpTokens } from "@/lib/use-pump-tokens";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ interface TrenchColumnProps {
   columnType: "new" | "soon" | "migration";
   enableAutoRefresh?: boolean;
   refreshInterval?: number;
+  selectedMetrics?: string[];
 }
 
 export default function TrenchColumn({ 
@@ -18,6 +19,7 @@ export default function TrenchColumn({
   columnType,
   enableAutoRefresh = true,
   refreshInterval = 5000,
+  selectedMetrics = [],
 }: TrenchColumnProps) {
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
@@ -34,18 +36,6 @@ export default function TrenchColumn({
     setTimeout(() => setIsManualRefresh(false), 1000);
   };
 
-  // Форматирование времени последнего обновления
-  const formatLastUpdate = (date: Date | null) => {
-    if (!date) return "Никогда";
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diff < 5) return "Только что";
-    if (diff < 60) return `${diff}с назад`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}м назад`;
-    return date.toLocaleTimeString();
-  };
-
   return (
     <div className="bg-card rounded-lg border p-3">
       {/* Column Header */}
@@ -57,38 +47,7 @@ export default function TrenchColumn({
           <button className="p-1 hover:bg-accent rounded transition-colors">
             <Filter className="h-3 w-3 text-muted-foreground" />
           </button>
-          <button className="p-1 hover:bg-accent rounded transition-colors">
-            <Star className="h-3 w-3 text-muted-foreground" />
-          </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleManualRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-3 w-3 ${isManualRefresh ? "animate-spin" : ""}`} />
-          </Button>
         </div>
-      </div>
-
-      {/* Status Bar */}
-      <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <span>{tokens.length} токенов</span>
-          {enableAutoRefresh && (
-            <span className={`flex items-center gap-1 ${wsConnected ? 'text-green-500' : 'text-orange-500'}`}>
-              <span className={`h-2 w-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-orange-500'}`}></span>
-              {wsConnected ? 'Live' : 'Polling'}
-            </span>
-          )}
-        </div>
-        {lastUpdate && (
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatLastUpdate(lastUpdate)}
-          </span>
-        )}
       </div>
 
       {/* Sort Options */}
@@ -132,7 +91,7 @@ export default function TrenchColumn({
           </div>
         ) : (
           tokens.map((trench, index) => (
-            <TrenchCard key={trench.mint || index} {...trench} />
+            <TrenchCard key={trench.mint || index} {...trench} selectedMetrics={selectedMetrics} />
           ))
         )}
       </div>

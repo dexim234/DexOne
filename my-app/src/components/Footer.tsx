@@ -39,6 +39,13 @@ const bingxLinks = {
   BNB: "https://bingx.com/ru/price/bnb/",
 };
 
+// Exchange rates (placeholder - should be fetched from API)
+const exchangeRates = {
+  USD_TO_RUB: 92.5,
+  USD_TO_EUR: 0.92,
+  USD_TO_CNY: 7.24,
+};
+
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -89,10 +96,10 @@ export default function Footer() {
         console.error('Failed to fetch crypto prices from Binance:', error);
         // Fallback prices
         setCryptoPrices({
-          SOL: { price: "142.35", change: "+2.4%" },
-          BTC: { price: "67432.50", change: "+1.8%" },
-          ETH: { price: "3542.80", change: "+3.2%" },
-          BNB: { price: "598.45", change: "+0.9%" },
+          SOL: { price: "142.35", change: "+2.4" },
+          BTC: { price: "67432.50", change: "+1.8" },
+          ETH: { price: "3542.80", change: "+3.2" },
+          BNB: { price: "598.45", change: "+0.9" },
         });
       }
     }
@@ -101,6 +108,31 @@ export default function Footer() {
     const interval = setInterval(fetchCryptoPrices, 60000); // Update every minute
     return () => clearInterval(interval);
   }, []);
+
+  const convertPrice = (priceUSD: string, currency: 'RUB' | 'EUR' | 'CNY'): string => {
+    const price = parseFloat(priceUSD);
+    let rate: number;
+    let symbol: string;
+    
+    switch (currency) {
+      case 'RUB':
+        rate = exchangeRates.USD_TO_RUB;
+        symbol = '₽';
+        break;
+      case 'EUR':
+        rate = exchangeRates.USD_TO_EUR;
+        symbol = '€';
+        break;
+      case 'CNY':
+        rate = exchangeRates.USD_TO_CNY;
+        symbol = '¥';
+        break;
+      default:
+        return priceUSD;
+    }
+    
+    return `${symbol}${(price * rate).toFixed(2)}`;
+  };
 
   if (!cryptoPrices) {
     return (
@@ -155,7 +187,7 @@ export default function Footer() {
 
         {/* Right side - Crypto Price ticker with BingX links */}
         <div className="flex items-center gap-2.5 ml-4">
-          {/* Crypto Prices - enhanced design */}
+          {/* Crypto Prices - enhanced design without percentages */}
           <div className="hidden lg:flex items-center gap-2">
             {[
               { coin: 'SOL', file: 'solanaLogoMark.svg', bingxLink: bingxLinks.SOL },
@@ -164,44 +196,63 @@ export default function Footer() {
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
             ].map(({ coin, file, bingxLink }) => {
               const price = cryptoPrices[coin as keyof typeof cryptoPrices];
-              const isPositive = !price.change.startsWith('-');
               return (
-                <a
-                  key={coin}
-                  href={bingxLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 hover:from-teal-muted/30 hover:to-purple-muted/30 px-3 py-2 rounded-xl border border-border/30 hover:border-teal/50 transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer"
-                >
-                  <div className="flex items-center justify-center h-4 w-4 rounded bg-background/50">
-                    <Image 
-                      src={`/${file}`} 
-                      alt={coin} 
-                      width={16} 
-                      height={16}
-                      className="object-contain"
-                    />
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <div className="flex items-center gap-1">
+                <div key={coin} className="relative group">
+                  <a
+                    href={bingxLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 hover:from-teal-500/20 hover:to-purple-600/20 px-3 py-2 rounded-xl border border-border/30 hover:border-teal-500/50 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-teal-500/20 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-center h-4 w-4 rounded bg-background/50">
+                      <Image 
+                        src={`/${file}`} 
+                        alt={coin} 
+                        width={16} 
+                        height={16}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-col leading-tight">
                       <span className="font-extrabold text-foreground text-sm tracking-tight">
                         ${price.price}
                       </span>
-                      <span className={`text-[10px] font-bold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                        {price.change}
-                      </span>
+                    </div>
+                    {/* Arrow icon on hover */}
+                    <svg 
+                      className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                  
+                  {/* Tooltip with currency conversions */}
+                  <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl px-3 py-2 shadow-xl">
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">USD</span>
+                          <span className="font-bold">${price.price}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">RUB</span>
+                          <span className="font-bold">{convertPrice(price.price, 'RUB')}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">EUR</span>
+                          <span className="font-bold">{convertPrice(price.price, 'EUR')}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">CNY</span>
+                          <span className="font-bold">{convertPrice(price.price, 'CNY')}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  {/* Arrow icon on hover */}
-                  <svg 
-                    className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
+                </div>
               );
             })}
           </div>
@@ -232,9 +283,6 @@ export default function Footer() {
                   />
                   <span className="font-extrabold text-foreground text-xs">
                     ${price.price}
-                  </span>
-                  <span className={`text-[9px] font-bold ${price.change.startsWith('-') ? 'text-red-500' : 'text-green-500'}`}>
-                    {price.change}
                   </span>
                 </a>
               );
