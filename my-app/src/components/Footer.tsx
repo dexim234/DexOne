@@ -39,13 +39,6 @@ const bingxLinks = {
   BNB: "https://bingx.com/ru/price/bnb/",
 };
 
-// Exchange rates (placeholder - should be fetched from API)
-const exchangeRates = {
-  USD_TO_RUB: 97.5,
-  USD_TO_EUR: 0.93,
-  USD_TO_CNY: 7.28,
-};
-
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -55,6 +48,38 @@ export default function Footer() {
     ETH: { price: string; change: string };
     BNB: { price: string; change: string };
   } | null>(null);
+  const [fiatRates, setFiatRates] = useState<{
+    USD_TO_RUB: number;
+    USD_TO_EUR: number;
+    USD_TO_CNY: number;
+  } | null>(null);
+
+  useEffect(() => {
+    async function fetchFiatRates() {
+      try {
+        // Fetch USD to other currencies from a free API
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        setFiatRates({
+          USD_TO_RUB: data.rates.RUB || 97.5,
+          USD_TO_EUR: data.rates.EUR || 0.93,
+          USD_TO_CNY: data.rates.CNY || 7.28,
+        });
+      } catch (error) {
+        console.error('Failed to fetch fiat rates:', error);
+        // Fallback rates
+        setFiatRates({
+          USD_TO_RUB: 97.5,
+          USD_TO_EUR: 0.93,
+          USD_TO_CNY: 7.28,
+        });
+      }
+    }
+    
+    fetchFiatRates();
+    const interval = setInterval(fetchFiatRates, 3600000); // Update every hour
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function fetchCryptoPrices() {
@@ -111,20 +136,22 @@ export default function Footer() {
 
   const convertPrice = (priceUSD: string, currency: 'RUB' | 'EUR' | 'CNY'): string => {
     const price = parseFloat(priceUSD);
+    if (!fiatRates) return '';
+    
     let rate: number;
     let symbol: string;
     
     switch (currency) {
       case 'RUB':
-        rate = exchangeRates.USD_TO_RUB;
+        rate = fiatRates.USD_TO_RUB;
         symbol = '₽';
         break;
       case 'EUR':
-        rate = exchangeRates.USD_TO_EUR;
+        rate = fiatRates.USD_TO_EUR;
         symbol = '€';
         break;
       case 'CNY':
-        rate = exchangeRates.USD_TO_CNY;
+        rate = fiatRates.USD_TO_CNY;
         symbol = '¥';
         break;
       default:

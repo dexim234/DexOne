@@ -147,29 +147,44 @@ export default function TrenchCard({
     <div className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer">
       {/* Header with Logo, Address, Copy Button, Dex Paid Badge */}
       <div className="flex items-start gap-2 mb-2">
-        {/* Logo */}
-        <div className="relative h-10 w-10 flex-shrink-0">
-          {!imageLoaded && (
-            <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
-          )}
-          <Image
-            src={logo}
-            alt={name}
-            width={40}
-            height={40}
-            className={`rounded-lg object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImageLoaded(true)}
-            onError={(e) => {
-              e.currentTarget.src = "/placeholder.png";
-              setImageLoaded(true);
+        {/* Left Side: Logo + Address */}
+        <div className="flex flex-col items-center gap-1">
+          {/* Logo */}
+          <div className="relative h-10 w-10 flex-shrink-0">
+            {!imageLoaded && (
+              <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
+            )}
+            <Image
+              src={logo}
+              alt={name}
+              width={40}
+              height={40}
+              className={`rounded-lg object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.png";
+                setImageLoaded(true);
+              }}
+              loading="eager"
+              priority
+            />
+          </div>
+
+          {/* Address with Copy - UNDER the logo */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyToClipboard();
             }}
-            loading="eager"
-            priority
-          />
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <span className="font-mono">{formatAddress(mint)}</span>
+            <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
         </div>
 
         {/* Token Info */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex-1">
           <div className="flex items-center gap-1 mb-1">
             <span className="font-semibold text-sm truncate">{name}</span>
             {isVerified && (
@@ -177,20 +192,6 @@ export default function TrenchCard({
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             )}
-          </div>
-          
-          {/* Address with Copy */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard();
-              }}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors group"
-            >
-              <span className="font-mono">{formatAddress(mint)}</span>
-              <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
           </div>
         </div>
 
@@ -260,11 +261,11 @@ export default function TrenchCard({
         </div>
       )}
 
-      {/* Metrics Grid based on selectedMetrics */}
+      {/* Metrics Grid - horizontal flow with wrapping */}
       {selectedMetrics.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+        <div className="flex flex-wrap gap-1.5">
           {selectedMetrics.map((metricId) => (
-            <div key={metricId} className="flex items-center gap-1">
+            <div key={metricId} className="flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-md">
               {renderMetric(metricId)}
             </div>
           ))}

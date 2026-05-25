@@ -45,7 +45,12 @@ export default function MarketHubPage() {
     }
     return ["volume", "holders", "priceChange"];
   });
-  const [timeframe, setTimeframe] = useState<string>("1m");
+  const [timeframe, setTimeframe] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("timeframe") || "1m";
+    }
+    return "1m";
+  });
   const [priceInput, setPriceInput] = useState<string>("0.0024");
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +58,10 @@ export default function MarketHubPage() {
   useEffect(() => {
     localStorage.setItem("selectedMetrics", JSON.stringify(selectedMetrics));
   }, [selectedMetrics]);
+
+  useEffect(() => {
+    localStorage.setItem("timeframe", timeframe);
+  }, [timeframe]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -102,19 +111,20 @@ export default function MarketHubPage() {
           </div>
 
           {/* Right: Action Controls */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Buy Button with Price Input */}
-            <div className="flex items-center gap-2 bg-muted/50 rounded-xl p-2 px-3 border border-border/30">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick Buy Button with Price Input */}
+            <div className="flex items-center gap-1.5 bg-muted/50 rounded-xl p-1.5 px-2 border border-border/30 h-10">
               <Button 
                 variant={buyMode === "buy" ? "default" : "secondary"} 
                 size="sm"
-                className="h-9 text-sm font-semibold px-3 rounded-lg"
+                className="h-8 text-xs font-semibold px-2.5 rounded-lg"
                 onClick={() => setBuyMode("buy")}
               >
-                <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                <Wallet className="h-3.5 w-3.5 mr-1" />
                 Quick Buy
               </Button>
-              <div className="flex items-center gap-1.5">
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-1">
                 {isEditing ? (
                   <>
                     <Input
@@ -124,24 +134,24 @@ export default function MarketHubPage() {
                       onChange={(e) => setPriceInput(e.target.value)}
                       onBlur={handleSavePrice}
                       onKeyDown={handleKeyDown}
-                      className="w-20 h-7 text-sm font-semibold bg-background border-input"
+                      className="w-16 h-6 text-xs font-semibold bg-background border-input"
                     />
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-7 w-7"
+                      className="h-6 w-6"
                       onClick={handleSavePrice}
                     >
-                      <Save className="h-3.5 w-3.5" />
+                      <Save className="h-3 w-3" />
                     </Button>
                   </>
                 ) : (
                   <div 
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-background rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 bg-background rounded-lg cursor-pointer hover:bg-accent transition-colors"
                     onClick={() => setIsEditing(true)}
                   >
-                    <span className="text-sm font-semibold">${priceInput}</span>
-                    <Save className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs font-semibold">${priceInput}</span>
+                    <Save className="h-2.5 w-2.5 text-muted-foreground" />
                   </div>
                 )}
               </div>
