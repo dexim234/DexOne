@@ -17,15 +17,6 @@ export interface UsePumpTokensReturn {
   wsConnected: boolean;
 }
 
-interface UsePumpTokensReturn {
-  tokens: TokenMarketData[];
-  isLoading: boolean;
-  error: Error | null;
-  refresh: () => Promise<void>;
-  lastUpdate: Date | null;
-  wsConnected: boolean;
-}
-
 /**
  * Хук для получения токенов Pump.fun с поддержкой реального времени
  */
