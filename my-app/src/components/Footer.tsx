@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
 import { Activity, Brain, Bell, Phone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import {
@@ -31,53 +30,25 @@ const aboutMenuItems = [
   { label: "Terms of Use", href: "#", icon: FileText },
 ];
 
+// BingX trading links
+const bingxLinks = {
+  SOL: "https://bingx.com/ru-ru/spot/trade/SOL_USDT/",
+  BTC: "https://bingx.com/ru-ru/spot/trade/BTC_USDT/",
+  ETH: "https://bingx.com/ru-ru/spot/trade/ETH_USDT/",
+  BNB: "https://bingx.com/ru-ru/spot/trade/BNB_USDT/",
+};
+
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const [cryptoPrices, setCryptoPrices] = useState<{
-    SOL: { price: string };
-    BTC: { price: string };
-    ETH: { price: string };
-    BNB: { price: string };
-  } | null>(null);
 
-  useEffect(() => {
-    async function fetchCryptoPrices() {
-      try {
-        const [solRes, btcRes, ethRes, bnbRes] = await Promise.all([
-          fetch('https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT'),
-          fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'),
-          fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT'),
-          fetch('https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT'),
-        ]);
-
-        const [solData, btcData, ethData, bnbData] = await Promise.all([
-          solRes.json(),
-          btcRes.json(),
-          ethRes.json(),
-          bnbRes.json(),
-        ]);
-
-        setCryptoPrices({
-          SOL: { price: parseFloat(solData.price).toFixed(2) },
-          BTC: { price: parseFloat(btcData.price).toFixed(2) },
-          ETH: { price: parseFloat(ethData.price).toFixed(2) },
-          BNB: { price: parseFloat(bnbData.price).toFixed(2) },
-        });
-      } catch (error) {
-        console.error('Failed to fetch crypto prices from Binance:', error);
-        setCryptoPrices({
-          SOL: { price: "142.35" },
-          BTC: { price: "67432.50" },
-          ETH: { price: "3542.80" },
-          BNB: { price: "598.45" },
-        });
-      }
-    }
-    fetchCryptoPrices();
-    const interval = setInterval(fetchCryptoPrices, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // Default crypto prices (no loading state, static data)
+  const cryptoPrices = {
+    SOL: { price: "142.35", change: "+2.4%" },
+    BTC: { price: "67432.50", change: "+1.8%" },
+    ETH: { price: "3542.80", change: "+3.2%" },
+    BNB: { price: "598.45", change: "+0.9%" },
+  };
 
   return (
     <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30 font-outfit">
@@ -99,23 +70,27 @@ export default function Footer() {
           })}
         </nav>
 
-        {/* Right side - Crypto Price ticker */}
+        {/* Right side - Crypto Price ticker with BingX links */}
         <div className="flex items-center gap-2.5 ml-4">
-          {/* Crypto Prices - compact ticker style */}
+          {/* Crypto Prices - enhanced design */}
           <div className="hidden lg:flex items-center gap-2">
             {[
-              { coin: 'SOL', file: 'solanaLogoMark.svg' },
-              { coin: 'BTC', file: 'Bitcoin.svg.png' },
-              { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png' },
-              { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png' },
-            ].map(({ coin, file }) => {
-              const price = cryptoPrices?.[coin as keyof typeof cryptoPrices];
+              { coin: 'SOL', file: 'solanaLogoMark.svg', bingxLink: bingxLinks.SOL },
+              { coin: 'BTC', file: 'Bitcoin.svg.png', bingxLink: bingxLinks.BTC },
+              { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png', bingxLink: bingxLinks.ETH },
+              { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
+            ].map(({ coin, file, bingxLink }) => {
+              const price = cryptoPrices[coin as keyof typeof cryptoPrices];
+              const isPositive = price.change.startsWith('+');
               return (
-                <div
+                <a
                   key={coin}
-                  className="flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 px-3 py-2 rounded-lg border border-border/30 hover:border-border/50 transition-all"
+                  href={bingxLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-1.5 bg-gradient-to-r from-muted/50 to-muted/30 hover:from-teal-muted/30 hover:to-purple-muted/30 px-3 py-2 rounded-xl border border-border/30 hover:border-teal/50 transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer"
                 >
-                  <div className="flex items-center justify-center h-4 w-4">
+                  <div className="flex items-center justify-center h-4 w-4 rounded bg-background/50">
                     <Image 
                       src={`/${file}`} 
                       alt={coin} 
@@ -125,40 +100,57 @@ export default function Footer() {
                     />
                   </div>
                   <div className="flex flex-col leading-tight">
-                    <span className="font-bold text-foreground text-sm">
-                      ${price?.price || "Loading..."}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-extrabold text-foreground text-sm tracking-tight">
+                        ${price.price}
+                      </span>
+                      <span className={`text-[10px] font-bold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                        {price.change}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  {/* Arrow icon on hover */}
+                  <svg 
+                    className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
               );
             })}
           </div>
 
           {/* Mobile crypto prices - minimal scrollable */}
-          <div className="lg:hidden flex items-center gap-1 overflow-x-auto no-scrollbar bg-muted/30 px-2 py-1.5 rounded-md border border-border/50">
+          <div className="lg:hidden flex items-center gap-1 overflow-x-auto no-scrollbar bg-muted/30 px-2 py-1.5 rounded-lg border border-border/50">
             {[
-              { coin: 'SOL', file: 'solanaLogoMark.svg' },
-              { coin: 'BTC', file: 'Bitcoin.svg.png' },
-              { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png' },
-              { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png' },
-            ].map(({ coin, file }) => {
-              const price = cryptoPrices?.[coin as keyof typeof cryptoPrices];
+              { coin: 'SOL', file: 'solanaLogoMark.svg', bingxLink: bingxLinks.SOL },
+              { coin: 'BTC', file: 'Bitcoin.svg.png', bingxLink: bingxLinks.BTC },
+              { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png', bingxLink: bingxLinks.ETH },
+              { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
+            ].map(({ coin, file, bingxLink }) => {
+              const price = cryptoPrices[coin as keyof typeof cryptoPrices];
               return (
-                <div
+                <a
                   key={coin}
-                  className="flex items-center gap-1 flex-shrink-0"
+                  href={bingxLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg hover:bg-background/50 transition-all"
                 >
                   <Image 
                     src={`/${file}`} 
                     alt={coin} 
-                    width={12} 
-                    height={12}
+                    width={14} 
+                    height={14}
                     className="object-contain"
                   />
-                  <span className="font-bold text-foreground text-xs">
-                    ${price?.price || "-"}
+                  <span className="font-extrabold text-foreground text-xs">
+                    ${price.price}
                   </span>
-                </div>
+                </a>
               );
             })}
           </div>
