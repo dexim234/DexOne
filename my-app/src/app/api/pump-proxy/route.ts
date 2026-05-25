@@ -8,6 +8,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing endpoint parameter' }, { status: 400 });
   }
 
+  // Блокируем нерабочие endpoints
+  if (endpoint.includes('/trending')) {
+    return NextResponse.json(
+      { error: 'Endpoint not available', message: 'Use /coins with orderBy parameter instead' }, 
+      { status: 400 }
+    );
+  }
+
   const baseUrl = 'https://frontend-api-v3.pump.fun';
   const url = `${baseUrl}${endpoint}`;
 
