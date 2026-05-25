@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'pump.mypinata.cloud',
+      },
+      {
+        protocol: 'https',
         hostname: 'cloudflare-ipfs.com',
       },
       {
