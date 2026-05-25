@@ -237,20 +237,7 @@ export class PumpFunApiService {
     };
 
     // Формируем URL изображения - пробуем несколько источников
-    let imageUrl = '/placeholder.png';
-    
-    // 1. Проверка imageUrl
-    if (token.imageUrl) {
-      imageUrl = this.normalizeImageUrl(token.imageUrl);
-    }
-    // 2. Проверка metadataUri с ipfs:// prefix
-    else if (token.metadataUri) {
-      imageUrl = this.normalizeImageUrl(token.metadataUri);
-    }
-    // 3. URI из токена
-    else if (token.uri) {
-      imageUrl = this.normalizeImageUrl(token.uri);
-    }
+    let imageUrl = this.getTokenImageUrl(token);
 
     return {
       rank: rank.toString(),
@@ -271,6 +258,37 @@ export class PumpFunApiService {
       imageUrl: imageUrl,
       metadataUri: token.metadataUri,
     };
+  }
+
+  /**
+   * Получить URL изображения токена
+   */
+  private getTokenImageUrl(token: PumpToken): string {
+    const placeholder = '/placeholder.png';
+    
+    // 1. Если есть imageUrl - используем его
+    if (token.imageUrl) {
+      return this.normalizeImageUrl(token.imageUrl);
+    }
+    
+    // 2. Если есть mint address - пробуем использовать img.pump.fun
+    if (token.mint) {
+      // Pump.fun использует этот паттерн для изображений
+      const pumpImageUrl = `https://img.pump.fun/images/${token.mint}`;
+      return pumpImageUrl;
+    }
+    
+    // 3. Если есть metadataUri - пробуем нормализовать
+    if (token.metadataUri) {
+      return this.normalizeImageUrl(token.metadataUri);
+    }
+    
+    // 4. Если есть uri - пробуем нормализовать
+    if (token.uri) {
+      return this.normalizeImageUrl(token.uri);
+    }
+    
+    return placeholder;
   }
 
   /**
