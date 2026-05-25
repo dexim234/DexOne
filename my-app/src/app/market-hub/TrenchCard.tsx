@@ -1,12 +1,63 @@
-"use client";
+import axios from 'axios';
 
-import Image from "next/image";
-import { formatSolanaAddress, getSolanaExplorerUrl } from "@/lib/solana-config";
+// Типы данных для токенов Pump.fun
+export interface PumpToken {
+  uri: string;
+  name: string;
+  symbol: string;
+  metadataUri: string;
+  mint: string;
+  mintAuthority: string;
+  freezeAuthority: string | null;
+  decimals: number;
+  createdTimestamp: number;
+  showHowToUse: boolean;
+  family: string;
+  virtualSolReserves?: number;
+  virtualTokenReserves?: number;
+  realSolReserves?: number;
+  realTokenReserves?: number;
+  totalSupply?: number;
+  marketCap?: number;
+  price?: number;
+  priceChange1h?: number;
+  priceChange24h?: number;
+  priceChange7d?: number;
+  volume24h?: number;
+  volumeChange?: number;
+  mcChange?: number;
+  trades?: number;
+  trades24h?: number;
+  holders?: number;
+  liquidity?: number;
+  isVerified?: boolean;
+  imageUrl?: string;
+}
 
-interface TrenchCardProps {
+// Интерфейс для ответа API
+export interface PumpCoinsResponse {
+  coins: PumpToken[];
+  hasNextPage: boolean;
+  endCursor?: string;
+}
+
+// Интерфейс для параметров запроса
+export interface PumpCoinsParams {
+  orderBy?: 'createdAt' | 'marketCap' | 'volume24h' | 'trades';
+  orderDirection?: 'asc' | 'desc';
+  limit?: number;
+  cursor?: string;
+  createdAtGte?: number;
+  createdAtLte?: number;
+}
+
+// Интерфейс для данных токена в формате TrenchCard
+export interface TokenMarketData {
   rank: string;
   logo: string;
   name: string;
+  symbol: string;
+  mint: string;
   mc: string;
   mcChange: string;
   volume24h: string;
@@ -16,108 +67,335 @@ interface TrenchCardProps {
   priceChange7d: string;
   trades: string;
   holders: string;
-  isVerified?: boolean;
-  mint?: string;
+  isVerified: boolean;
   imageUrl?: string;
+  metadataUri?: string;
 }
 
-export default function TrenchCard({
-  rank,
-  logo,
-  name,
-  mc,
-  mcChange,
-  volume24h,
-  volumeChange,
-  priceChange1h,
-  priceChange24h,
-  priceChange7d,
-  trades,
-  holders,
-  isVerified = false,
-  mint,
-  imageUrl,
-}: TrenchCardProps) {
-  const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
-  const isNegative = (val: string) => val.includes("-");
+export class PumpFunApiService {
+  private baseUrl: string;
+  private authToken: string | null = null;
+  public useProxy: boolean = true; // Использовать прокси для обхода CORS
 
-  const handleCardClick = () => {
-    if (mint) {
-      const url = getSolanaExplorerUrl(mint);
-      window.open(url, '_blank');
+  constructor(baseUrl: string = 'https://frontend-api-v3.pump.fun') {
+    this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Включить/выключить прокси
+   */
+  setProxyEnabled(enabled: boolean) {
+    this.useProxy = enabled;
+  }
+
+  /**
+   * Установить токен авторизации
+   */
+  setAuthToken(token: string) {
+    this.authToken = token;
+  }
+
+  /**
+   * Получить общие настройки API
+   */
+  private getAxiosConfig() {
+    const config: any = {
+      headers: {
+        'Accept': 'application/json',
+      }
+    };
+
+    if (this.authToken) {
+      config.headers['Authorization'] = `Bearer ${this.authToken}`;
     }
-  };
 
-  const displayImage = imageUrl || logo || '';
+    return config;
+  }
 
-  return (
-    <div 
-      className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer"
-      onClick={handleCardClick}
-    >
-      {/* Header with Rank, Logo, Name */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-muted-foreground w-4">{rank}</span>
-        <div className="relative h-8 w-8 flex-shrink-0">
-          <Image
-            src={displayImage}
-            alt={name}
-            width={32}
-            height={32}
-            className="rounded-lg object-cover"
-            unoptimized
-            onError={(e) => {
-              e.currentTarget.src = '/placeholder.png';
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <span className="font-medium truncate">{name}</span>
-          {isVerified && (
-            <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-          )}
-        </div>
-      </div>
+  /**
+   * Получить URL для запроса (с прокси или напрямую)
+   */
+  private getApiUrl(path: string, params?: URLSearchParams): string {
+    if (this.useProxy) {
+      const proxyUrl = '/api/pump-proxy';
+      const fullParams = new URLSearchParams(params?.toString() || '');
+      fullParams.set('endpoint', path);
+      return `${proxyUrl}?${fullParams.toString()}`;
+    }
+    
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      url.search = params.toString();
+    }
+    return url.toString();
+  }
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-xs">
-        {/* Row 1: MC */}
-        <div className="col-span-3 flex items-center gap-1 mb-1">
-          <span className="text-muted-foreground">MC</span>
-          <span className="font-medium text-teal">{mc}</span>
-          <span className={isPositive(mcChange) ? "text-green-500" : isNegative(mcChange) ? "text-red-500" : "text-muted-foreground"}>
-            {mcChange}
-          </span>
-        </div>
-        
-        {/* Row 2: 24h Volume */}
-        <div className="col-span-3 flex items-center gap-1 mb-1">
-          <span className="text-muted-foreground">24h</span>
-          <span className="font-medium">{volume24h}</span>
-          <span className={isPositive(volumeChange) ? "text-green-500" : isNegative(volumeChange) ? "text-red-500" : "text-muted-foreground"}>
-            {volumeChange}
-          </span>
-        </div>
+  /**
+   * Получить список токенов с фильтрами
+   */
+  async getCoins(params?: PumpCoinsParams): Promise<PumpCoinsResponse> {
+    const urlSearchParams = new URLSearchParams();
+    
+    if (params) {
+      if (params.orderBy) urlSearchParams.append('orderBy', params.orderBy);
+      if (params.orderDirection) urlSearchParams.append('orderDirection', params.orderDirection);
+      if (params.limit) urlSearchParams.append('limit', params.limit.toString());
+      if (params.cursor) urlSearchParams.append('cursor', params.cursor);
+      if (params.createdAtGte) urlSearchParams.append('createdAtGte', params.createdAtGte.toString());
+      if (params.createdAtLte) urlSearchParams.append('createdAtLte', params.createdAtLte.toString());
+    }
 
-        {/* Row 3: Price changes */}
-        <div className={isPositive(priceChange1h) ? "text-green-500" : isNegative(priceChange1h) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange1h}
-        </div>
-        <div className={isPositive(priceChange24h) ? "text-green-500" : isNegative(priceChange24h) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange24h}
-        </div>
-        <div className={isPositive(priceChange7d) ? "text-green-500" : isNegative(priceChange7d) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange7d}
-        </div>
+    const url = this.getApiUrl('/coins', urlSearchParams);
+    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
+    
+    // Обработка разных форматов ответа
+    if (Array.isArray(response.data)) {
+      return {
+        coins: response.data,
+        hasNextPage: false,
+      };
+    }
+    return response.data;
+  }
 
-        {/* Row 4: Trades and Holders */}
-        <div className="col-span-3 flex items-center gap-2 mt-1">
-          <span className="text-muted-foreground text-xs">{trades}</span>
-          <span className="text-muted-foreground text-xs">{holders}</span>
-        </div>
-      </div>
-    </div>
-  );
+  /**
+   * Получить трендовые токены (используем /coins с сортировкой)
+   */
+  async getTrendingCoins(limit: number = 50): Promise<PumpToken[]> {
+    // /coins/trending не работает, используем /coins с сортировкой по объему
+    const response = await this.getCoins({
+      orderBy: 'volume24h',
+      orderDirection: 'desc',
+      limit,
+    });
+    return response.coins || [];
+  }
+    
+  /**
+   * Получить новые токены (созданные недавно)
+   */
+  async getNewCoins(limit: number = 50, cursor?: string): Promise<PumpCoinsResponse> {
+    return this.getCoins({
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      limit,
+      cursor,
+    });
+  }
+    
+  /**
+   * Получить токены по конкретному ID/mint address
+   */
+  async getCoinById(mint: string): Promise<PumpToken | null> {
+    try {
+      const url = this.getApiUrl(`/coins/${mint}`);
+      const response = await axios.get<PumpToken>(url, this.getAxiosConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching coin ${mint}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Получить несколько токенов по массиву mint addresses
+   */
+  async getCoinsByIds(mints: string[]): Promise<PumpToken[]> {
+    const promises = mints.map(mint => this.getCoinById(mint));
+    const results = await Promise.all(promises);
+    return results.filter((token): token is PumpToken => token !== null);
+  }
+
+  /**
+   * Преобразовать PumpToken в формат TokenMarketData для карточек
+   */
+  convertToMarketData(token: PumpToken, rank: number): TokenMarketData {
+    const formatNumber = (num?: number): string => {
+      if (num === undefined || num === null) return '0';
+      if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+      if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
+      return `$${num.toFixed(2)}`;
+    };
+
+    const formatPercent = (val?: number): string => {
+      if (val === undefined || val === null) return '0.00%';
+      return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
+    };
+
+    const formatVolume = (num?: number): string => {
+      if (num === undefined || num === null) return '$0';
+      if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+      if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
+      return `$${num.toFixed(2)}`;
+    };
+
+    const imageUrl = this.getTokenImageUrl(token);
+
+    return {
+      rank: rank.toString(),
+      logo: imageUrl,
+      name: token.name || token.symbol || 'Unknown',
+      symbol: token.symbol || '',
+      mint: token.mint,
+      mc: formatNumber(token.marketCap || token.virtualSolReserves || 0),
+      mcChange: formatPercent(token.mcChange || token.priceChange24h),
+      volume24h: formatVolume(token.volume24h),
+      volumeChange: formatPercent(token.volumeChange),
+      priceChange1h: formatPercent(token.priceChange1h),
+      priceChange24h: formatPercent(token.priceChange24h),
+      priceChange7d: formatPercent(token.priceChange7d),
+      trades: (token.trades || token.trades24h || 0).toString(),
+      holders: (token.holders || 0).toString(),
+      isVerified: token.isVerified || false,
+      imageUrl: imageUrl,
+      metadataUri: token.metadataUri,
+    };
+  }
+
+  /**
+   * Получить URL изображения токена
+   */
+  private getTokenImageUrl(token: PumpToken): string {
+    // 1. Если есть uri с metadata - пробуем получить image оттуда
+    if (token.uri && token.uri.startsWith('https://arweave.net')) {
+      // Arweave metadata
+      return `https://arweave.net/${token.uri.replace('https://arweave.net/', '')}/image`;
+    }
+    
+    // 2. Если есть metadataUri с IPFS
+    if (token.metadataUri) {
+      if (token.metadataUri.startsWith('ipfs://')) {
+        return `https://cloudflare-ipfs.com/ipfs/${token.metadataUri.replace('ipfs://', '')}`;
+      }
+      if (token.metadataUri.includes('ipfs/')) {
+        return token.metadataUri;
+      }
+    }
+    
+    // 3. Если есть imageUrl
+    if (token.imageUrl) {
+      return token.imageUrl;
+    }
+    
+    // 4. Если есть uri
+    if (token.uri) {
+      if (token.uri.startsWith('ipfs://')) {
+        return `https://cloudflare-ipfs.com/ipfs/${token.uri.replace('ipfs://', '')}`;
+      }
+      return token.uri;
+    }
+    
+    return '/placeholder.png';
+  }
+    
+  /**
+   * Нормализация URL изображения
+   */
+  private normalizeImageUrl(url: string): string {
+    if (!url) return '/placeholder.png';
+    
+    // Если уже полный HTTP URL
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // IPFS через Cloudflare
+    if (url.startsWith('ipfs://')) {
+      return `https://cloudflare-ipfs.com/ipfs/${url.replace('ipfs://', '')}`;
+    }
+    
+    // IPFS с /ipfs/
+    if (url.includes('/ipfs/')) {
+      return url.replace('ipfs:', 'https:').replace('//ipfs/', '/ipfs/');
+    }
+    
+    // Просто хэш IPFS
+    if (url.length === 44 || url.length === 43) {
+      return `https://cloudflare-ipfs.com/ipfs/${url}`;
+    }
+    
+    // Относительный путь - пробуем IPFS
+    return `https://cloudflare-ipfs.com/ipfs/${url}`;
+  }
+
+  /**
+   * Получить токены для колонки "New" (самые свежие)
+   */
+  async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      const response = await this.getNewCoins(limit);
+      const coins = response.coins || [];
+      return coins.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading new tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить токены для колонки "Soon" (предстоящие/популярные)
+   */
+  async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      const trending = await this.getTrendingCoins(limit);
+      return trending.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading soon tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить токены для колонки "Migration" (готовящиеся к миграции)
+   */
+  async getMigrationTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      // Токены с высокой капитализацией, близкие к миграции
+      const response = await this.getCoins({
+        orderBy: 'marketCap',
+        orderDirection: 'desc',
+        limit,
+      });
+      
+      const coins = response.coins || [];
+      
+      // Фильтруем токены, которые близки к миграции (например, MC > 60k)
+      const migrationThreshold = 60000;
+      const migrationTokens = coins.filter(
+        token => (token.marketCap || 0) >= migrationThreshold
+      );
+
+      return migrationTokens.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading migration tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить изображение токена из metadata
+   */
+  async getTokenImage(metadataUri: string): Promise<string | null> {
+    try {
+      const response = await axios.get(metadataUri, {
+        timeout: 5000,
+      });
+      return response.data.image || null;
+    } catch (error) {
+      console.error('Error fetching token image:', error);
+      return null;
+    }
+  }
 }
+
+// Экспорт singleton instance
+export const pumpFunApi = new PumpFunApiService();
+// Принудительно включаем прокси
+pumpFunApi.setProxyEnabled(true);
+
