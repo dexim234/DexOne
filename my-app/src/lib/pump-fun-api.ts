@@ -159,25 +159,18 @@ export class PumpFunApiService {
   }
 
   /**
-   * Получить трендовые токены
+   * Получить трендовые токены (используем /coins с сортировкой)
    */
   async getTrendingCoins(limit: number = 50): Promise<PumpToken[]> {
-    const urlSearchParams = new URLSearchParams();
-    urlSearchParams.append('limit', limit.toString());
-    
-    const url = this.getApiUrl('/coins/trending', urlSearchParams);
-    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
-    
-    // Обработка разных форматов ответа
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-    if (response.data && 'coins' in response.data && Array.isArray(response.data.coins)) {
-      return response.data.coins;
-    }
-    return [];
+    // /coins/trending не работает, используем /coins с сортировкой по объему
+    const response = await this.getCoins({
+      orderBy: 'volume24h',
+      orderDirection: 'desc',
+      limit,
+    });
+    return response.coins || [];
   }
-
+    
   /**
    * Получить новые токены (созданные недавно)
    */
@@ -236,8 +229,7 @@ export class PumpFunApiService {
       return `$${num.toFixed(2)}`;
     };
 
-    // Формируем URL изображения - пробуем несколько источников
-    let imageUrl = this.getTokenImageUrl(token);
+    const imageUrl = this.getTokenImageUrl(token);
 
     return {
       rank: rank.toString(),
@@ -264,10 +256,35 @@ export class PumpFunApiService {
    * Получить URL изображения токена
    */
   private getTokenImageUrl(token: PumpToken): string {
-    // Pump.fun использует img.pump.fun с путем /images/{mint}
-    if (token.mint) {
-      return `https://img.pump.fun/${token.mint}`;
+    // 1. Если есть uri с metadata - пробуем получить image оттуда
+    if (token.uri && token.uri.startsWith('https://arweave.net')) {
+      // Arweave metadata
+      return `https://arweave.net/${token.uri.replace('https://arweave.net/', '')}/image`;
     }
+    
+    // 2. Если есть metadataUri с IPFS
+    if (token.metadataUri) {
+      if (token.metadataUri.startsWith('ipfs://')) {
+        return `https://cloudflare-ipfs.com/ipfs/${token.metadataUri.replace('ipfs://', '')}`;
+      }
+      if (token.metadataUri.includes('ipfs/')) {
+        return token.metadataUri;
+      }
+    }
+    
+    // 3. Если есть imageUrl
+    if (token.imageUrl) {
+      return token.imageUrl;
+    }
+    
+    // 4. Если есть uri
+    if (token.uri) {
+      if (token.uri.startsWith('ipfs://')) {
+        return `https://cloudflare-ipfs.com/ipfs/${token.uri.replace('ipfs://', '')}`;
+      }
+      return token.uri;
+    }
+    
     return '/placeholder.png';
   }
     
@@ -379,6 +396,7 @@ export class PumpFunApiService {
 
 // Экспорт singleton instance
 export const pumpFunApi = new PumpFunApiService();
-// Принудительно включаем прокси
+// Принудительно включаем прокси для обхода CORS
 pumpFunApi.setProxyEnabled(true);
+// Версия API: 1.0.1
 
