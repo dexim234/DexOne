@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { Filter, Star } from "lucide-react";
-import TrenchCard from "./TrenchCard";
 
 interface TrenchData {
   rank: string;
@@ -26,9 +24,7 @@ interface TrenchColumnProps {
   trenches: TrenchData[];
 }
 
-export default function TrenchColumn({ title, icon, trenches }: TrenchColumnProps) {
-  const [sortBy, setSortBy] = useState("rank");
-
+export default function TrenchColumn({ title, icon }: TrenchColumnProps) {
   return (
     <div className="bg-card rounded-lg border p-3">
       {/* Column Header */}
@@ -45,35 +41,6 @@ export default function TrenchColumn({ title, icon, trenches }: TrenchColumnProp
             <Star className="h-3 w-3 text-muted-foreground" />
           </button>
         </div>
-      </div>
-
-      {/* Sort Options */}
-      <div className="flex items-center gap-2 mb-3 text-xs">
-        <button
-          onClick={() => setSortBy("rank")}
-          className={`px-2 py-0.5 rounded transition-colors ${sortBy === "rank" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
-        >
-          Rank
-        </button>
-        <button
-          onClick={() => setSortBy("mc")}
-          className={`px-2 py-0.5 rounded transition-colors ${sortBy === "mc" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
-        >
-          MC
-        </button>
-        <button
-          onClick={() => setSortBy("volume")}
-          className={`px-2 py-0.5 rounded transition-colors ${sortBy === "volume" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
-        >
-          24h Vol
-        </button>
-      </div>
-
-      {/* Trench Cards */}
-      <div className="space-y-2">
-        {trenches.map((trench, index) => (
-          <TrenchCard key={index} {...trench} />
-        ))}
       </div>
     </div>
   );
