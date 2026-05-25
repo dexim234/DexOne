@@ -146,7 +146,15 @@ export class PumpFunApiService {
     }
 
     const url = this.getApiUrl('/coins', urlSearchParams);
-    const response = await axios.get<PumpCoinsResponse>(url, this.getAxiosConfig());
+    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
+    
+    // Обработка разных форматов ответа
+    if (Array.isArray(response.data)) {
+      return {
+        coins: response.data,
+        hasNextPage: false,
+      };
+    }
     return response.data;
   }
 
@@ -158,8 +166,16 @@ export class PumpFunApiService {
     urlSearchParams.append('limit', limit.toString());
     
     const url = this.getApiUrl('/coins/trending', urlSearchParams);
-    const response = await axios.get<PumpCoinsResponse>(url, this.getAxiosConfig());
-    return response.data.coins || [];
+    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
+    
+    // Обработка разных форматов ответа
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    if (response.data && 'coins' in response.data && Array.isArray(response.data.coins)) {
+      return response.data.coins;
+    }
+    return [];
   }
 
   /**
@@ -245,42 +261,60 @@ export class PumpFunApiService {
    * Получить токены для колонки "New" (самые свежие)
    */
   async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
-    const response = await this.getNewCoins(limit);
-    return response.coins.map((token, index) => 
-      this.convertToMarketData(token, index + 1)
-    );
+    try {
+      const response = await this.getNewCoins(limit);
+      const coins = response.coins || [];
+      return coins.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading new tokens:', error);
+      return [];
+    }
   }
 
   /**
    * Получить токены для колонки "Soon" (предстоящие/популярные)
    */
   async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
-    const trending = await this.getTrendingCoins(limit);
-    return trending.map((token, index) => 
-      this.convertToMarketData(token, index + 1)
-    );
+    try {
+      const trending = await this.getTrendingCoins(limit);
+      return trending.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading soon tokens:', error);
+      return [];
+    }
   }
 
   /**
    * Получить токены для колонки "Migration" (готовящиеся к миграции)
    */
   async getMigrationTokens(limit: number = 20): Promise<TokenMarketData[]> {
-    // Токены с высокой капитализацией, близкие к миграции
-    const response = await this.getCoins({
-      orderBy: 'marketCap',
-      orderDirection: 'desc',
-      limit,
-    });
-    
-    // Фильтруем токены, которые близки к миграции (например, MC > 60k)
-    const migrationThreshold = 60000;
-    const migrationTokens = response.coins.filter(
-      token => (token.marketCap || 0) >= migrationThreshold
-    );
+    try {
+      // Токены с высокой капитализацией, близкие к миграции
+      const response = await this.getCoins({
+        orderBy: 'marketCap',
+        orderDirection: 'desc',
+        limit,
+      });
+      
+      const coins = response.coins || [];
+      
+      // Фильтруем токены, которые близки к миграции (например, MC > 60k)
+      const migrationThreshold = 60000;
+      const migrationTokens = coins.filter(
+        token => (token.marketCap || 0) >= migrationThreshold
+      );
 
-    return migrationTokens.map((token, index) => 
-      this.convertToMarketData(token, index + 1)
-    );
+      return migrationTokens.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading migration tokens:', error);
+      return [];
+    }
   }
 
   /**
