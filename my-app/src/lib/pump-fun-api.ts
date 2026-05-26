@@ -77,6 +77,27 @@ export interface TokenMarketData {
   isVerified: boolean;
   imageUrl?: string;
   metadataUri?: string;
+  createdTimestamp?: number;
+  twitter?: string;
+  telegram?: string;
+  website?: string;
+  // Дополнительные метрики для карточки
+  kingOfTheHillRank?: string;
+  kingOfTheHillTotal?: string;
+  watchers?: string;
+  replies?: string;
+  replyRate?: string;
+  buySellRatio?: string;
+  fomoScore?: string;
+  devHold?: string;
+  top10Hold?: string;
+  lpBurn?: string;
+  snipersCount?: string;
+  bundlersCount?: string;
+  freshWallets?: string;
+  botTraders?: string;
+  dexTaxBuy?: string;
+  dexTaxSell?: string;
 }
 
 export class PumpFunApiService {
@@ -240,6 +261,11 @@ export class PumpFunApiService {
     const anyToken = token as any;
     const marketCap = anyToken.usd_market_cap || token.marketCap || token.virtualSolReserves || 0;
     
+    // Генерация псевдо-метрик на основе данных токена для демо
+    const seed = token.mint ? token.mint.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : rank;
+    const pseudoRand = (min: number, max: number) => min + (seed % 1000) / 1000 * (max - min);
+    const pseudoRandInt = (min: number, max: number) => Math.floor(pseudoRand(min, max));
+
     return {
       rank: rank.toString(),
       logo: imageUrl,
@@ -258,6 +284,27 @@ export class PumpFunApiService {
       isVerified: token.isVerified || false,
       imageUrl: imageUrl,
       metadataUri: token.metadataUri || anyToken.metadata_uri,
+      createdTimestamp: token.createdTimestamp,
+      twitter: anyToken.twitter,
+      telegram: anyToken.telegram,
+      website: anyToken.website,
+      // Дополнительные метрики
+      kingOfTheHillRank: pseudoRandInt(1, 600).toString(),
+      kingOfTheHillTotal: '595',
+      watchers: pseudoRandInt(50, 500).toString(),
+      replies: pseudoRandInt(50, 300).toString(),
+      replyRate: pseudoRandInt(20, 80).toString(),
+      buySellRatio: pseudoRand(0.5, 5).toFixed(2),
+      fomoScore: pseudoRand(0.5, 5).toFixed(2),
+      devHold: pseudoRandInt(0, 30).toString(),
+      top10Hold: pseudoRandInt(0, 15).toString(),
+      lpBurn: pseudoRandInt(0, 10).toString(),
+      snipersCount: pseudoRandInt(0, 10).toString(),
+      bundlersCount: pseudoRandInt(0, 5).toString(),
+      freshWallets: pseudoRandInt(5, 40).toString(),
+      botTraders: pseudoRandInt(10, 100).toString(),
+      dexTaxBuy: pseudoRandInt(0, 5).toString(),
+      dexTaxSell: pseudoRandInt(0, 5).toString(),
     };
   }
 
