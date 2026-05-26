@@ -203,7 +203,7 @@ export default function TrackerPage() {
             {/* Action Buttons */}
             <div className="flex items-center gap-2 mb-4">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger>
                   <Button variant="outline" size="sm" className="h-8 text-xs px-3">
                     <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
                     Actions
