@@ -24,10 +24,9 @@ export default function TrenchColumn({
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
 
-  const { tokens, isLoading, error, refresh, lastUpdate, wsConnected } = usePumpTokens({
+  const { tokens, isLoading, error, refresh, lastUpdate } = usePumpTokens({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
-    enableWebSocket: true,
   });
 
   const handleManualRefresh = async () => {
