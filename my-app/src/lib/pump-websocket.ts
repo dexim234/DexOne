@@ -222,7 +222,7 @@ export class PumpWebSocketClient {
 
 // Singleton instance
 export const pumpWebSocket = new PumpWebSocketClient({
-  autoReconnect: true,
+  autoReconnect: false,
   reconnectInterval: 5000,
-  maxReconnectAttempts: 10,
+  maxReconnectAttempts: 0,
 });
