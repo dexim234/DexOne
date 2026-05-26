@@ -47,13 +47,8 @@ export function usePumpTokens({
           newTokens = await pumpFunApi.getNewTokens(20);
           break;
         case 'soon':
-          // Get trending tokens but filter out those already in 'new'
-          const trending = await pumpFunApi.getTrendingCoins(30);
-          const newTokensSet = new Set((await pumpFunApi.getNewTokens(20)).map(t => t.mint));
-          newTokens = trending
-            .filter(t => !newTokensSet.has(t.mint))
-            .slice(0, 20)
-            .map((token, index) => pumpFunApi.convertToMarketData(token, index + 1));
+          // Взвешенный скоринг: score ≥ 65 / 100
+          newTokens = await pumpFunApi.getSoonTokens(20);
           break;
         case 'migration':
           newTokens = await pumpFunApi.getMigrationTokens(20);
