@@ -307,7 +307,7 @@ const renderMetric = (metricId: string) => {
               <div className="absolute inset-0 rounded-2xl bg-muted animate-pulse" />
             )}
             <Image
-              src={logo}
+              src={logo || "/placeholder.png"}
               alt={name}
               width={80}
               height={80}
@@ -319,6 +319,7 @@ const renderMetric = (metricId: string) => {
               }}
               loading="eager"
               priority
+              unoptimized
             />
           </div>
 
