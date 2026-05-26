@@ -123,7 +123,7 @@ export default function AlertsPage() {
           </Button>
 
           {/* Create Button */}
-          <Button className="h-10 px-6 font-bold bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg shadow-teal-500/25 border-0">
+          <Button className="h-10 px-6 font-semibold bg-gradient-to-r from-teal-500/90 to-cyan-500/90 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md shadow-teal-500/15 border-0">
             <Zap className="h-4 w-4 mr-2" />
             Создать
           </Button>
