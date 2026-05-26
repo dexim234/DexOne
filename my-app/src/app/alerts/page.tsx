@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, Shield, BarChart3, Bell, Users, Brain, Play, Share2, TrendingUp, Activity, Clock, Target, FileImport } from "lucide-react";
+import { Zap, Shield, BarChart3, Bell, Users, Brain, Play, Share2, TrendingUp, Activity, Clock, Target, Download } from "lucide-react";
 
 const featureCards = [
   {
@@ -118,7 +118,7 @@ export default function AlertsPage() {
             variant="outline" 
             className="h-10 px-5 font-semibold border-border/50 hover:bg-accent/50"
           >
-            <FileImport className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-2" />
             Импорт
           </Button>
 
