@@ -298,26 +298,21 @@ export class PumpFunApiService {
   }
     
   /**
-   * Нормализация IPFS URL
+   * Нормализация IPFS URL — возвращает URL через первый доступный gateway
    */
   private normalizeIpfsUrl(url: string): string {
     if (!url) return '/placeholder.png';
     
-    // Уже HTTP(S)
+    // Уже HTTP(S) и не похоже на IPFS — вернуть как есть
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    // IPFS протокол
-    if (url.startsWith('ipfs://')) {
-      return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
+    const cid = extractIpfsCid(url);
+    if (cid) {
+      return `${IPFS_GATEWAYS[0]}/${cid}`;
     }
-    
-    // Хэш IPFS (44 символа для base58)
-    if (url.length === 44 || url.length === 46) {
-      return `https://pump.mypinata.cloud/ipfs/${url}`;
-    }
-    
+
     return url;
   }
 
@@ -422,9 +417,69 @@ export class PumpFunApiService {
   }
 }
 
+// ─── IPFS Gateway Fallbacks ─────────────────────────────────────────
+
+const IPFS_GATEWAYS = [
+  'https://pump.mypinata.cloud/ipfs',
+  'https://ipfs.io/ipfs',
+  'https://gateway.pinata.cloud/ipfs',
+  'https://cloudflare-ipfs.com/ipfs',
+];
+
+/**
+ * Извлечь CID из IPFS URL любого формата
+ */
+function extractIpfsCid(url: string): string | null {
+  if (!url) return null;
+
+  // ipfs://<cid>
+  if (url.startsWith('ipfs://')) {
+    return url.replace('ipfs://', '');
+  }
+
+  // https://<gateway>/ipfs/<cid>
+  const gatewayMatch = url.match(/\/ipfs\/([a-zA-Z0-9]+)/);
+  if (gatewayMatch) return gatewayMatch[1];
+
+  // Просто CID (base58 v0 ~44-46 символов, base32 v1 до ~60)
+  if (/^[a-zA-Z0-9]{44,60}$/.test(url)) {
+    return url;
+  }
+
+  return null;
+}
+
+/**
+ * Получить fallback URL'ы для IPFS-изображения.
+ * Если URL не IPFS — возвращает [url].
+ */
+export function getIpfsFallbackUrls(url: string): string[] {
+  if (!url) return ['/placeholder.png'];
+
+  // Уже HTTP(S) и не IPFS — вернуть как есть
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    const cid = extractIpfsCid(url);
+    if (!cid) return [url]; // не IPFS
+
+    // Вернуть оригинал + fallback'ы на другие gateway
+    const fallbacks = IPFS_GATEWAYS.map((g) => `${g}/${cid}`);
+    // Убедимся, что оригинал первый
+    if (!fallbacks.includes(url)) {
+      return [url, ...fallbacks];
+    }
+    return fallbacks;
+  }
+
+  // IPFS протокол или raw CID
+  const cid = extractIpfsCid(url);
+  if (!cid) return [url];
+
+  return IPFS_GATEWAYS.map((g) => `${g}/${cid}`);
+}
+
 // Экспорт singleton instance
 export const pumpFunApi = new PumpFunApiService();
 // Принудительно включаем прокси для обхода CORS
 pumpFunApi.setProxyEnabled(true);
-// Версия API: 1.0.1
+// Версия API: 1.0.2
 
