@@ -52,14 +52,14 @@ import {
   Filter,
   X,
 } from "lucide-react";
-import { searchWallet } from "@/lib/solana-api";
+import { searchWallet } from "../../lib/solana-api";
 import {
   WalletData,
   addWalletToFirestore,
   getWalletsFromFirestore,
   updateWalletInFirestore,
   deleteWalletFromFirestore,
-} from "@/lib/firebase";
+} from "../../lib/firebase";
 
 interface Wallet {
   id: number;
