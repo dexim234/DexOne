@@ -309,6 +309,12 @@ export default function TrackerPage() {
     }
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      searchExternalWallet();
+    }
+  };
+
   const addWallet = () => {
     if (!newWallet.wallet) return;
     const newId = Math.max(...wallets.map(w => w.id)) + 1;
@@ -319,10 +325,15 @@ export default function TrackerPage() {
       balance: "0 SOL",
       active: true,
       lastActivity: Date.now(),
-      name: newWallet.name || newWallet.wallet.slice(0, 6),
+      name: newWallet.name || formatAddressName(newWallet.wallet),
     }]);
     setNewWallet({ name: "", wallet: "", group: "Main" });
     setShowAddWalletDialog(false);
+  };
+
+  const formatAddressName = (addr: string): string => {
+    if (addr.length < 8) return addr;
+    return `${addr.slice(0, 3)}...${addr.slice(-4)}`;
   };
 
   const saveEditWallet = () => {
@@ -484,21 +495,26 @@ export default function TrackerPage() {
           <div className="bg-card rounded-xl border border-border/50 p-4">
             {/* Header with Add Button */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search wallets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-sm"
-                />
-              </div>
-              <Button
-                onClick={() => setShowAddWalletDialog(true)}
-                className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search wallets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                setShowAddWalletDialog(true);
+                if (walletSearchQuery.trim()) {
+                  setNewWallet(prev => ({ ...prev, wallet: walletSearchQuery, name: formatAddressName(walletSearchQuery) }));
+                }
+              }}
+              className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
             </div>
 
             {/* Group Management */}
@@ -562,6 +578,10 @@ export default function TrackerPage() {
                   <DropdownMenuItem>
                     <Settings className="h-4 w-4 mr-2" />
                     Manage Wallets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setShowGroupDialog(true); setEditingGroup(null); setNewGroupName(""); }}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Manage Groups
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-red-600">
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -701,9 +721,9 @@ export default function TrackerPage() {
             {/* Filters Panel */}
             {positionFilters && (
               <div className="bg-muted/30 rounded-lg p-4 mb-4 border border-border/30">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   {/* Group */}
-                  <div>
+                  <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Group</label>
                     <select
                       className="w-full h-9 px-2 rounded-md border border-input bg-background text-xs"
@@ -718,7 +738,7 @@ export default function TrackerPage() {
                   </div>
 
                   {/* Wallets */}
-                  <div>
+                  <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Wallets</label>
                     <Input
                       placeholder="addr1, addr2..."
@@ -739,7 +759,6 @@ export default function TrackerPage() {
                       <option value="All">All Assets</option>
                       <option value="SOL">SOL</option>
                       <option value="ETH">ETH</option>
-                      <option value="USDC">USDC</option>
                     </select>
                   </div>
 
@@ -757,76 +776,70 @@ export default function TrackerPage() {
                     </select>
                   </div>
 
-                  {/* MC Min */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">MC Min ($)</label>
-                    <Input
-                      placeholder="0"
-                      type="number"
-                      value={filterMcMin}
-                      onChange={(e) => setFilterMcMin(e.target.value)}
-                      className="h-9 text-xs"
-                    />
+                  {/* MC */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Market Cap ($)</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Min"
+                        type="number"
+                        value={filterMcMin}
+                        onChange={(e) => setFilterMcMin(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        placeholder="Max"
+                        type="number"
+                        value={filterMcMax}
+                        onChange={(e) => setFilterMcMax(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                    </div>
                   </div>
 
-                  {/* MC Max */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">MC Max ($)</label>
-                    <Input
-                      placeholder="10000000"
-                      type="number"
-                      value={filterMcMax}
-                      onChange={(e) => setFilterMcMax(e.target.value)}
-                      className="h-9 text-xs"
-                    />
+                  {/* LIQ */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Liquidity ($)</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Min"
+                        type="number"
+                        value={filterLiqMin}
+                        onChange={(e) => setFilterLiqMin(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        placeholder="Max"
+                        type="number"
+                        value={filterLiqMax}
+                        onChange={(e) => setFilterLiqMax(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                    </div>
                   </div>
 
-                  {/* LIQ Min */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">LIQ Min ($)</label>
-                    <Input
-                      placeholder="0"
-                      type="number"
-                      value={filterLiqMin}
-                      onChange={(e) => setFilterLiqMin(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-
-                  {/* LIQ Max */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">LIQ Max ($)</label>
-                    <Input
-                      placeholder="1000000"
-                      type="number"
-                      value={filterLiqMax}
-                      onChange={(e) => setFilterLiqMax(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-
-                  {/* Makers Min */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Makers/5m Min</label>
-                    <Input
-                      placeholder="0"
-                      type="number"
-                      value={filterMakersMin}
-                      onChange={(e) => setFilterMakersMin(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-
-                  {/* Makers Max */}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Makers/5m Max</label>
-                    <Input
-                      placeholder="1000"
-                      type="number"
-                      value={filterMakersMax}
-                      onChange={(e) => setFilterMakersMax(e.target.value)}
-                      className="h-9 text-xs"
-                    />
+                  {/* Makers */}
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Makers/5m</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Min"
+                        type="number"
+                        value={filterMakersMin}
+                        onChange={(e) => setFilterMakersMin(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        placeholder="Max"
+                        type="number"
+                        value={filterMakersMax}
+                        onChange={(e) => setFilterMakersMax(e.target.value)}
+                        className="h-9 text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -881,7 +894,14 @@ export default function TrackerPage() {
                           {position.group}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center font-mono text-xs">
+                      <TableCell 
+                        className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
+                        onClick={() => {
+                          navigator.clipboard.writeText(position.wallet);
+                          router.push(`/tracker/${position.wallet}`);
+                        }}
+                        title="Click to copy and view analytics"
+                      >
                         {position.wallet}
                       </TableCell>
                       <TableCell className="text-center">
