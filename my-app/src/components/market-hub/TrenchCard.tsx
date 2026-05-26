@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Copy, ExternalLink, Zap } from "lucide-react";
+import { Copy, ExternalLink, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Wallet, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface TrenchCardProps {
@@ -95,52 +95,184 @@ export default function TrenchCard({
 
   const hasSocials = twitter || telegram || website;
 
-  const renderMetric = (metricId: string) => {
-    switch (metricId) {
-      case "volume":
-        return <><span className="text-muted-foreground">Vol</span><span className="font-medium">{volume24h}</span></>;
-      case "liquidity":
-        return <><span className="text-muted-foreground">Liq</span><span className="font-medium">-</span></>;
-      case "transactions":
-        return <><span className="text-muted-foreground">Txns</span><span className="font-medium">{trades}</span></>;
-      case "ath":
-        return <><span className="text-muted-foreground">ATH</span><span className="font-medium">-</span></>;
-      case "makersVol":
-        return <><span className="text-muted-foreground">Makers</span><span className="font-medium">-</span></>;
-      case "priceChange":
-        return (
-          <span className={isPositive(priceChange24h) ? "text-green-500" : isNegative(priceChange24h) ? "text-red-500" : "text-muted-foreground"}>
-            {priceChange24h}
-          </span>
-        );
-      case "devTokensHistory":
-        return <><span className="text-muted-foreground">Dev</span><span className="font-medium">-</span></>;
-      case "holders":
-        return <><span className="text-muted-foreground">Holders</span><span className="font-medium">{holders}</span></>;
-      case "botTraders":
-        return <><span className="text-muted-foreground">Bots</span><span className="font-medium">-</span></>;
-      case "botFee":
-        return <><span className="text-muted-foreground">Fee</span><span className="font-medium">-</span></>;
-      case "globalFees":
-        return <><span className="text-muted-foreground">Fees</span><span className="font-medium">-</span></>;
-      case "top10Hold":
-        return <><span className="text-muted-foreground">Top10</span><span className="font-medium">-</span></>;
-      case "devHold":
-        return <><span className="text-muted-foreground">Dev%</span><span className="font-medium">-</span></>;
-      case "bundlers":
-        return <><span className="text-muted-foreground">Bundles</span><span className="font-medium">-</span></>;
-      case "snipers":
-        return <><span className="text-muted-foreground">Snipers</span><span className="font-medium">-</span></>;
-      case "freshWallets":
-        return <><span className="text-muted-foreground">Fresh</span><span className="font-medium">-</span></>;
-      case "lpBurn":
-        return <><span className="text-muted-foreground">LP</span><span className="font-medium">-</span></>;
-      case "dexTax":
-        return <><span className="text-muted-foreground">Tax</span><span className="font-medium">-</span></>;
-      default:
-        return null;
-    }
-  };
+const featureIcons = {
+  mc: TrendingUp,
+  volume: Zap,
+  liquidity: Droplets,
+  transactions: Activity,
+  ath: TrendingUp,
+  makersVol: Users,
+  priceChange: PieChart,
+  devTokensHistory: Clock,
+  holders: Users2,
+  botTraders: Bot,
+  botFee: DollarSign,
+  globalFees: Wallet,
+  top10Hold: Award,
+  devHold: UserX,
+  bundlers: Package,
+  snipers: Crosshair,
+  freshWallets: UserPlus,
+  lpBurn: Flame,
+  dexTax: Percent,
+};
+
+const renderMetric = (metricId: string) => {
+  switch (metricId) {
+    case "mc":
+      return (
+        <>
+          <TrendingUp className="h-3 w-3 text-teal-500" />
+          <span className="text-muted-foreground">MC</span>
+          <span className="font-medium text-teal">{mc}</span>
+        </>
+      );
+    case "volume":
+      return (
+        <>
+          <Zap className="h-3 w-3 text-yellow-500" />
+          <span className="text-muted-foreground">Vol</span>
+          <span className="font-medium">{volume24h}</span>
+        </>
+      );
+    case "liquidity":
+      return (
+        <>
+          <Droplets className="h-3 w-3 text-blue-500" />
+          <span className="text-muted-foreground">Liq</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "transactions":
+      return (
+        <>
+          <Activity className="h-3 w-3 text-green-500" />
+          <span className="text-muted-foreground">Txns</span>
+          <span className="font-medium">{trades}</span>
+        </>
+      );
+    case "ath":
+      return (
+        <>
+          <TrendingUp className="h-3 w-3 text-purple-500" />
+          <span className="text-muted-foreground">ATH</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "makersVol":
+      return (
+        <>
+          <Users className="h-3 w-3 text-indigo-500" />
+          <span className="text-muted-foreground">Makers</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "priceChange":
+      return (
+        <span className={isPositive(priceChange24h) ? "text-green-500" : isNegative(priceChange24h) ? "text-red-500" : "text-muted-foreground"}>
+          {priceChange24h}
+        </span>
+      );
+    case "devTokensHistory":
+      return (
+        <>
+          <Clock className="h-3 w-3 text-orange-500" />
+          <span className="text-muted-foreground">Dev</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "holders":
+      return (
+        <>
+          <Users2 className="h-3 w-3 text-cyan-500" />
+          <span className="text-muted-foreground">Holders</span>
+          <span className="font-medium">{holders}</span>
+        </>
+      );
+    case "botTraders":
+      return (
+        <>
+          <Bot className="h-3 w-3 text-rose-500" />
+          <span className="text-muted-foreground">Bots</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "botFee":
+      return (
+        <>
+          <DollarSign className="h-3 w-3 text-emerald-500" />
+          <span className="text-muted-foreground">Fee</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "globalFees":
+      return (
+        <>
+          <Wallet className="h-3 w-3 text-teal-500" />
+          <span className="text-muted-foreground">Fees</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "top10Hold":
+      return (
+        <>
+          <Award className="h-3 w-3 text-amber-500" />
+          <span className="text-muted-foreground">Top10</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "devHold":
+      return (
+        <>
+          <UserX className="h-3 w-3 text-gray-500" />
+          <span className="text-muted-foreground">Dev%</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "bundlers":
+      return (
+        <>
+          <Package className="h-3 w-3 text-lime-500" />
+          <span className="text-muted-foreground">Bundles</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "snipers":
+      return (
+        <>
+          <Crosshair className="h-3 w-3 text-red-500" />
+          <span className="text-muted-foreground">Snipers</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "freshWallets":
+      return (
+        <>
+          <UserPlus className="h-3 w-3 text-sky-500" />
+          <span className="text-muted-foreground">Fresh</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "lpBurn":
+      return (
+        <>
+          <Flame className="h-3 w-3 text-orange-600" />
+          <span className="text-muted-foreground">LP</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    case "dexTax":
+      return (
+        <>
+          <Percent className="h-3 w-3 text-violet-500" />
+          <span className="text-muted-foreground">Tax</span>
+          <span className="font-medium">-</span>
+        </>
+      );
+    default:
+      return null;
+  }
+};
 
   return (
     <div className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer">
@@ -164,10 +296,11 @@ export default function TrenchCard({
           )}
         </div>
       )}
-      {/* Header with Logo, Address, Copy Button, Dex Paid Badge */}
-      <div className="flex items-start gap-2">
+      
+      {/* Header with Logo, Address, Dex Paid Badge, Time */}
+      <div className="flex items-start gap-3">
         {/* Left Side: Logo + Address */}
-        <div className="flex flex-col items-center gap-0.5 shrink-0">
+        <div className="flex flex-col items-start gap-0.5 shrink-0">
           {/* Logo */}
           <div className="relative h-10 w-10">
             {!imageLoaded && (
@@ -189,22 +322,22 @@ export default function TrenchCard({
             />
           </div>
 
-          {/* Address with Copy - UNDER the logo */}
+          {/* Address with Copy - UNDER the logo, clickable */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors group"
+            className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors group text-left"
           >
             <span className="font-mono">{formatAddress(mint)}</span>
             <Copy className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         </div>
 
-        {/* Token Info + Metrics - starts at same vertical line as logo top */}
+        {/* Token Info + Metrics */}
         <div className="flex-1 min-w-0 flex flex-col justify-start">
-          {/* Token Name - immediately after logo */}
+          {/* Token Name */}
           <div className="flex items-center gap-1 mb-1">
             <span className="font-semibold text-sm truncate">{name}</span>
             {isVerified && (
@@ -224,39 +357,19 @@ export default function TrenchCard({
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-[10px]">
-              <div className="col-span-3 flex items-center gap-1 mb-1">
-                <span className="text-muted-foreground">MC</span>
-                <span className="font-medium text-teal">{mc}</span>
-              </div>
-              <div className="col-span-3 flex items-center gap-1 mb-1">
-                <span className="text-muted-foreground">24h</span>
-                <span className="font-medium">{volume24h}</span>
-              </div>
+            /* Default metrics */
+            <div className="flex flex-wrap gap-1">
+              {renderMetric("mc")}
+              {renderMetric("liquidity")}
+              {renderMetric("volume")}
+              {renderMetric("globalFees")}
+              {renderMetric("botFee")}
             </div>
           )}
         </div>
 
-        {/* Right Side: Copy Button, Dex Paid Badge, Time */}
+        {/* Right Side: Dex Paid Badge, Time */}
         <div className="flex flex-col items-end gap-1 shrink-0">
-          {/* Copy Address Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              copyToClipboard();
-            }}
-            className="p-1 hover:bg-accent rounded-lg transition-colors"
-            title="Copy address"
-          >
-            {copied ? (
-              <svg className="h-3 w-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <Copy className="h-3 w-3 text-muted-foreground" />
-            )}
-          </button>
-
           {/* Dex Paid Badge */}
           {(dexScreenerData?.hasPaidPromotion || dexScreenerData?.hasLightning) && (
             <div className="flex items-center gap-0.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-1.5 py-0.5 rounded-md border border-purple-500/30">

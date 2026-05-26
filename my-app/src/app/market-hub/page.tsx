@@ -3,40 +3,37 @@
 import { useState, useRef, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Wallet, Eye, Save, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3 } from "lucide-react";
+import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 
 const DISPLAY_METRICS = [
-  { id: "volume", label: "Volume" },
-  { id: "liquidity", label: "Liquidity" },
-  { id: "transactions", label: "Transactions" },
-  { id: "ath", label: "ATH" },
-  { id: "makersVol", label: "Makers / Vol" },
-  { id: "priceChange", label: "Price Change %" },
-  { id: "devTokensHistory", label: "Dev Tokens History" },
-  { id: "holders", label: "Holders" },
-  { id: "botTraders", label: "Bot Traders" },
-  { id: "botFee", label: "Bot Fee" },
-  { id: "globalFees", label: "Global Fees" },
-  { id: "top10Hold", label: "Top 10 Hold" },
-  { id: "devHold", label: "Dev Hold" },
-  { id: "bundlers", label: "Bundlers" },
-  { id: "snipers", label: "Snipers" },
-  { id: "freshWallets", label: "Fresh Wallets" },
-  { id: "lpBurn", label: "LP Burn" },
-  { id: "dexTax", label: "DEX Tax" },
+  { id: "volume", label: "Volume", icon: Zap },
+  { id: "liquidity", label: "Liquidity", icon: Droplets },
+  { id: "transactions", label: "Transactions", icon: Activity },
+  { id: "ath", label: "ATH", icon: TrendingUp },
+  { id: "makersVol", label: "Makers / Vol", icon: Users },
+  { id: "priceChange", label: "Price Change %", icon: PieChart },
+  { id: "devTokensHistory", label: "Dev Tokens History", icon: Clock },
+  { id: "holders", label: "Holders", icon: Users2 },
+  { id: "botTraders", label: "Bot Traders", icon: Bot },
+  { id: "botFee", label: "Bot Fee", icon: DollarSign },
+  { id: "globalFees", label: "Global Fees", icon: Wallet },
+  { id: "top10Hold", label: "Top 10 Hold", icon: Award },
+  { id: "devHold", label: "Dev Hold", icon: UserX },
+  { id: "bundlers", label: "Bundlers", icon: Package },
+  { id: "snipers", label: "Snipers", icon: Crosshair },
+  { id: "freshWallets", label: "Fresh Wallets", icon: UserPlus },
+  { id: "lpBurn", label: "LP Burn", icon: Flame },
+  { id: "dexTax", label: "DEX Tax", icon: Percent },
 ];
 
 export default function MarketHubPage() {
-  const [buyMode, setBuyMode] = useState<string>("buy");
   const [displayMode, setDisplayMode] = useState<string>("trenches");
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
@@ -51,9 +48,6 @@ export default function MarketHubPage() {
     }
     return "1m";
   });
-  const [priceInput, setPriceInput] = useState<string>("0.0024");
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     localStorage.setItem("selectedMetrics", JSON.stringify(selectedMetrics));
@@ -62,22 +56,6 @@ export default function MarketHubPage() {
   useEffect(() => {
     localStorage.setItem("timeframe", timeframe);
   }, [timeframe]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const handleSavePrice = () => {
-    setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSavePrice();
-    }
-  };
 
   const toggleMetric = (metricId: string) => {
     setSelectedMetrics(prev => 
@@ -112,50 +90,15 @@ export default function MarketHubPage() {
 
           {/* Right: Action Controls */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Quick Buy Button with Price Input */}
-            <div className="flex items-center gap-1.5 bg-muted/50 rounded-xl p-1.5 px-2 border border-border/30 h-10">
-              <Button 
-                variant={buyMode === "buy" ? "default" : "secondary"} 
-                size="sm"
-                className="h-8 text-xs font-semibold px-2.5 rounded-lg"
-                onClick={() => setBuyMode("buy")}
-              >
-                <Wallet className="h-3.5 w-3.5 mr-1" />
-                Quick Buy
-              </Button>
-              <Separator orientation="vertical" className="h-6" />
-              <div className="flex items-center gap-1">
-                {isEditing ? (
-                  <>
-                    <Input
-                      ref={inputRef as any}
-                      type="text"
-                      value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
-                      onBlur={handleSavePrice}
-                      onKeyDown={handleKeyDown}
-                      className="w-16 h-6 text-xs font-semibold bg-background border-input"
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6"
-                      onClick={handleSavePrice}
-                    >
-                      <Save className="h-3 w-3" />
-                    </Button>
-                  </>
-                ) : (
-                  <div 
-                    className="flex items-center gap-1 px-2 py-1 bg-background rounded-lg cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <span className="text-xs font-semibold">${priceInput}</span>
-                    <Save className="h-2.5 w-2.5 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Quick Buy Button */}
+            <Button 
+              variant="secondary" 
+              size="sm"
+              className="h-9 text-sm font-semibold px-3 rounded-lg"
+            >
+              <Wallet className="h-3.5 w-3.5 mr-1.5" />
+              Quick Buy
+            </Button>
 
             {/* Display Selector with Metrics */}
             <Popover>
@@ -167,33 +110,37 @@ export default function MarketHubPage() {
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-3" align="end">
-                <div className="mb-2">
+              <PopoverContent className="w-96 p-3" align="end">
+                <div className="mb-3">
                   <h4 className="font-semibold text-sm mb-1">Choose which metrics to display</h4>
-                  <p className="text-xs text-muted-foreground">Select metrics to show on token cards</p>
+                  <p className="text-xs text-muted-foreground">Click to toggle metrics on/off</p>
                 </div>
                 <Separator className="mb-3" />
-                <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
-                  {DISPLAY_METRICS.map((metric) => (
-                    <div 
-                      key={metric.id}
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 rounded-md p-1.5 transition-colors"
-                      onClick={() => toggleMetric(metric.id)}
-                    >
-                      <Checkbox 
-                        id={metric.id}
-                        checked={selectedMetrics.includes(metric.id)}
-                        onCheckedChange={() => toggleMetric(metric.id)}
-                        className="h-3.5 w-3.5"
-                      />
-                      <label 
-                        htmlFor={metric.id}
-                        className="text-xs font-medium leading-none cursor-pointer select-none"
+                <div className="grid grid-cols-2 gap-2 max-h-[450px] overflow-y-auto pr-1">
+                  {DISPLAY_METRICS.map((metric) => {
+                    const isSelected = selectedMetrics.includes(metric.id);
+                    const Icon = metric.icon;
+                    return (
+                      <div 
+                        key={metric.id}
+                        onClick={() => toggleMetric(metric.id)}
+                        className={`
+                          cursor-pointer rounded-lg p-2.5 transition-all border
+                          ${isSelected 
+                            ? 'bg-gradient-to-br from-teal-500/15 to-cyan-500/15 border-teal-500/40' 
+                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                          }
+                        `}
                       >
-                        {metric.label}
-                      </label>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-teal-500' : 'text-muted-foreground'}`} />
+                          <span className={`text-xs font-medium ${isSelected ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {metric.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </PopoverContent>
             </Popover>
