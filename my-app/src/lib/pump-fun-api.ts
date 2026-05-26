@@ -343,8 +343,12 @@ export class PumpFunApiService {
   private normalizeIpfsUrl(url: string): string {
     if (!url) return '/placeholder.png';
     
-    // Уже HTTP(S)
+    // Уже HTTP(S) — заменяем нестабильные шлюзы
     if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (url.includes('ipfs.io/ipfs/')) {
+        return url.replace('https://ipfs.io/ipfs/', 'https://pump.mypinata.cloud/ipfs/')
+                  .replace('http://ipfs.io/ipfs/', 'https://pump.mypinata.cloud/ipfs/');
+      }
       return url;
     }
     
@@ -353,8 +357,8 @@ export class PumpFunApiService {
       return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
     }
     
-    // Хэш IPFS (44 символа для base58)
-    if (url.length === 44 || url.length === 46) {
+    // Хэш IPFS (bafybei... или Qm...)
+    if (url.length >= 44 && url.length <= 80) {
       return `https://pump.mypinata.cloud/ipfs/${url}`;
     }
     
