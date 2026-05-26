@@ -302,7 +302,7 @@ const renderMetric = (metricId: string) => {
         {/* Left Side: Logo + Address */}
         <div className="flex flex-col items-start gap-0.5 shrink-0">
           {/* Logo */}
-          <div className="relative h-10 w-10">
+          <div className="relative h-10 w-10 overflow-hidden rounded-lg">
             {!imageLoaded && (
               <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
             )}
@@ -311,7 +311,7 @@ const renderMetric = (metricId: string) => {
               alt={name}
               width={40}
               height={40}
-              className={`rounded-lg object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
               onError={(e) => {
                 e.currentTarget.src = "/placeholder.png";
