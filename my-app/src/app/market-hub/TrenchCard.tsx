@@ -60,13 +60,13 @@ export default function TrenchCard({
       {/* Header with Rank, Logo, Name */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs text-muted-foreground w-4">{rank}</span>
-        <div className="relative h-8 w-8 flex-shrink-0">
+        <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-lg">
           <Image
             src={displayImage}
             alt={name}
             width={32}
             height={32}
-            className="rounded-lg object-cover"
+            className="object-cover"
             unoptimized
             onError={(e) => {
               e.currentTarget.src = '/placeholder.png';
