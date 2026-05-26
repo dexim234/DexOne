@@ -23,7 +23,7 @@ export interface UsePumpTokensReturn {
 export function usePumpTokens({
   columnType,
   refreshInterval = 5000, // 5 секунд по умолчанию
-  enableWebSocket = true,
+  enableWebSocket = false,
 }: UsePumpTokensOptions): UsePumpTokensReturn {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
