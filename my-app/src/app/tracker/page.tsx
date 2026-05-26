@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,8 @@ import {
   Edit2,
   ExternalLink,
   Eye,
+  Filter,
+  X,
 } from "lucide-react";
 import { searchWallet } from "@/lib/solana-api";
 
@@ -72,6 +74,9 @@ interface Position {
   liq: string;
   time: string;
   makers5m: string;
+  mcValue: number;
+  liqValue: number;
+  makersValue: number;
 }
 
 const initialGroups = ["All", "Main", "Trading", "Sniper", "Alpha"];
@@ -80,7 +85,7 @@ const initialWallets: Wallet[] = [
   {
     id: 1,
     group: "Main",
-    wallet: "7xKX...vQp9Z",
+    wallet: "7xKXtvQp9ZmKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
     balance: "1,234.56 SOL",
     active: true,
     lastActivity: Date.now() - 120000,
@@ -89,7 +94,7 @@ const initialWallets: Wallet[] = [
   {
     id: 2,
     group: "Trading",
-    wallet: "3mPL...kJ8nX",
+    wallet: "3mPLkJ8nXpnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     balance: "890.23 SOL",
     active: false,
     lastActivity: Date.now() - 3600000,
@@ -98,7 +103,7 @@ const initialWallets: Wallet[] = [
   {
     id: 3,
     group: "Sniper",
-    wallet: "9qWZ...hR2mY",
+    wallet: "9qWZRhR2mYihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8u",
     balance: "2,567.89 SOL",
     active: true,
     lastActivity: Date.now() - 30000,
@@ -107,7 +112,7 @@ const initialWallets: Wallet[] = [
   {
     id: 4,
     group: "Alpha",
-    wallet: "5nBC...pT4kL",
+    wallet: "5nBCpT4kLOTOE5TF83wUUFt3GsCEz19ppKDu8QaBn53Hf",
     balance: "456.78 SOL",
     active: true,
     lastActivity: Date.now() - 7200000,
@@ -127,6 +132,9 @@ const samplePositions: Position[] = [
     liq: "$345K",
     time: "2m ago",
     makers5m: "234",
+    mcValue: 1200000,
+    liqValue: 345000,
+    makersValue: 234,
   },
   {
     id: 2,
@@ -139,18 +147,24 @@ const samplePositions: Position[] = [
     liq: "$123K",
     time: "5m ago",
     makers5m: "89",
+    mcValue: 890000,
+    liqValue: 123000,
+    makersValue: 89,
   },
   {
     id: 3,
     group: "Sniper",
     wallet: "9qWZ...hR2mY",
-    asset: "USDC",
+    asset: "ETH",
     coin: "POPCAT",
     action: "Buy",
     mc: "$2.3M",
     liq: "$567K",
     time: "1m ago",
     makers5m: "456",
+    mcValue: 2300000,
+    liqValue: 567000,
+    makersValue: 456,
   },
   {
     id: 4,
@@ -163,6 +177,9 @@ const samplePositions: Position[] = [
     liq: "$234K",
     time: "8m ago",
     makers5m: "178",
+    mcValue: 1800000,
+    liqValue: 234000,
+    makersValue: 178,
   },
   {
     id: 5,
@@ -175,6 +192,39 @@ const samplePositions: Position[] = [
     liq: "$789K",
     time: "3m ago",
     makers5m: "312",
+    mcValue: 3400000,
+    liqValue: 789000,
+    makersValue: 312,
+  },
+  {
+    id: 6,
+    group: "Trading",
+    wallet: "3mPL...kJ8nX",
+    asset: "ETH",
+    coin: "SLERF",
+    action: "Buy",
+    mc: "$5.6M",
+    liq: "$1.2M",
+    time: "12m ago",
+    makers5m: "567",
+    mcValue: 5600000,
+    liqValue: 1200000,
+    makersValue: 567,
+  },
+  {
+    id: 7,
+    group: "Sniper",
+    wallet: "9qWZ...hR2mY",
+    asset: "SOL",
+    coin: "TURBO",
+    action: "Sell",
+    mc: "$780K",
+    liq: "$89K",
+    time: "15m ago",
+    makers5m: "45",
+    mcValue: 780000,
+    liqValue: 89000,
+    makersValue: 45,
   },
 ];
 
@@ -201,6 +251,19 @@ export default function TrackerPage() {
   const [positions] = useState<Position[]>(samplePositions);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
 
+  // Position filters
+  const [positionFilters, setShowPositionFilters] = useState(false);
+  const [filterGroup, setFilterGroup] = useState<string>("All");
+  const [filterWallets, setFilterWallets] = useState<string>("");
+  const [filterAsset, setFilterAsset] = useState<string>("All");
+  const [filterAction, setFilterAction] = useState<string>("All");
+  const [filterMcMin, setFilterMcMin] = useState<string>("");
+  const [filterMcMax, setFilterMcMax] = useState<string>("");
+  const [filterLiqMin, setFilterLiqMin] = useState<string>("");
+  const [filterLiqMax, setFilterLiqMax] = useState<string>("");
+  const [filterMakersMin, setFilterMakersMin] = useState<string>("");
+  const [filterMakersMax, setFilterMakersMax] = useState<string>("");
+
   // Dialog states
   const [showAddWalletDialog, setShowAddWalletDialog] = useState(false);
   const [showEditWalletDialog, setShowEditWalletDialog] = useState(false);
@@ -223,6 +286,7 @@ export default function TrackerPage() {
   };
 
   const viewWalletAnalytics = (address: string) => {
+    navigator.clipboard.writeText(address);
     router.push(`/tracker/${address}`);
   };
 
@@ -316,20 +380,71 @@ export default function TrackerPage() {
     setShowEditWalletDialog(true);
   };
 
+  const copyWallet = (wallet: string) => {
+    navigator.clipboard.writeText(wallet);
+  };
+
+  // Filter positions
+  const filteredPositions = useMemo(() => {
+    return positions.filter(p => {
+      // Group filter
+      if (filterGroup !== "All" && p.group !== filterGroup) return false;
+      
+      // Wallet filter (comma-separated)
+      if (filterWallets.trim()) {
+        const walletList = filterWallets.split(",").map(w => w.trim().toLowerCase());
+        const walletMatch = walletList.some(w => 
+          p.wallet.toLowerCase().includes(w) || w.includes(p.wallet.toLowerCase())
+        );
+        if (!walletMatch) return false;
+      }
+      
+      // Asset filter
+      if (filterAsset !== "All" && p.asset !== filterAsset) return false;
+      
+      // Action filter
+      if (filterAction !== "All" && p.action !== filterAction) return false;
+      
+      // MC filter
+      if (filterMcMin && p.mcValue < parseFloat(filterMcMin)) return false;
+      if (filterMcMax && p.mcValue > parseFloat(filterMcMax)) return false;
+      
+      // LIQ filter
+      if (filterLiqMin && p.liqValue < parseFloat(filterLiqMin)) return false;
+      if (filterLiqMax && p.liqValue > parseFloat(filterLiqMax)) return false;
+      
+      // Makers filter
+      if (filterMakersMin && p.makersValue < parseInt(filterMakersMin)) return false;
+      if (filterMakersMax && p.makersValue > parseInt(filterMakersMax)) return false;
+      
+      return true;
+    });
+  }, [positions, filterGroup, filterWallets, filterAsset, filterAction, 
+      filterMcMin, filterMcMax, filterLiqMin, filterLiqMax, filterMakersMin, filterMakersMax]);
+
+  const clearFilters = () => {
+    setFilterGroup("All");
+    setFilterWallets("");
+    setFilterAsset("All");
+    setFilterAction("All");
+    setFilterMcMin("");
+    setFilterMcMax("");
+    setFilterLiqMin("");
+    setFilterLiqMax("");
+    setFilterMakersMin("");
+    setFilterMakersMax("");
+  };
+
+  const hasActiveFilters = filterGroup !== "All" || filterWallets || filterAsset !== "All" || 
+    filterAction !== "All" || filterMcMin || filterMcMax || filterLiqMin || filterLiqMax || 
+    filterMakersMin || filterMakersMax;
+
   const filteredWallets = wallets.filter(w => {
     const matchesGroup = selectedGroup === "All" || w.group === selectedGroup;
     const matchesSearch =
       w.wallet.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.balance.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (w.name && w.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesGroup && matchesSearch;
-  });
-
-  const filteredPositions = positions.filter(p => {
-    const matchesGroup = selectedGroup === "All" || p.group === selectedGroup;
-    const matchesSearch =
-      p.coin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.wallet.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesGroup && matchesSearch;
   });
 
@@ -463,7 +578,7 @@ export default function TrackerPage() {
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
                     Group
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[100px]">
                     Wallet
                   </TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center">
@@ -472,27 +587,28 @@ export default function TrackerPage() {
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
                     Active
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[120px]">
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
                     Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredWallets.map((wallet) => (
-                  <TableRow key={wallet.id} className="border-border/30 cursor-pointer hover:bg-accent/30">
-                    <TableCell className="text-center" onClick={() => viewWalletAnalytics(wallet.wallet)}>
+                  <TableRow key={wallet.id} className="border-border/30">
+                    <TableCell className="text-center">
                       <Badge variant="outline" className="text-[10px] font-medium">
                         {wallet.group}
                       </Badge>
                     </TableCell>
                     <TableCell 
-                      className="text-center font-mono text-xs"
+                      className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
+                      title="Click to copy and view analytics"
                     >
-                      {wallet.name || wallet.wallet}
+                      {wallet.name || wallet.wallet.slice(0, 8) + "..." + wallet.wallet.slice(-4)}
                     </TableCell>
                     <TableCell 
-                      className="text-center text-xs font-semibold"
+                      className="text-center text-xs font-semibold cursor-pointer hover:text-teal-500 transition-colors"
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
                     >
                       {wallet.balance}
@@ -514,19 +630,10 @@ export default function TrackerPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(wallet.wallet); }}
+                          onClick={(e) => { e.stopPropagation(); copyWallet(wallet.wallet); }}
                           title="Copy"
                         >
                           <Copy className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); viewWalletAnalytics(wallet.wallet); }}
-                          title="Analytics"
-                        >
-                          <Eye className="h-3.5 w-3.5 text-teal-500" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -541,24 +648,6 @@ export default function TrackerPage() {
                             <BellOff className="h-3.5 w-3.5 text-muted-foreground" />
                           )}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); openEditWalletDialog(wallet); }}
-                          title="Edit"
-                        >
-                          <Edit2 className="h-3.5 w-3.5 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); deleteWallet(wallet.id); }}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -571,16 +660,177 @@ export default function TrackerPage() {
         {/* Right Side - Positions Table */}
         <div className="flex-1 min-w-0">
           <div className="bg-card rounded-xl border border-border/50 p-4">
-            {/* Positions Header */}
-            <div className="flex items-center gap-4 mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Activity className="h-5 w-5 text-teal-500" />
-                Live Positions
-              </h2>
-              <Badge variant="secondary" className="text-xs">
-                {filteredPositions.length} active
-              </Badge>
+            {/* Positions Header with Filters */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-teal-500" />
+                  Live Positions
+                </h2>
+                <Badge variant="secondary" className="text-xs">
+                  {filteredPositions.length}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={positionFilters ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs px-3"
+                  onClick={() => setShowPositionFilters(!positionFilters)}
+                >
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
+                  Filters
+                  {hasActiveFilters && (
+                    <span className="ml-1.5 h-2 w-2 rounded-full bg-teal-500" />
+                  )}
+                </Button>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs px-3"
+                    onClick={clearFilters}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Filters Panel */}
+            {positionFilters && (
+              <div className="bg-muted/30 rounded-lg p-4 mb-4 border border-border/30">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Group */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Group</label>
+                    <select
+                      className="w-full h-9 px-2 rounded-md border border-input bg-background text-xs"
+                      value={filterGroup}
+                      onChange={(e) => setFilterGroup(e.target.value)}
+                    >
+                      <option value="All">All Groups</option>
+                      {groups.filter(g => g !== "All").map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Wallets */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Wallets</label>
+                    <Input
+                      placeholder="addr1, addr2..."
+                      value={filterWallets}
+                      onChange={(e) => setFilterWallets(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* Asset */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Asset</label>
+                    <select
+                      className="w-full h-9 px-2 rounded-md border border-input bg-background text-xs"
+                      value={filterAsset}
+                      onChange={(e) => setFilterAsset(e.target.value)}
+                    >
+                      <option value="All">All Assets</option>
+                      <option value="SOL">SOL</option>
+                      <option value="ETH">ETH</option>
+                      <option value="USDC">USDC</option>
+                    </select>
+                  </div>
+
+                  {/* Action */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Action</label>
+                    <select
+                      className="w-full h-9 px-2 rounded-md border border-input bg-background text-xs"
+                      value={filterAction}
+                      onChange={(e) => setFilterAction(e.target.value)}
+                    >
+                      <option value="All">All Actions</option>
+                      <option value="Buy">Buy</option>
+                      <option value="Sell">Sell</option>
+                    </select>
+                  </div>
+
+                  {/* MC Min */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">MC Min ($)</label>
+                    <Input
+                      placeholder="0"
+                      type="number"
+                      value={filterMcMin}
+                      onChange={(e) => setFilterMcMin(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* MC Max */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">MC Max ($)</label>
+                    <Input
+                      placeholder="10000000"
+                      type="number"
+                      value={filterMcMax}
+                      onChange={(e) => setFilterMcMax(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* LIQ Min */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">LIQ Min ($)</label>
+                    <Input
+                      placeholder="0"
+                      type="number"
+                      value={filterLiqMin}
+                      onChange={(e) => setFilterLiqMin(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* LIQ Max */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">LIQ Max ($)</label>
+                    <Input
+                      placeholder="1000000"
+                      type="number"
+                      value={filterLiqMax}
+                      onChange={(e) => setFilterLiqMax(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* Makers Min */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Makers/5m Min</label>
+                    <Input
+                      placeholder="0"
+                      type="number"
+                      value={filterMakersMin}
+                      onChange={(e) => setFilterMakersMin(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* Makers Max */}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Makers/5m Max</label>
+                    <Input
+                      placeholder="1000"
+                      type="number"
+                      value={filterMakersMax}
+                      onChange={(e) => setFilterMakersMax(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Positions Table */}
             <Table>
@@ -616,68 +866,72 @@ export default function TrackerPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPositions.map((position) => (
-                  <TableRow key={position.id} className="border-border/30">
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="text-[10px] font-medium">
-                        {position.group}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-xs">
-                      {position.wallet}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Coins className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs font-medium">{position.asset}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={position.action === "Buy" ? "default" : "destructive"}
-                        className="text-[10px] font-semibold"
-                      >
-                        {position.coin}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={
-                          position.action === "Buy"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className={`text-[10px] font-bold ${
-                          position.action === "Buy"
-                            ? "bg-green-500 hover:bg-green-600"
-                            : "bg-red-500 hover:bg-red-600"
-                        }`}
-                      >
-                        {position.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center text-xs font-semibold text-teal-500">
-                      {position.mc}
-                    </TableCell>
-                    <TableCell className="text-center text-xs font-semibold text-blue-500">
-                      {position.liq}
-                    </TableCell>
-                    <TableCell className="text-center text-xs text-muted-foreground">
-                      <div className="flex items-center justify-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {position.time}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Zap className="h-3 w-3 text-yellow-500" />
-                        <span className="text-xs font-bold text-foreground">
-                          {position.makers5m}
-                        </span>
-                      </div>
+                {filteredPositions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No positions match your filters</p>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredPositions.map((position) => (
+                    <TableRow key={position.id} className="border-border/30">
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-[10px] font-medium">
+                          {position.group}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-xs">
+                        {position.wallet}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Coins className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs font-medium">{position.asset}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={position.action === "Buy" ? "default" : "destructive"}
+                          className="text-[10px] font-semibold"
+                        >
+                          {position.coin}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          className={`text-[10px] font-bold ${
+                            position.action === "Buy"
+                              ? "bg-green-500 hover:bg-green-600"
+                              : "bg-red-500 hover:bg-red-600"
+                          }`}
+                        >
+                          {position.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-xs font-semibold text-teal-500">
+                        {position.mc}
+                      </TableCell>
+                      <TableCell className="text-center text-xs font-semibold text-blue-500">
+                        {position.liq}
+                      </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground">
+                        <div className="flex items-center justify-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {position.time}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Zap className="h-3 w-3 text-yellow-500" />
+                          <span className="text-xs font-bold text-foreground">
+                            {position.makers5m}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
