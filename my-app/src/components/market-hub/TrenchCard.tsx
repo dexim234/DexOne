@@ -76,8 +76,8 @@ export default function TrenchCard({
   };
 
   const formatAddress = (addr: string) => {
-    if (addr.length < 7) return addr;
-    return `${addr.slice(0, 3)}...${addr.slice(-4)}`;
+    if (addr.length < 9) return addr;
+    return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
   };
 
   const formatTimeAgo = (timestamp?: number) => {
@@ -302,15 +302,15 @@ const renderMetric = (metricId: string) => {
         {/* Left Side: Logo + Address */}
         <div className="flex flex-col items-start gap-0.5 shrink-0">
           {/* Logo */}
-          <div className="relative h-10 w-10 overflow-hidden rounded-lg">
+          <div className="relative h-12 w-12 overflow-hidden rounded-xl">
             {!imageLoaded && (
-              <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
+              <div className="absolute inset-0 rounded-xl bg-muted animate-pulse" />
             )}
             <Image
               src={logo}
               alt={name}
-              width={40}
-              height={40}
+              width={48}
+              height={48}
               className={`object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
               onError={(e) => {
@@ -328,10 +328,10 @@ const renderMetric = (metricId: string) => {
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors group text-left"
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group text-left mt-1"
           >
             <span className="font-mono">{formatAddress(mint)}</span>
-            <Copy className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         </div>
 
