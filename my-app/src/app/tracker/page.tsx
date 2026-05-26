@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +48,18 @@ import {
   Edit2,
   ExternalLink,
   Eye,
+  Loader2,
   Filter,
   X,
 } from "lucide-react";
 import { searchWallet } from "@/lib/solana-api";
+import {
+  WalletData,
+  addWalletToFirestore,
+  getWalletsFromFirestore,
+  updateWalletInFirestore,
+  deleteWalletFromFirestore,
+} from "@/lib/firebase";
 
 interface Wallet {
   id: number;
@@ -61,6 +69,7 @@ interface Wallet {
   active: boolean;
   lastActivity: number;
   name?: string;
+  firebaseId?: string;
 }
 
 interface Position {
@@ -80,45 +89,6 @@ interface Position {
 }
 
 const initialGroups = ["All", "Main", "Trading", "Sniper", "Alpha"];
-
-const initialWallets: Wallet[] = [
-  {
-    id: 1,
-    group: "Main",
-    wallet: "7xKXtvQp9ZmKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-    balance: "1,234.56 SOL",
-    active: true,
-    lastActivity: Date.now() - 120000,
-    name: "Primary Wallet",
-  },
-  {
-    id: 2,
-    group: "Trading",
-    wallet: "3mPLkJ8nXpnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-    balance: "890.23 SOL",
-    active: false,
-    lastActivity: Date.now() - 3600000,
-    name: "Trading Bot",
-  },
-  {
-    id: 3,
-    group: "Sniper",
-    wallet: "9qWZRhR2mYihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8u",
-    balance: "2,567.89 SOL",
-    active: true,
-    lastActivity: Date.now() - 30000,
-    name: "Sniper #1",
-  },
-  {
-    id: 4,
-    group: "Alpha",
-    wallet: "5nBCpT4kLOTOE5TF83wUUFt3GsCEz19ppKDu8QaBn53Hf",
-    balance: "456.78 SOL",
-    active: true,
-    lastActivity: Date.now() - 7200000,
-    name: "Alpha Access",
-  },
-];
 
 const samplePositions: Position[] = [
   {
@@ -247,9 +217,11 @@ export default function TrackerPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
   const [groups, setGroups] = useState<string[]>(initialGroups);
-  const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [positions] = useState<Position[]>(samplePositions);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
+  const [isLoadingWallets, setIsLoadingWallets] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Position filters
   const [positionFilters, setShowPositionFilters] = useState(false);
@@ -275,14 +247,66 @@ export default function TrackerPage() {
   const [newWallet, setNewWallet] = useState({ name: "", wallet: "", group: "Main" });
   const [newGroupName, setNewGroupName] = useState("");
 
-  const toggleActive = (id: number) => {
+  // Load wallets from Firestore on mount
+  useEffect(() => {
+    loadWallets();
+  }, []);
+
+  const loadWallets = async () => {
+    setIsLoadingWallets(true);
+    setError(null);
+    try {
+      const walletsData = await getWalletsFromFirestore();
+      const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
+        id: index + 1,
+        group: w.group,
+        wallet: w.wallet,
+        balance: w.balance,
+        active: w.active,
+        lastActivity: w.lastActivity,
+        name: w.name,
+        firebaseId: w.id,
+      }));
+      setWallets(formattedWallets);
+    } catch (err) {
+      console.error("Error loading wallets:", err);
+      setError("Failed to load wallets from Firestore");
+      setWallets([]);
+    } finally {
+      setIsLoadingWallets(false);
+    }
+  };
+
+  const toggleActive = async (id: number) => {
+    const wallet = wallets.find(w => w.id === id);
+    if (!wallet) return;
+
     setWallets(prev =>
       prev.map(w => (w.id === id ? { ...w, active: !w.active } : w))
     );
+
+    if (wallet.firebaseId) {
+      try {
+        await updateWalletInFirestore(wallet.firebaseId, { active: !wallet.active });
+      } catch (err) {
+        console.error("Error updating wallet active status:", err);
+      }
+    }
   };
 
-  const deleteWallet = (id: number) => {
+  const deleteWallet = async (id: number) => {
+    const wallet = wallets.find(w => w.id === id);
+    if (!wallet) return;
+
     setWallets(prev => prev.filter(w => w.id !== id));
+
+    if (wallet.firebaseId) {
+      try {
+        await deleteWalletFromFirestore(wallet.firebaseId);
+      } catch (err) {
+        console.error("Error deleting wallet:", err);
+      }
+    }
   };
 
   const viewWalletAnalytics = (address: string) => {
@@ -315,20 +339,36 @@ export default function TrackerPage() {
     }
   };
 
-  const addWallet = () => {
+  const addWallet = async () => {
     if (!newWallet.wallet) return;
-    const newId = Math.max(...wallets.map(w => w.id)) + 1;
-    setWallets(prev => [...prev, {
-      id: newId,
-      group: newWallet.group,
-      wallet: newWallet.wallet,
-      balance: "0 SOL",
-      active: true,
-      lastActivity: Date.now(),
-      name: newWallet.name || formatAddressName(newWallet.wallet),
-    }]);
-    setNewWallet({ name: "", wallet: "", group: "Main" });
-    setShowAddWalletDialog(false);
+    
+    try {
+      const walletId = await addWalletToFirestore({
+        group: newWallet.group,
+        wallet: newWallet.wallet,
+        balance: "0 SOL",
+        active: true,
+        lastActivity: Date.now(),
+        name: newWallet.name || formatAddressName(newWallet.wallet),
+      });
+
+      const newId = Math.max(...wallets.map(w => w.id), 0) + 1;
+      setWallets(prev => [...prev, {
+        id: newId,
+        group: newWallet.group,
+        wallet: newWallet.wallet,
+        balance: "0 SOL",
+        active: true,
+        lastActivity: Date.now(),
+        name: newWallet.name || formatAddressName(newWallet.wallet),
+        firebaseId: walletId,
+      }]);
+      setNewWallet({ name: "", wallet: "", group: "Main" });
+      setShowAddWalletDialog(false);
+    } catch (err) {
+      console.error("Error adding wallet:", err);
+      alert("Failed to add wallet to Firestore");
+    }
   };
 
   const formatAddressName = (addr: string): string => {
@@ -336,17 +376,31 @@ export default function TrackerPage() {
     return `${addr.slice(0, 3)}...${addr.slice(-4)}`;
   };
 
-  const saveEditWallet = () => {
-    if (!editingWallet) return;
-    setWallets(prev =>
-      prev.map(w =>
-        w.id === editingWallet.id
-          ? { ...w, name: newWallet.name, group: newWallet.group, wallet: newWallet.wallet }
-          : w
-      )
-    );
-    setEditingWallet(null);
-    setShowEditWalletDialog(false);
+  const saveEditWallet = async () => {
+    if (!editingWallet || !newWallet.wallet) return;
+
+    try {
+      const updates: Partial<WalletData> = {
+        group: newWallet.group || "Main",
+        wallet: newWallet.wallet,
+        name: newWallet.name || formatAddressName(newWallet.wallet),
+      };
+
+      await updateWalletInFirestore(editingWallet.firebaseId!, updates);
+
+      setWallets(prev =>
+        prev.map(w =>
+          w.id === editingWallet.id
+            ? { ...w, name: updates.name!, group: updates.group!, wallet: updates.wallet! }
+            : w
+        )
+      );
+      setEditingWallet(null);
+      setShowEditWalletDialog(false);
+    } catch (err) {
+      console.error("Error updating wallet:", err);
+      alert("Failed to update wallet in Firestore");
+    }
   };
 
   const addGroup = () => {
@@ -461,6 +515,21 @@ export default function TrackerPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Loading State */}
+      {isLoadingWallets && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+          <span className="ml-3 text-muted-foreground">Loading wallets...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
+          <p className="text-red-500 text-sm">{error}</p>
+        </div>
+      )}
+
       {/* External Wallet Search */}
       <div className="mb-6">
         <div className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/30 rounded-xl p-4">
@@ -567,9 +636,9 @@ export default function TrackerPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { loadWallets(); }}>
                     <Download className="h-4 w-4 mr-2" />
-                    Import
+                    Refresh from Firestore
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
