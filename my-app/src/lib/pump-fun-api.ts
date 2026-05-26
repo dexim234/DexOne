@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { calculateTokenScore, TokenScoreResult } from './token-scoring';
 
 // Типы данных для токенов Pump.fun
 export interface PumpToken {
@@ -77,6 +78,10 @@ export interface TokenMarketData {
   isVerified: boolean;
   imageUrl?: string;
   metadataUri?: string;
+  /** Скор Soon-эллигибильности (0–100) */
+  soonScore?: number;
+  /** Прогресс bonding curve в процентах */
+  curveProgress?: number;
 }
 
 export class PumpFunApiService {
@@ -215,7 +220,7 @@ export class PumpFunApiService {
   /**
    * Преобразовать PumpToken в формат TokenMarketData для карточек
    */
-  convertToMarketData(token: PumpToken, rank: number): TokenMarketData {
+  convertToMarketData(token: PumpToken, rank: number, scoreResult?: TokenScoreResult): TokenMarketData {
     const formatNumber = (num?: number): string => {
       if (num === undefined || num === null) return '0';
       if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
@@ -258,6 +263,8 @@ export class PumpFunApiService {
       isVerified: token.isVerified || false,
       imageUrl: imageUrl,
       metadataUri: token.metadataUri || anyToken.metadata_uri,
+      soonScore: scoreResult?.score,
+      curveProgress: scoreResult?.progressPercent,
     };
   }
 
@@ -332,12 +339,37 @@ export class PumpFunApiService {
 
   /**
    * Получить токены для колонки "Soon" (предстоящие/популярные)
+   * Использует взвешенный скоринг: score ≥ 65 / 100.
    */
   async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
     try {
-      const trending = await this.getTrendingCoins(limit);
-      return trending.map((token, index) => 
-        this.convertToMarketData(token, index + 1)
+      // Запрашиваем больше токенов, чтобы скоринг мог отфильтровать
+      const poolLimit = Math.max(limit * 5, 100);
+      const trending = await this.getTrendingCoins(poolLimit);
+      const fresh = await this.getNewCoins(poolLimit);
+
+      // Объединяем пулы и дедуплицируем по mint
+      const mintSet = new Set<string>();
+      const pool: PumpToken[] = [];
+
+      for (const token of [...trending, ...(fresh.coins || [])]) {
+        if (!token.mint || mintSet.has(token.mint)) continue;
+        mintSet.add(token.mint);
+        pool.push(token);
+      }
+
+      // Считаем скор каждому токену
+      const scored = pool
+        .map((token) => ({
+          token,
+          result: calculateTokenScore(token),
+        }))
+        .filter((item) => item.result.eligible)
+        .sort((a, b) => b.result.score - a.result.score)
+        .slice(0, limit);
+
+      return scored.map((item, index) =>
+        this.convertToMarketData(item.token, index + 1, item.result)
       );
     } catch (error) {
       console.error('Error loading soon tokens:', error);
