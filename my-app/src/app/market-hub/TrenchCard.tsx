@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { getSolanaExplorerUrl } from "@/lib/solana-config";
 
 interface TrenchCardProps {
@@ -60,17 +59,20 @@ export default function TrenchCard({
       {/* Header with Rank, Logo, Name */}
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs text-muted-foreground w-4">{rank}</span>
-        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl">
-          <Image
+        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-muted">
+          <img
             src={displayImage || "/placeholder.png"}
             alt={name}
             width={80}
             height={80}
-            className="object-cover"
-            unoptimized
+            className="w-full h-full object-cover"
             onError={(e) => {
-              e.currentTarget.src = '/placeholder.png';
+              const target = e.currentTarget;
+              if (!target.src.includes('placeholder.png')) {
+                target.src = '/placeholder.png';
+              }
             }}
+            loading="eager"
           />
         </div>
         <div className="flex flex-col flex-1 min-w-0 justify-center">
