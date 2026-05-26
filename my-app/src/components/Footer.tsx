@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Activity, Brain, Bell, Phone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
+import { Activity, Brain, Bell, Megaphone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ const leftItems = [
   { label: "Tracker", href: "/tracker", icon: Activity, transKey: "footer.tracker" },
   { label: "Smart", href: "/smart", icon: Brain, transKey: "footer.smart" },
   { label: "Alerts", href: "/alerts", icon: Bell, transKey: "footer.alerts" },
-  { label: "Calls", href: "/calls", icon: Phone, transKey: "footer.calls" },
+  { label: "Calls", href: "/calls", icon: Megaphone, transKey: "footer.calls" },
   { label: "MarketView", href: "/market-view", icon: BarChart3, transKey: "footer.marketView" },
 ];
 

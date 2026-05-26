@@ -15,7 +15,7 @@ import {
   Sun,
   Menu,
   TrendingUp,
-  Phone,
+  Megaphone,
   BellRing,
   Activity,
   Brain,
@@ -41,7 +41,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 
 const navItems = [
   { label: "Market HUB", href: "/market-hub", icon: TrendingUp, transKey: "nav.marketHub" },
-  { label: "Calls", href: "/calls", icon: Phone, transKey: "nav.calls" },
+  { label: "Calls", href: "/calls", icon: Megaphone, transKey: "nav.calls" },
   { label: "Alerts", href: "/alerts", icon: BellRing, transKey: "nav.alerts" },
   { label: "Tracker", href: "/tracker", icon: Activity, transKey: "nav.tracker" },
   { label: "Smart", href: "/smart", icon: Brain, transKey: "nav.smart" },
