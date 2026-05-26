@@ -338,12 +338,17 @@ const renderMetric = (metricId: string) => {
         {/* Token Info + Metrics */}
         <div className="flex-1 min-w-0 flex flex-col justify-start">
           {/* Token Name */}
-          <div className="flex items-center gap-1 mb-1">
-            <span className="font-semibold text-sm truncate">{name}</span>
-            {isVerified && (
-              <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+          <div className="flex flex-col mb-1 min-w-0">
+            <div className="flex items-center gap-1">
+              <span className="font-bold text-sm truncate">{symbol || name}</span>
+              {isVerified && (
+                <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            {symbol && name && symbol !== name && (
+              <span className="text-[11px] text-muted-foreground truncate leading-tight">{name}</span>
             )}
           </div>
 
