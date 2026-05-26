@@ -1,11 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
-import { pumpWebSocket, PumpEventType } from './pump-websocket';
+import { pumpFunApi, TokenMarketData } from './pump-fun-api';
 
 export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
   refreshInterval?: number;
-  enableWebSocket?: boolean;
 }
 
 export interface UsePumpTokensReturn {
@@ -17,24 +15,17 @@ export interface UsePumpTokensReturn {
   wsConnected: boolean;
 }
 
-/**
- * Хук для получения токенов Pump.fun с поддержкой реального времени
- */
 export function usePumpTokens({
   columnType,
-  refreshInterval = 5000, // 5 секунд по умолчанию
-  enableWebSocket = true,
+  refreshInterval = 5000,
 }: UsePumpTokensOptions): UsePumpTokensReturn {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const wsCallbackRef = useRef<(() => void) | null>(null);
 
-  // Функция загрузки токенов
   const loadTokens = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -47,7 +38,6 @@ export function usePumpTokens({
           newTokens = await pumpFunApi.getNewTokens(20);
           break;
         case 'soon':
-          // Get trending tokens but filter out those already in 'new'
           const trending = await pumpFunApi.getTrendingCoins(30);
           const newTokensSet = new Set((await pumpFunApi.getNewTokens(20)).map(t => t.mint));
           newTokens = trending
@@ -72,71 +62,14 @@ export function usePumpTokens({
     }
   }, [columnType]);
 
-  // Подключение к WebSocket для реального времени
-  const connectWebSocket = useCallback(() => {
-    if (!enableWebSocket) return;
-
-    // Подписка на события создания токенов
-    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken }) => {
-      if (columnType === 'new' && event.type === 'create') {
-        setTokens(prev => {
-          const newToken = pumpFunApi.convertToMarketData(event.token, 1);
-          return [newToken, ...prev.slice(0, 19)];
-        });
-        setLastUpdate(new Date());
-      }
-    };
-
-    pumpWebSocket.on('create', handleTokenCreate);
-    wsCallbackRef.current = () => {
-      pumpWebSocket.off('create', handleTokenCreate);
-    };
-
-    // Подключаемся если еще не подключены
-    const status = pumpWebSocket.getStatus();
-    setWsConnected(status.connected);
-
-    if (!status.connected) {
-      pumpWebSocket.connect();
-    }
-
-    // Слушаем изменения статуса подключения
-    const checkConnection = setInterval(() => {
-      const currentStatus = pumpWebSocket.getStatus();
-      setWsConnected(currentStatus.connected);
-    }, 2000);
-
-    intervalRef.current = checkConnection as unknown as NodeJS.Timeout;
-  }, [enableWebSocket, columnType]);
-
-  // Отключение от WebSocket
-  const disconnectWebSocket = useCallback(() => {
-    if (wsCallbackRef.current) {
-      wsCallbackRef.current();
-      wsCallbackRef.current = null;
-    }
-  }, []);
-
-  // Эффект для загрузки токенов при монтировании
   useEffect(() => {
     loadTokens();
-    
-    // Устанавливаем интервал для периодического обновления
     intervalRef.current = setInterval(loadTokens, refreshInterval);
-
-    // Пытаемся подключить WebSocket
-    connectWebSocket();
-
     return () => {
-      // Очистка при размонтировании
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      disconnectWebSocket();
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [loadTokens, refreshInterval, connectWebSocket, disconnectWebSocket]);
+  }, [loadTokens, refreshInterval]);
 
-  // Функция для ручного обновления
   const refresh = useCallback(async () => {
     await loadTokens();
   }, [loadTokens]);
@@ -147,6 +80,6 @@ export function usePumpTokens({
     error,
     refresh,
     lastUpdate,
-    wsConnected,
+    wsConnected: false,
   };
 }
