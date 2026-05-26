@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { calculateTokenScore, TokenScoreResult } from './token-scoring';
 
 // Типы данных для токенов Pump.fun
 export interface PumpToken {
@@ -78,10 +77,6 @@ export interface TokenMarketData {
   isVerified: boolean;
   imageUrl?: string;
   metadataUri?: string;
-  /** Скор Soon-эллигибильности (0–100) */
-  soonScore?: number;
-  /** Прогресс bonding curve в процентах */
-  curveProgress?: number;
 }
 
 export class PumpFunApiService {
@@ -220,7 +215,7 @@ export class PumpFunApiService {
   /**
    * Преобразовать PumpToken в формат TokenMarketData для карточек
    */
-  convertToMarketData(token: PumpToken, rank: number, scoreResult?: TokenScoreResult): TokenMarketData {
+  convertToMarketData(token: PumpToken, rank: number): TokenMarketData {
     const formatNumber = (num?: number): string => {
       if (num === undefined || num === null) return '0';
       if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
@@ -263,8 +258,6 @@ export class PumpFunApiService {
       isVerified: token.isVerified || false,
       imageUrl: imageUrl,
       metadataUri: token.metadataUri || anyToken.metadata_uri,
-      soonScore: scoreResult?.score,
-      curveProgress: scoreResult?.progressPercent,
     };
   }
 
@@ -298,21 +291,26 @@ export class PumpFunApiService {
   }
     
   /**
-   * Нормализация IPFS URL — возвращает URL через первый доступный gateway
+   * Нормализация IPFS URL
    */
   private normalizeIpfsUrl(url: string): string {
     if (!url) return '/placeholder.png';
     
-    // Уже HTTP(S) и не похоже на IPFS — вернуть как есть
+    // Уже HTTP(S)
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
     
-    const cid = extractIpfsCid(url);
-    if (cid) {
-      return `${IPFS_GATEWAYS[0]}/${cid}`;
+    // IPFS протокол
+    if (url.startsWith('ipfs://')) {
+      return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
     }
-
+    
+    // Хэш IPFS (44 символа для base58)
+    if (url.length === 44 || url.length === 46) {
+      return `https://pump.mypinata.cloud/ipfs/${url}`;
+    }
+    
     return url;
   }
 
@@ -334,37 +332,12 @@ export class PumpFunApiService {
 
   /**
    * Получить токены для колонки "Soon" (предстоящие/популярные)
-   * Использует взвешенный скоринг: score ≥ 65 / 100.
    */
   async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
     try {
-      // Запрашиваем больше токенов, чтобы скоринг мог отфильтровать
-      const poolLimit = Math.max(limit * 5, 100);
-      const trending = await this.getTrendingCoins(poolLimit);
-      const fresh = await this.getNewCoins(poolLimit);
-
-      // Объединяем пулы и дедуплицируем по mint
-      const mintSet = new Set<string>();
-      const pool: PumpToken[] = [];
-
-      for (const token of [...trending, ...(fresh.coins || [])]) {
-        if (!token.mint || mintSet.has(token.mint)) continue;
-        mintSet.add(token.mint);
-        pool.push(token);
-      }
-
-      // Считаем скор каждому токену
-      const scored = pool
-        .map((token) => ({
-          token,
-          result: calculateTokenScore(token),
-        }))
-        .filter((item) => item.result.eligible)
-        .sort((a, b) => b.result.score - a.result.score)
-        .slice(0, limit);
-
-      return scored.map((item, index) =>
-        this.convertToMarketData(item.token, index + 1, item.result)
+      const trending = await this.getTrendingCoins(limit);
+      return trending.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
       );
     } catch (error) {
       console.error('Error loading soon tokens:', error);
@@ -417,69 +390,9 @@ export class PumpFunApiService {
   }
 }
 
-// ─── IPFS Gateway Fallbacks ─────────────────────────────────────────
-
-const IPFS_GATEWAYS = [
-  'https://pump.mypinata.cloud/ipfs',
-  'https://ipfs.io/ipfs',
-  'https://gateway.pinata.cloud/ipfs',
-  'https://cloudflare-ipfs.com/ipfs',
-];
-
-/**
- * Извлечь CID из IPFS URL любого формата
- */
-function extractIpfsCid(url: string): string | null {
-  if (!url) return null;
-
-  // ipfs://<cid>
-  if (url.startsWith('ipfs://')) {
-    return url.replace('ipfs://', '');
-  }
-
-  // https://<gateway>/ipfs/<cid>
-  const gatewayMatch = url.match(/\/ipfs\/([a-zA-Z0-9]+)/);
-  if (gatewayMatch) return gatewayMatch[1];
-
-  // Просто CID (base58 v0 ~44-46 символов, base32 v1 до ~60)
-  if (/^[a-zA-Z0-9]{44,60}$/.test(url)) {
-    return url;
-  }
-
-  return null;
-}
-
-/**
- * Получить fallback URL'ы для IPFS-изображения.
- * Если URL не IPFS — возвращает [url].
- */
-export function getIpfsFallbackUrls(url: string): string[] {
-  if (!url) return ['/placeholder.png'];
-
-  // Уже HTTP(S) и не IPFS — вернуть как есть
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    const cid = extractIpfsCid(url);
-    if (!cid) return [url]; // не IPFS
-
-    // Вернуть оригинал + fallback'ы на другие gateway
-    const fallbacks = IPFS_GATEWAYS.map((g) => `${g}/${cid}`);
-    // Убедимся, что оригинал первый
-    if (!fallbacks.includes(url)) {
-      return [url, ...fallbacks];
-    }
-    return fallbacks;
-  }
-
-  // IPFS протокол или raw CID
-  const cid = extractIpfsCid(url);
-  if (!cid) return [url];
-
-  return IPFS_GATEWAYS.map((g) => `${g}/${cid}`);
-}
-
 // Экспорт singleton instance
 export const pumpFunApi = new PumpFunApiService();
 // Принудительно включаем прокси для обхода CORS
 pumpFunApi.setProxyEnabled(true);
-// Версия API: 1.0.2
+// Версия API: 1.0.1
 

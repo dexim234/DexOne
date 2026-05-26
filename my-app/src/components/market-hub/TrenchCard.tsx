@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { Copy, ExternalLink, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Wallet, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getIpfsFallbackUrls } from "@/lib/pump-fun-api";
 
 interface TrenchCardProps {
   rank: string;
@@ -30,10 +29,6 @@ interface TrenchCardProps {
     hasPaidPromotion?: boolean;
     hasLightning?: boolean;
   };
-  /** Скор Soon (0–100) */
-  soonScore?: number;
-  /** Прогресс bonding curve в % */
-  curveProgress?: number;
 }
 
 export default function TrenchCard({
@@ -58,20 +53,12 @@ export default function TrenchCard({
   telegram,
   website,
   dexScreenerData,
-  soonScore,
-  curveProgress,
 }: TrenchCardProps) {
   const [copied, setCopied] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [fallbackIndex, setFallbackIndex] = useState(0);
-
-  // Собираем fallback URL'ы при изменении logo
-  const fallbackUrls = getIpfsFallbackUrls(logo);
-  const currentLogo = fallbackUrls[fallbackIndex] ?? '/placeholder.png';
 
   useEffect(() => {
     setImageLoaded(false);
-    setFallbackIndex(0);
   }, [logo]);
 
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
@@ -320,18 +307,15 @@ const renderMetric = (metricId: string) => {
               <div className="absolute inset-0 rounded-lg bg-muted animate-pulse" />
             )}
             <Image
-              src={currentLogo}
+              src={logo}
               alt={name}
               width={40}
               height={40}
               className={`rounded-lg object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
-              onError={() => {
-                if (fallbackIndex < fallbackUrls.length - 1) {
-                  setFallbackIndex((prev) => prev + 1);
-                } else {
-                  setImageLoaded(true);
-                }
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.png";
+                setImageLoaded(true);
               }}
               loading="eager"
               priority
@@ -384,7 +368,7 @@ const renderMetric = (metricId: string) => {
           )}
         </div>
 
-        {/* Right Side: Dex Paid Badge, Score, Curve, Time */}
+        {/* Right Side: Dex Paid Badge, Time */}
         <div className="flex flex-col items-end gap-1 shrink-0">
           {/* Dex Paid Badge */}
           {(dexScreenerData?.hasPaidPromotion || dexScreenerData?.hasLightning) && (
@@ -397,26 +381,6 @@ const renderMetric = (metricId: string) => {
               {dexScreenerData?.hasLightning && (
                 <Zap className="h-3 w-3 text-yellow-500" />
               )}
-            </div>
-          )}
-
-          {/* Soon Score Badge */}
-          {typeof soonScore === 'number' && (
-            <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-              soonScore >= 80
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                : soonScore >= 65
-                ? 'bg-teal-500/15 text-teal-400 border-teal-500/30'
-                : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
-            }`}>
-              {soonScore}/100
-            </div>
-          )}
-
-          {/* Curve Progress */}
-          {typeof curveProgress === 'number' && (
-            <div className="text-[10px] text-muted-foreground font-medium">
-              Curve {curveProgress.toFixed(1)}%
             </div>
           )}
 

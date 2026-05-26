@@ -27,7 +27,7 @@ export default function TrenchColumn({
   const { tokens, isLoading, error, refresh, lastUpdate, wsConnected } = usePumpTokens({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
-    enableWebSocket: false,
+    enableWebSocket: true,
   });
 
   const handleManualRefresh = async () => {

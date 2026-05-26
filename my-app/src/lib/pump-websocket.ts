@@ -58,9 +58,9 @@ export class PumpWebSocketClient {
     this.url = config?.url || 'wss://ws.pump.fun';
     this.config = {
       url: this.url,
-      autoReconnect: config?.autoReconnect ?? false,
-      reconnectInterval: config?.reconnectInterval ?? 5000,
-      maxReconnectAttempts: config?.maxReconnectAttempts ?? 3,
+      autoReconnect: config?.autoReconnect ?? true,
+      reconnectInterval: config?.reconnectInterval ?? 3000,
+      maxReconnectAttempts: config?.maxReconnectAttempts ?? 5,
       onConnect: config?.onConnect ?? (() => {}),
       onDisconnect: config?.onDisconnect ?? (() => {}),
       onError: config?.onError ?? (() => {}),
@@ -136,11 +136,8 @@ export class PumpWebSocketClient {
         }
       };
 
-      this.ws.onerror = (_error) => {
-        // Suppress noisy logs; single warning on first failure
-        if (this.reconnectAttempts === 0) {
-          console.warn('Pump.fun WebSocket unavailable (expected — no public WS endpoint). Falling back to polling.');
-        }
+      this.ws.onerror = (error) => {
+        console.error('Pump.fun WebSocket error:', error);
         this.config.onError(new Error('WebSocket error'));
       };
 
@@ -148,12 +145,12 @@ export class PumpWebSocketClient {
         this.isConnected = false;
         this.isConnecting = false;
         
-        // Only reconnect if autoReconnect is enabled and we haven't exhausted attempts
+        console.log('Pump.fun WebSocket disconnected');
+        this.config.onDisconnect();
+
+        // Автоматическое переподключение
         if (this.config.autoReconnect && this.reconnectAttempts < this.config.maxReconnectAttempts) {
           this.scheduleReconnect();
-        } else {
-          // Clean up to prevent memory leaks
-          this.ws = null;
         }
       };
     } catch (err) {
@@ -223,9 +220,9 @@ export class PumpWebSocketClient {
   private reconnectTimeout: NodeJS.Timeout | null = null;
 }
 
-// Singleton instance — WebSocket disabled by default (no public Pump.fun WS endpoint)
+// Singleton instance
 export const pumpWebSocket = new PumpWebSocketClient({
-  autoReconnect: false,
+  autoReconnect: true,
   reconnectInterval: 5000,
-  maxReconnectAttempts: 0,
+  maxReconnectAttempts: 10,
 });
