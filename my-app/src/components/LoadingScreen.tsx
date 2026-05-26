@@ -70,22 +70,6 @@ export default function LoadingScreen() {
             <span className="font-semibold">{Math.min(Math.round(progress), 100)}%</span>
           </div>
         </div>
-
-        {/* Status indicators */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <span>WebSocket</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse delay-500" />
-            <span>API</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse delay-1000" />
-            <span>Blockchain</span>
-          </div>
-        </div>
       </div>
     </div>
   );
