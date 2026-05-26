@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,71 +24,56 @@ import {
   Zap,
   Shield,
 } from "lucide-react";
+import { searchWallet, getWalletTransactions, WalletData, Position } from "@/lib/solana-api";
 
 export default function WalletAnalyticsPage() {
   const params = useParams();
   const address = params.address as string;
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // В реальном приложении здесь будет fetch к API
-  const walletData = {
-    address: address,
-    balance: "1,234.56 SOL",
-    usdValue: "$234,567.89",
-    totalProfit: "+$45,678.90",
-    profitPercent: "+23.4%",
-    totalTrades: 1234,
-    winRate: "67%",
-    lastActive: "2 мин назад",
-    following: 45,
-    followers: 1234,
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const wallet = await searchWallet(address);
+        const txs = await getWalletTransactions(address);
+        setWalletData(wallet);
+        setPositions(txs);
+      } catch (error) {
+        console.error("Error fetching wallet data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const recentPositions = [
-    {
-      id: 1,
-      coin: "WIF",
-      action: "Buy",
-      entry: "$0.45",
-      current: "$0.67",
-      pnl: "+48.9%",
-      mc: "$1.2M",
-      time: "2h ago",
-      status: "profit",
-    },
-    {
-      id: 2,
-      coin: "BONK",
-      action: "Sell",
-      entry: "$0.00023",
-      current: "$0.00031",
-      pnl: "+34.8%",
-      mc: "$890K",
-      time: "5h ago",
-      status: "profit",
-    },
-    {
-      id: 3,
-      coin: "POPCAT",
-      action: "Buy",
-      entry: "$0.12",
-      current: "$0.08",
-      pnl: "-33.3%",
-      mc: "$2.3M",
-      time: "1d ago",
-      status: "loss",
-    },
-    {
-      id: 4,
-      coin: "MEW",
-      action: "Sell",
-      entry: "$0.0067",
-      current: "$0.0089",
-      pnl: "+32.8%",
-      mc: "$1.8M",
-      time: "2d ago",
-      status: "profit",
-    },
-  ];
+    fetchData();
+  }, [address]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-teal-500 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading wallet data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!walletData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-500">
+          <p className="text-xl font-bold mb-2">Wallet not found</p>
+          <p className="text-muted-foreground">Could not fetch wallet data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -113,10 +99,10 @@ export default function WalletAnalyticsPage() {
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
                     <Shield className="h-3 w-3 mr-1" />
-                    Verified
+                    {walletData.isVerified ? "Verified" : "Active Trader"}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    Top Trader
+                    {walletData.totalTrades} trades
                   </Badge>
                 </div>
               </div>
@@ -129,7 +115,7 @@ export default function WalletAnalyticsPage() {
                 <Copy className="h-4 w-4 mr-2" />
                 Copy
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => window.open(`https://solscan.io/account/${address}`, "_blank")}>
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Solscan
               </Button>
@@ -201,73 +187,80 @@ export default function WalletAnalyticsPage() {
           Recent Positions
         </h2>
 
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border/30">
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                Coin
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                Action
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                Entry → Current
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                PnL
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                MC
-              </TableHead>
-              <TableHead className="text-xs font-semibold text-muted-foreground">
-                Time
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentPositions.map((pos) => (
-              <TableRow key={pos.id} className="border-border/30">
-                <TableCell>
-                  <Badge variant="outline" className="text-xs font-semibold">
-                    {pos.coin}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    className={`text-xs font-bold ${
-                      pos.action === "Buy"
-                        ? "bg-green-500 hover:bg-green-600"
-                        : "bg-red-500 hover:bg-red-600"
-                    }`}
-                  >
-                    {pos.action}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm">
-                  {pos.entry} → {pos.current}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`text-sm font-bold ${
-                      pos.pnl.startsWith("+") ? "text-green-500" : "text-red-500"
-                    }`}
-                  >
-                    {pos.pnl}
-                  </span>
-                </TableCell>
-                <TableCell className="text-sm font-semibold text-teal-500">
-                  {pos.mc}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {pos.time}
-                  </div>
-                </TableCell>
+        {positions.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No recent positions found</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/30">
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  Coin
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  Action
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  Entry → Current
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  PnL
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  MC
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-muted-foreground">
+                  Time
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {positions.map((pos) => (
+                <TableRow key={pos.id} className="border-border/30">
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs font-semibold">
+                      {pos.coin}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={`text-xs font-bold ${
+                        pos.action === "Buy"
+                          ? "bg-green-500 hover:bg-green-600"
+                          : "bg-red-500 hover:bg-red-600"
+                      }`}
+                    >
+                      {pos.action}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {pos.entry} → {pos.current}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`text-sm font-bold ${
+                        pos.pnl.startsWith("+") ? "text-green-500" : "text-red-500"
+                      }`}
+                    >
+                      {pos.pnl}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-sm font-semibold text-teal-500">
+                    {pos.mc}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {pos.time}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   );
