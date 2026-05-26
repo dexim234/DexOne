@@ -29,6 +29,10 @@ interface TrenchCardProps {
     hasPaidPromotion?: boolean;
     hasLightning?: boolean;
   };
+  /** Скор Soon (0–100) */
+  soonScore?: number;
+  /** Прогресс bonding curve в % */
+  curveProgress?: number;
 }
 
 export default function TrenchCard({
@@ -53,6 +57,8 @@ export default function TrenchCard({
   telegram,
   website,
   dexScreenerData,
+  soonScore,
+  curveProgress,
 }: TrenchCardProps) {
   const [copied, setCopied] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -368,7 +374,7 @@ const renderMetric = (metricId: string) => {
           )}
         </div>
 
-        {/* Right Side: Dex Paid Badge, Time */}
+        {/* Right Side: Dex Paid Badge, Score, Curve, Time */}
         <div className="flex flex-col items-end gap-1 shrink-0">
           {/* Dex Paid Badge */}
           {(dexScreenerData?.hasPaidPromotion || dexScreenerData?.hasLightning) && (
@@ -381,6 +387,26 @@ const renderMetric = (metricId: string) => {
               {dexScreenerData?.hasLightning && (
                 <Zap className="h-3 w-3 text-yellow-500" />
               )}
+            </div>
+          )}
+
+          {/* Soon Score Badge */}
+          {typeof soonScore === 'number' && (
+            <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+              soonScore >= 80
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                : soonScore >= 65
+                ? 'bg-teal-500/15 text-teal-400 border-teal-500/30'
+                : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+            }`}>
+              {soonScore}/100
+            </div>
+          )}
+
+          {/* Curve Progress */}
+          {typeof curveProgress === 'number' && (
+            <div className="text-[10px] text-muted-foreground font-medium">
+              Curve {curveProgress.toFixed(1)}%
             </div>
           )}
 
