@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Copy, ExternalLink, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Wallet, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -302,24 +301,25 @@ const renderMetric = (metricId: string) => {
         {/* Left Side: Logo + Address */}
         <div className="flex flex-col items-start gap-0.5 shrink-0">
           {/* Logo */}
-          <div className="relative h-20 w-20 overflow-hidden rounded-2xl">
+          <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-muted">
             {!imageLoaded && (
               <div className="absolute inset-0 rounded-2xl bg-muted animate-pulse" />
             )}
-            <Image
+            <img
               src={logo || "/placeholder.png"}
               alt={name}
               width={80}
               height={80}
-              className={`object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`w-full h-full object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
               onError={(e) => {
-                e.currentTarget.src = "/placeholder.png";
+                const target = e.currentTarget;
+                if (!target.src.includes('placeholder.png')) {
+                  target.src = "/placeholder.png";
+                }
                 setImageLoaded(true);
               }}
               loading="eager"
-              priority
-              unoptimized
             />
           </div>
 
