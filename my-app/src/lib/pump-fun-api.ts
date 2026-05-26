@@ -291,7 +291,7 @@ export class PumpFunApiService {
   }
     
   /**
-   * Нормализация IPFS URL
+   * Нормализация IPFS URL с fallback шлюзами
    */
   private normalizeIpfsUrl(url: string): string {
     if (!url) return '/placeholder.png';
@@ -303,15 +303,25 @@ export class PumpFunApiService {
     
     // IPFS протокол
     if (url.startsWith('ipfs://')) {
-      return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
+      const hash = url.replace('ipfs://', '');
+      return `https://pump.mypinata.cloud/ipfs/${hash}`;
     }
     
-    // Хэш IPFS (44 символа для base58)
-    if (url.length === 44 || url.length === 46) {
+    // Хэш IPFS (44 символа для base58, 46 для base32)
+    if (url.length >= 44 && url.length <= 60) {
       return `https://pump.mypinata.cloud/ipfs/${url}`;
     }
     
     return url;
+  }
+
+  /**
+   * Получить URL изображения с fallback шлюзами
+   */
+  getImageWithFallback(url: string): string {
+    if (!url || url === '/placeholder.png') return '/placeholder.png';
+    if (url.startsWith('http')) return url;
+    return this.normalizeIpfsUrl(url);
   }
 
   /**
