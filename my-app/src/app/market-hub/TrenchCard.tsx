@@ -17,6 +17,7 @@ interface TrenchCardProps {
   trades: string;
   holders: string;
   isVerified?: boolean;
+  symbol?: string;
   mint?: string;
   imageUrl?: string;
 }
@@ -36,6 +37,7 @@ export default function TrenchCard({
   holders,
   isVerified = false,
   mint,
+  symbol,
   imageUrl,
 }: TrenchCardProps) {
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
@@ -71,12 +73,17 @@ export default function TrenchCard({
             }}
           />
         </div>
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <span className="font-medium truncate">{name}</span>
-          {isVerified && (
-            <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+        <div className="flex flex-col flex-1 min-w-0 justify-center">
+          <div className="flex items-center gap-1">
+            <span className="font-bold text-sm truncate">{symbol || name}</span>
+            {isVerified && (
+              <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          {symbol && name && symbol !== name && (
+            <span className="text-[11px] text-muted-foreground truncate leading-tight">{name}</span>
           )}
         </div>
       </div>
