@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,7 +46,10 @@ import {
   Clock,
   Zap,
   Edit2,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
+import { searchWallet } from "@/lib/solana-api";
 
 interface Wallet {
   id: number;
@@ -188,11 +192,14 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 export default function TrackerPage() {
+  const router = useRouter();
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
   const [groups, setGroups] = useState<string[]>(initialGroups);
   const [wallets, setWallets] = useState<Wallet[]>(initialWallets);
   const [positions] = useState<Position[]>(samplePositions);
+  const [isSearchingWallet, setIsSearchingWallet] = useState(false);
 
   // Dialog states
   const [showAddWalletDialog, setShowAddWalletDialog] = useState(false);
@@ -213,6 +220,29 @@ export default function TrackerPage() {
 
   const deleteWallet = (id: number) => {
     setWallets(prev => prev.filter(w => w.id !== id));
+  };
+
+  const viewWalletAnalytics = (address: string) => {
+    router.push(`/tracker/${address}`);
+  };
+
+  const searchExternalWallet = async () => {
+    if (!walletSearchQuery.trim()) return;
+    
+    setIsSearchingWallet(true);
+    try {
+      const result = await searchWallet(walletSearchQuery);
+      if (result) {
+        router.push(`/tracker/${walletSearchQuery}`);
+      } else {
+        alert("Wallet not found or invalid address");
+      }
+    } catch (error) {
+      console.error("Error searching wallet:", error);
+      alert("Error searching wallet");
+    } finally {
+      setIsSearchingWallet(false);
+    }
   };
 
   const addWallet = () => {
@@ -305,6 +335,34 @@ export default function TrackerPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* External Wallet Search */}
+      <div className="mb-6">
+        <div className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/30 rounded-xl p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-500" />
+              <Input
+                placeholder="Search any Solana wallet address..."
+                value={walletSearchQuery}
+                onChange={(e) => setWalletSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && searchExternalWallet()}
+                className="pl-10 h-11"
+              />
+            </div>
+            <Button
+              onClick={searchExternalWallet}
+              disabled={isSearchingWallet}
+              className="h-11 px-6 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+            >
+              {isSearchingWallet ? "Searching..." : "Analyze Wallet"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Paste a full Solana wallet address to view analytics, PnL, and trading history
+          </p>
+        </div>
+      </div>
+
       <div className="flex gap-6">
         {/* Left Side - Wallets Table */}
         <div className="w-1/3 shrink-0">
@@ -414,27 +472,36 @@ export default function TrackerPage() {
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
                     Active
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[100px]">
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[120px]">
                     Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredWallets.map((wallet) => (
-                  <TableRow key={wallet.id} className="border-border/30">
-                    <TableCell className="text-center">
+                  <TableRow key={wallet.id} className="border-border/30 cursor-pointer hover:bg-accent/30">
+                    <TableCell className="text-center" onClick={() => viewWalletAnalytics(wallet.wallet)}>
                       <Badge variant="outline" className="text-[10px] font-medium">
                         {wallet.group}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center font-mono text-xs">
+                    <TableCell 
+                      className="text-center font-mono text-xs"
+                      onClick={() => viewWalletAnalytics(wallet.wallet)}
+                    >
                       {wallet.name || wallet.wallet}
                     </TableCell>
-                    <TableCell className="text-center text-xs font-semibold">
+                    <TableCell 
+                      className="text-center text-xs font-semibold"
+                      onClick={() => viewWalletAnalytics(wallet.wallet)}
+                    >
                       {wallet.balance}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center">
+                      <div 
+                        className="flex items-center justify-center cursor-pointer"
+                        onClick={() => viewWalletAnalytics(wallet.wallet)}
+                      >
                         <div className={`h-2 w-2 rounded-full ${wallet.active ? "bg-green-500" : "bg-gray-500"}`} />
                         <span className="text-[10px] text-muted-foreground ml-1">
                           {formatTimeAgo(wallet.lastActivity)}
@@ -447,7 +514,7 @@ export default function TrackerPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => navigator.clipboard.writeText(wallet.wallet)}
+                          onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(wallet.wallet); }}
                           title="Copy"
                         >
                           <Copy className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
@@ -456,7 +523,16 @@ export default function TrackerPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => toggleActive(wallet.id)}
+                          onClick={(e) => { e.stopPropagation(); viewWalletAnalytics(wallet.wallet); }}
+                          title="Analytics"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-teal-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => { e.stopPropagation(); toggleActive(wallet.id); }}
                           title={wallet.active ? "Mute" : "Unmute"}
                         >
                           {wallet.active ? (
@@ -469,7 +545,7 @@ export default function TrackerPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => openEditWalletDialog(wallet)}
+                          onClick={(e) => { e.stopPropagation(); openEditWalletDialog(wallet); }}
                           title="Edit"
                         >
                           <Edit2 className="h-3.5 w-3.5 text-blue-500" />
@@ -478,7 +554,7 @@ export default function TrackerPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => deleteWallet(wallet.id)}
+                          onClick={(e) => { e.stopPropagation(); deleteWallet(wallet.id); }}
                           title="Delete"
                         >
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -725,3 +801,4 @@ export default function TrackerPage() {
     </div>
   );
 }
+
