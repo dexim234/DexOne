@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { formatSolanaAddress, getSolanaExplorerUrl } from "@/lib/solana-config";
+import { getSolanaExplorerUrl } from "@/lib/solana-config";
 
 interface TrenchCardProps {
   rank: string;
@@ -128,4 +128,3 @@ export default function TrenchCard({
     </div>
   );
 }
-
