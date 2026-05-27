@@ -85,7 +85,7 @@ interface Wallet {
 }
 
 interface Position {
-  id: number;
+  id: string;
   group: string;
   wallet: string;
   asset: string;
@@ -830,8 +830,8 @@ export default function TrackerPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                  )}
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -1410,7 +1410,7 @@ export default function TrackerPage() {
                 </div>
               </div>
             ))}
-            {groups.filter(g => g !== "All").length === 0 && (
+            {groups.filter(g => g.name !== "All").length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No groups yet. Create your first group!</p>
