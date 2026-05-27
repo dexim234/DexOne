@@ -40,6 +40,7 @@ export default function TrenchCard({
   rank: _rank,
   logo,
   name,
+  symbol,
   mc,
   volume24h,
   mint = "",
@@ -134,6 +135,9 @@ export default function TrenchCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-bold text-sm text-foreground truncate">{name}</span>
+              {symbol && (
+                <span className="text-xs text-muted-foreground shrink-0 uppercase">{symbol}</span>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
