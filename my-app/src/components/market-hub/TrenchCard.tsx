@@ -238,9 +238,9 @@ export default function TrenchCard({
           </div>
           <button
             onClick={(e) => e.stopPropagation()}
-            className="h-10 w-10 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
           >
-            <Zap className="h-5 w-5 text-green-400" />
+            <Zap className="h-4 w-4 text-green-400" />
           </button>
         </div>
       </div>
