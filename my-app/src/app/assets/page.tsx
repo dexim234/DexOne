@@ -57,7 +57,10 @@ export default function AssetsPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [balances, setBalances] = useState<WalletBalance>({});
   const [showMoreWallets, setShowMoreWallets] = useState(false);
-  const [profitPeriod, setProfitPeriod] = useState("7D");
+  const [showPrivateKeys, setShowPrivateKeys] = useState<Record<string, boolean>>({});
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [calendarData, setCalendarData] = useState<DailyPnL[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [calendarData, setCalendarData] = useState<DailyPnL[]>([]);
@@ -73,6 +76,10 @@ export default function AssetsPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [pinnedWallets, setPinnedWallets] = useState<Set<string>>(new Set());
+
+  // Create/Import modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     loadWallets();
@@ -234,32 +241,14 @@ export default function AssetsPage() {
       };
     }
 
-    const now = new Date();
-    const days = period === "1D" ? 1 : period === "7D" ? 7 : period === "14D" ? 14 : 30;
-    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-    
-    let totalPnL = 0;
-    let profitableDays = 0;
-    let tradingDays = 0;
-
-    for (let d = new Date(); d >= startDate; d.setDate(d.getDate() - 1)) {
-      const dailyPnL = (Math.random() - 0.45) * 0.1;
-      totalPnL += dailyPnL;
-      tradingDays++;
-      if (dailyPnL > 0) profitableDays++;
-    }
-
-    const winRate = tradingDays > 0 ? (profitableDays / tradingDays) * 100 : 0;
-    const totalPnLUSD = totalPnL * 140;
-    const percentReturn = (totalPnL * 100);
-
+    // Return all zeros
     return {
-      realizedPnL: totalPnL,
-      realizedPnLUSD: totalPnLUSD,
-      percentReturn,
-      winRate,
-      totalPnL: totalPnL * 0.6,
-      unrealizedPnL: totalPnL * 0.4,
+      realizedPnL: 0,
+      realizedPnLUSD: 0,
+      percentReturn: 0,
+      winRate: 0,
+      totalPnL: 0,
+      unrealizedPnL: 0,
     };
   };
 
@@ -291,7 +280,7 @@ export default function AssetsPage() {
       setWallets(updated);
       setActiveWalletId(newWallet.id);
       setNewWalletName("");
-      setShowCreateForm(false);
+      setShowCreateModal(false);
       addToast("success", "Wallet Created", `${newWallet.name} has been created successfully`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to create wallet";
@@ -318,7 +307,7 @@ export default function AssetsPage() {
       setActiveWalletId(importedWallet.id);
       setImportPrivateKey("");
       setImportWalletName("");
-      setShowImportForm(false);
+      setShowImportModal(false);
       addToast("success", "Wallet Imported", `${importedWallet.name} has been imported successfully`);
     } catch (err) {
       const errorMsg = "Invalid private key format. Please check and try again.";
@@ -617,10 +606,7 @@ export default function AssetsPage() {
                   {/* Action Buttons - same size as Holdings */}
                   <div className="grid grid-cols-3 gap-2">
                     <Button
-                      onClick={() => {
-                        setShowCreateForm(!showCreateForm);
-                        setShowImportForm(false);
-                      }}
+                      onClick={() => setShowCreateModal(true)}
                       variant="outline"
                       className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
                     >
@@ -628,10 +614,7 @@ export default function AssetsPage() {
                       New
                     </Button>
                     <Button
-                      onClick={() => {
-                        setShowImportForm(!showImportForm);
-                        setShowCreateForm(false);
-                      }}
+                      onClick={() => setShowImportModal(true)}
                       variant="outline"
                       className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
                     >
@@ -647,105 +630,6 @@ export default function AssetsPage() {
                       Send
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Create Wallet Form */}
-            {showCreateForm && (
-              <Card className="border-teal-500/20 bg-gradient-to-r from-teal-500/5 to-cyan-500/5">
-                <CardContent className="p-5 space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                      <Plus className="h-4 w-4 text-teal-500" />
-                      Wallet Name <span className="text-muted-foreground font-normal">(optional)</span>
-                    </label>
-                    <Input
-                      placeholder="Enter wallet name"
-                      value={newWalletName}
-                      onChange={(e) => setNewWalletName(e.target.value)}
-                      className="border-teal-500/20 focus:border-teal-500"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleCreateWallet}
-                    disabled={isLoading}
-                    className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                        Creating...
-                      </span>
-                    ) : (
-                      "Create Wallet"
-                    )}
-                  </Button>
-                  {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-                      {error}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Import Wallet Form */}
-            {showImportForm && (
-              <Card className="border-teal-500/20 bg-gradient-to-r from-teal-500/5 to-cyan-500/5">
-                <CardContent className="p-5 space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                      <Key className="h-4 w-4 text-teal-500" />
-                      Wallet Name <span className="text-muted-foreground font-normal">(optional)</span>
-                    </label>
-                    <Input
-                      placeholder="Enter wallet name"
-                      value={importWalletName}
-                      onChange={(e) => setImportWalletName(e.target.value)}
-                      className="border-teal-500/20 focus:border-teal-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                      <Key className="h-4 w-4 text-teal-500" />
-                      Private Key (Base58)
-                    </label>
-                    <Input
-                      placeholder="Enter private key..."
-                      value={importPrivateKey}
-                      onChange={(e) => setImportPrivateKey(e.target.value)}
-                      className="font-mono text-sm border-teal-500/20 focus:border-teal-500"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleImportWallet}
-                      disabled={isLoading}
-                      className="flex-1 h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                          Importing...
-                        </span>
-                      ) : (
-                        "Import Wallet"
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowImportForm(false)}
-                      className="h-11 px-6 border-teal-500/20 hover:bg-teal-500/5"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                  {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
-                      {error}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )}
@@ -917,6 +801,119 @@ export default function AssetsPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Wallet Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-teal-500" />
+              Create New Wallet
+            </DialogTitle>
+            <DialogDescription>
+              Generate a new Solana wallet
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+              <Input
+                placeholder="Enter wallet name"
+                value={newWalletName}
+                onChange={(e) => setNewWalletName(e.target.value)}
+                className="border-teal-500/20 focus:border-teal-500"
+              />
+            </div>
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                {error}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateWallet}
+              disabled={isLoading}
+              className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Creating...
+                </span>
+              ) : (
+                "Create Wallet"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Wallet Modal */}
+      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-teal-500" />
+              Import Wallet
+            </DialogTitle>
+            <DialogDescription>
+              Import a wallet using your private key
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+              <Input
+                placeholder="Enter wallet name"
+                value={importWalletName}
+                onChange={(e) => setImportWalletName(e.target.value)}
+                className="border-teal-500/20 focus:border-teal-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
+              <Input
+                placeholder="Enter private key..."
+                value={importPrivateKey}
+                onChange={(e) => setImportPrivateKey(e.target.value)}
+                className="font-mono text-sm border-teal-500/20 focus:border-teal-500"
+              />
+            </div>
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                {error}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowImportModal(false);
+              setImportPrivateKey("");
+              setImportWalletName("");
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImportWallet}
+              disabled={isLoading}
+              className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Importing...
+                </span>
+              ) : (
+                "Import Wallet"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Send Dialog */}
       <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
