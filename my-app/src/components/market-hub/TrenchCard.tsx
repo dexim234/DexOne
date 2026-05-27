@@ -151,7 +151,7 @@ export default function TrenchCard({
               <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />
               <span className="text-xs text-muted-foreground shrink-0">$</span>
             </div>
-            <div className="flex items-center gap-2 text-xs shrink-0 ml-2">
+            <div className="flex items-center gap-2 text-xs shrink-0 ml-auto">
               <span className="text-muted-foreground">V <span className="text-teal-400 font-semibold">{volume24h}</span></span>
               <span className="text-muted-foreground">MC <span className="text-teal-400 font-semibold">{mc}</span></span>
             </div>
