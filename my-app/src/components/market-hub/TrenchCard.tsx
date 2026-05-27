@@ -151,31 +151,25 @@ export default function TrenchCard({
             <span className="text-xs text-muted-foreground shrink-0">$</span>
           </div>
 
-          {/* Row 2: Time + Socials + 1M/Stats */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {timeAgo && (
-                <span className="text-xs text-teal-400 font-medium">{timeAgo}</span>
+          {/* Row 2: Time + Socials */}
+          <div className="flex items-center gap-2">
+            {timeAgo && (
+              <span className="text-xs text-teal-400 font-medium">{timeAgo}</span>
+            )}
+            <div className="flex items-center gap-1.5">
+              {twitter && (
+                <a href={twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
               )}
-              <div className="flex items-center gap-1.5">
-                {twitter && (
-                  <a href={twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
-                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  </a>
-                )}
-                {website && (
-                  <a href={website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                  </a>
-                )}
-                <button className="text-muted-foreground hover:text-foreground transition-colors">
-                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
-              <span>1M</span>
-              <span className="text-foreground font-medium">{watchers}/{kingOfTheHillTotal}</span>
+              {website && (
+                <a href={website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </a>
+              )}
+              <button className="text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </button>
             </div>
           </div>
 
@@ -230,11 +224,15 @@ export default function TrenchCard({
           </div>
         </div>
 
-        {/* Right: V/MC + Action button */}
+        {/* Right: V/MC + 1M + Action button */}
         <div className="shrink-0 flex flex-col justify-between items-end">
           <div className="flex flex-col items-end gap-0.5 text-[11px]">
             <span className="text-muted-foreground">V <span className="text-teal-400 font-semibold">{volume24h}</span></span>
             <span className="text-muted-foreground">MC <span className="text-teal-400 font-semibold">{mc}</span></span>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span>1M</span>
+              <span className="text-foreground font-medium">{watchers}/{kingOfTheHillTotal}</span>
+            </div>
           </div>
           <button
             onClick={(e) => e.stopPropagation()}
