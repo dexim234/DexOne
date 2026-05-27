@@ -12,12 +12,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useWidgets } from "@/contexts/WidgetContext";
 
-const leftItems = [
-  { label: "Tracker", href: "/tracker", icon: Activity, transKey: "footer.tracker" },
-  { label: "Smart", href: "/smart", icon: Brain, transKey: "footer.smart" },
-  { label: "Alerts", href: "/alerts", icon: Bell, transKey: "footer.alerts" },
-  { label: "Calls", href: "/calls", icon: Megaphone, transKey: "footer.calls" },
+interface FooterItem {
+  label: string;
+  icon: typeof Activity;
+  transKey: string;
+}
+
+interface WidgetItem extends FooterItem {
+  widgetType: "tracker" | "smart" | "alerts" | "calls";
+}
+
+interface LinkItem extends FooterItem {
+  href: string;
+}
+
+const widgetItems: WidgetItem[] = [
+  { label: "Tracker", widgetType: "tracker", icon: Activity, transKey: "footer.tracker" },
+  { label: "Smart", widgetType: "smart", icon: Brain, transKey: "footer.smart" },
+  { label: "Alerts", widgetType: "alerts", icon: Bell, transKey: "footer.alerts" },
+  { label: "Calls", widgetType: "calls", icon: Megaphone, transKey: "footer.calls" },
+];
+
+const linkItems: LinkItem[] = [
   { label: "MarketView", href: "/market-view", icon: BarChart3, transKey: "footer.marketView" },
 ];
 
@@ -42,6 +60,7 @@ const bingxLinks = {
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
+  const { openWidget, isWidgetOpen } = useWidgets();
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
     BTC: { price: string; change: string };
@@ -170,7 +189,20 @@ export default function Footer() {
       <footer className="fixed bottom-0 z-50 w-full bg-gradient-to-r from-background/95 via-background/90 to-background/95 backdrop-blur-xl border-t border-border/30 font-outfit">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6">
           <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            {leftItems.map((item) => {
+            {widgetItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.widgetType}
+                  onClick={() => openWidget(item.widgetType, item.label)}
+                  className="flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight text-foreground hover:bg-accent/50 hover:scale-102"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
+                </button>
+              );
+            })}
+            {linkItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -201,7 +233,25 @@ export default function Footer() {
       <div className="flex h-14 items-center justify-between px-4 lg:px-6">
         {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {leftItems.map((item) => {
+          {widgetItems.map((item) => {
+            const Icon = item.icon;
+            const isOpen = isWidgetOpen(item.widgetType);
+            return (
+              <button
+                key={item.widgetType}
+                onClick={() => openWidget(item.widgetType, item.label)}
+                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight border ${
+                  isOpen
+                    ? 'bg-teal-500/20 border-teal-500/50 text-teal-500'
+                    : 'text-foreground hover:bg-accent/50 hover:scale-102 border-transparent'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>
+              </button>
+            );
+          })}
+          {linkItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
