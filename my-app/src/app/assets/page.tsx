@@ -474,7 +474,7 @@ export default function AssetsPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Wallet List (2/3) */}
+          {/* Left Column - Wallet List + Active Wallet (2/3) */}
           <div className="lg:col-span-2 space-y-4">
             {/* Wallet List Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
@@ -595,42 +595,61 @@ export default function AssetsPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative">
-                <Button
-                  onClick={() => {
-                    setShowCreateForm(!showCreateForm);
-                    setShowImportForm(false);
-                  }}
-                  className="w-full h-14 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 shadow-lg shadow-teal-500/25 transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-white/20 rounded-lg">
-                      <Plus className="h-5 w-5" />
+            {/* Active Wallet Card with Action Buttons */}
+            {activeWallet && activeBalance && (
+              <Card className="border-teal-500/30 bg-gradient-to-br from-teal-500/10 to-cyan-500/10">
+                <CardContent className="p-4 space-y-4">
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Active Wallet</p>
+                      <p className="font-semibold text-base">{activeWallet.name}</p>
                     </div>
-                    <span>New Wallet</span>
-                  </div>
-                </Button>
-              </div>
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowImportForm(!showImportForm);
-                    setShowCreateForm(false);
-                  }}
-                  className="w-full h-14 text-base border-2 border-teal-500/30 hover:border-teal-500/50 hover:bg-teal-500/5 transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-teal-500/10 rounded-lg">
-                      <Key className="h-5 w-5 text-teal-500" />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Balance</p>
+                      <p className="text-2xl font-bold text-teal-400">
+                        {activeBalance.solBalance.toFixed(4)} SOL
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        (${activeBalance.usdValue.toFixed(2)})
+                      </p>
                     </div>
-                    <span>Import</span>
                   </div>
-                </Button>
-              </div>
-            </div>
+                  {/* Action Buttons - same size as Holdings */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      onClick={() => {
+                        setShowCreateForm(!showCreateForm);
+                        setShowImportForm(false);
+                      }}
+                      variant="outline"
+                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2 text-teal-500" />
+                      New
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowImportForm(!showImportForm);
+                        setShowCreateForm(false);
+                      }}
+                      variant="outline"
+                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                    >
+                      <Key className="h-4 w-4 mr-2 text-teal-500" />
+                      Import
+                    </Button>
+                    <Button
+                      onClick={() => handleSendClick(activeWalletId)}
+                      variant="outline"
+                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                    >
+                      <Send className="h-4 w-4 mr-2 text-teal-500" />
+                      Send
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Create Wallet Form */}
             {showCreateForm && (
@@ -746,19 +765,6 @@ export default function AssetsPage() {
                 Realised
               </Button>
             </div>
-
-            {/* Send Button */}
-            {activeWalletId && (
-              <Button
-                onClick={() => handleSendClick(activeWalletId)}
-                className="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg shadow-teal-500/25"
-              >
-                <div className="flex items-center gap-2">
-                  <Send className="h-4 w-4" />
-                  <span>Send SOL</span>
-                </div>
-              </Button>
-            )}
           </div>
 
           {/* Right Column - Calendar (1/3) */}
