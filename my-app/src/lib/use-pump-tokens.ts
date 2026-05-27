@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
 import { pumpWebSocket, PumpEventType } from './pump-websocket';
+import { getPumpSwapTokens, getLetsBonkTokens, getMeteoraTokens } from './multi-launchpad-api';
 
 export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
@@ -43,9 +44,29 @@ export function usePumpTokens({
       let newTokens: TokenMarketData[];
 
       switch (columnType) {
-        case 'new':
-          newTokens = await pumpFunApi.getNewTokens(20);
+        case 'new': {
+          // Загружаем токены из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getNewTokens(12),
+            getPumpSwapTokens(6),
+            getLetsBonkTokens(6),
+            getMeteoraTokens(6),
+          ]);
+
+          // Объединяем и сортируем по времени создания (новые сверху)
+          const allTokens = [
+            ...pumpFunTokens,
+            ...pumpSwapTokens,
+            ...letsBonkTokens,
+            ...meteoraTokens,
+          ];
+
+          // Сортируем по createdTimestamp (новые первыми), затем перемешиваем для разнообразия
+          newTokens = allTokens
+            .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
+            .slice(0, 20);
           break;
+        }
         case 'soon':
           // Get trending tokens but filter out those already in 'new'
           const trending = await pumpFunApi.getTrendingCoins(30);
