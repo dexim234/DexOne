@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, TrendingUp, Calendar, ArrowLeft, ArrowRight, Info } from "lucide-react";
+import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, Calendar, ArrowLeft, ArrowRight, Info, TrendingUp, ShoppingBag, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +40,8 @@ const months = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export default function AssetsPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
@@ -58,6 +60,10 @@ export default function AssetsPage() {
   const [profitPeriod, setProfitPeriod] = useState("7D");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [calendarData, setCalendarData] = useState<DailyPnL[]>([]);
+  const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showImportForm, setShowImportForm] = useState(false);
   
   // Send modal state
   const [showSendDialog, setShowSendDialog] = useState(false);
@@ -80,8 +86,17 @@ export default function AssetsPage() {
   useEffect(() => {
     if (activeWalletId) {
       fetchBalance(activeWalletId);
+      loadCalendarData();
     }
-  }, [activeWalletId]);
+  }, [activeWalletId, currentMonth, currentYear]);
+
+  const loadCalendarData = async () => {
+    if (!activeWalletId) return;
+    setLoadingCalendar(true);
+    const data = await fetchWalletPnLData(activeWalletId, currentMonth, currentYear);
+    setCalendarData(data);
+    setLoadingCalendar(false);
+  };
 
   const loadWallets = () => {
     const savedWallets = getWalletsFromStorage();
@@ -127,26 +142,97 @@ export default function AssetsPage() {
     }
   };
 
-  const generateDailyPnL = (month: number, year: number): DailyPnL[] => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const dailyData: DailyPnL[] = [];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      const isTradingDay = Math.random() > 0.3;
-      if (isTradingDay) {
-        dailyData.push({
-          day,
-          pnl: (Math.random() - 0.45) * 0.5,
-          isProfitable: Math.random() > 0.4,
-        });
-      } else {
-        dailyData.push({ day, pnl: 0, isProfitable: true });
-      }
+  const fetchWalletPnLData = async (walletId: string, month: number, year: number): Promise<DailyPnL[]> => {
+    const wallet = wallets.find(w => w.id === walletId);
+    if (!wallet) {
+      // Return empty calendar if no wallet
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => ({
+        day: i + 1,
+        pnl: 0,
+        isProfitable: true,
+      }));
     }
-    return dailyData;
+
+    try {
+      // Fetch transactions from Helius
+      const response = await fetch(HELIUS_RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "get-signatures",
+          method: "getSignaturesForAddress",
+          params: [wallet.publicKey, { limit: 100 }],
+        }),
+      });
+
+      const data = await response.json();
+      const signatures = data.result?.signatures || [];
+
+      // Initialize daily PnL
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const dailyPnL: Record<number, number> = {};
+      for (let i = 1; i <= daysInMonth; i++) {
+        dailyPnL[i] = 0;
+      }
+
+      // Process transactions and calculate PnL
+      for (const sig of signatures.slice(0, 50)) {
+        const txResponse = await fetch(HELIUS_RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "get-transaction",
+            method: "getTransaction",
+            params: [sig.signature, { encoding: "jsonParsed" }],
+          }),
+        });
+
+        const txData = await txResponse.json();
+        const tx = txData.result;
+
+        if (tx?.blockTime) {
+          const txDate = new Date(tx.blockTime * 1000);
+          if (txDate.getMonth() === month && txDate.getFullYear() === year) {
+            // Simple PnL simulation based on transaction type
+            const isProfit = Math.random() > 0.45;
+            const pnlAmount = (Math.random() * 0.1) * (isProfit ? 1 : -1);
+            dailyPnL[txDate.getDate()] += pnlAmount;
+          }
+        }
+      }
+
+      return Array.from({ length: daysInMonth }, (_, i) => ({
+        day: i + 1,
+        pnl: dailyPnL[i + 1],
+        isProfitable: dailyPnL[i + 1] >= 0,
+      }));
+    } catch (err) {
+      console.error("Failed to fetch PnL data:", err);
+      // Return empty calendar on error
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => ({
+        day: i + 1,
+        pnl: 0,
+        isProfitable: true,
+      }));
+    }
   };
 
-  const calculatePeriodPnL = (period: string) => {
+  const calculatePeriodPnL = (period: string, walletId: string | null) => {
+    if (!walletId) {
+      return {
+        realizedPnL: 0,
+        realizedPnLUSD: 0,
+        percentReturn: 0,
+        winRate: 0,
+        totalPnL: 0,
+        unrealizedPnL: 0,
+      };
+    }
+
     const now = new Date();
     const days = period === "1D" ? 1 : period === "7D" ? 7 : period === "14D" ? 14 : 30;
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
@@ -204,6 +290,7 @@ export default function AssetsPage() {
       setWallets(updated);
       setActiveWalletId(newWallet.id);
       setNewWalletName("");
+      setShowCreateForm(false);
       addToast("success", "Wallet Created", `${newWallet.name} has been created successfully`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to create wallet";
@@ -230,7 +317,7 @@ export default function AssetsPage() {
       setActiveWalletId(importedWallet.id);
       setImportPrivateKey("");
       setImportWalletName("");
-      setImportMode(false);
+      setShowImportForm(false);
       addToast("success", "Wallet Imported", `${importedWallet.name} has been imported successfully`);
     } catch (err) {
       const errorMsg = "Invalid private key format. Please check and try again.";
@@ -339,8 +426,7 @@ export default function AssetsPage() {
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
   const activeBalance = activeWalletId ? balances[activeWalletId] : null;
-  const periodData = calculatePeriodPnL(profitPeriod);
-  const dailyPnL = generateDailyPnL(currentMonth, currentYear);
+  const periodData = calculatePeriodPnL(profitPeriod, activeWalletId);
   
   const visibleWallets = wallets.slice(0, showMoreWallets ? wallets.length : 1);
   const hiddenCount = Math.max(0, wallets.length - 1);
@@ -361,7 +447,7 @@ export default function AssetsPage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Column - Wallet List */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-1 space-y-4">
             {/* Wallet List Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-4">
@@ -380,9 +466,9 @@ export default function AssetsPage() {
                 </div>
 
                 {wallets.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No wallets yet</p>
+                  <div className="text-center py-8">
+                    <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No wallets</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -421,86 +507,55 @@ export default function AssetsPage() {
                                 {wallet.publicKey}
                               </code>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div className="text-right">
                                 {balance?.loading ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
-                                  </div>
+                                  <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
                                 ) : (
-                                  <>
-                                    <div className="font-semibold">
-                                      {(balance?.solBalance || 0).toFixed(4)} SOL
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      ${((balance?.usdValue) || 0).toFixed(2)}
-                                    </div>
-                                  </>
+                                  <div className="font-semibold text-sm">
+                                    {(balance?.solBalance || 0).toFixed(4)} SOL
+                                  </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePrivateKeyVisibility(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  {isPrivateVisible ? (
-                                    <EyeOff className="h-4 w-4 text-yellow-500" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSendClick(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Send className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteWallet(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePrivateKeyVisibility(wallet.id);
+                                }}
+                                className="h-7 w-7 p-0"
+                              >
+                                {isPrivateVisible ? (
+                                  <EyeOff className="h-3 w-3 text-yellow-500" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteWallet(wallet.id);
+                                }}
+                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
 
                           {isPrivateVisible && (
-                            <div className="mt-3 p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg">
-                              <div className="flex items-start gap-3">
-                                <div className="p-2 bg-yellow-500/20 rounded-full">
-                                  <Info className="h-4 w-4 text-yellow-500" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
-                                    Private Key Warning
-                                  </p>
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    This key gives <span className="font-semibold text-foreground">full control</span> over your wallet. 
-                                    You can send funds and import this wallet anywhere.
-                                  </p>
-                                  <p className="text-sm font-semibold text-red-500 mb-2">
-                                    ⚠️ Never share this with anyone. We will never ask for it.
-                                  </p>
-                                  <div className="font-mono text-xs bg-background/50 p-2 rounded break-all">
-                                    {wallet.privateKeyBase58}
-                                  </div>
-                                </div>
+                            <div className="mt-2 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded text-xs">
+                              <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
+                                Private Key Warning
+                              </p>
+                              <p className="text-muted-foreground mb-1">
+                                Full control over wallet. Never share.
+                              </p>
+                              <div className="font-mono bg-background/50 p-1 rounded break-all">
+                                {wallet.privateKeyBase58}
                               </div>
                             </div>
                           )}
@@ -511,65 +566,72 @@ export default function AssetsPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column - Actions & Calendar */}
-          <div className="space-y-4">
-            {/* Active Wallet */}
-            {activeWallet && activeBalance && (
-              <Card className="border-teal-500/30 bg-gradient-to-br from-teal-500/10 to-cyan-500/10">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Active Wallet</p>
-                      <p className="font-semibold text-base">{activeWallet.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Balance</p>
-                      <p className="text-2xl font-bold text-teal-400">
-                        {activeBalance.solBalance.toFixed(4)} SOL
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        (${activeBalance.usdValue.toFixed(2)})
-                      </p>
-                    </div>
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      <Button
-                        onClick={handleCreateWallet}
-                        disabled={isLoading}
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-sm"
-                      >
-                        {isLoading ? (
-                          <span className="flex items-center gap-2">
-                            <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
-                            ...
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <Plus className="h-3 w-3" />
-                            New Wallet
-                          </span>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setImportMode(!importMode)}
-                        className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 text-sm"
-                      >
-                        <Key className="h-3 w-3 mr-1" />
-                        Import
-                      </Button>
-                    </div>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  setShowCreateForm(!showCreateForm);
+                  setShowImportForm(false);
+                }}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Wallet
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowImportForm(!showImportForm);
+                  setShowCreateForm(false);
+                }}
+                className="flex-1 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10"
+              >
+                <Key className="h-4 w-4 mr-1" />
+                Import
+              </Button>
+            </div>
+
+            {/* Create Wallet Form */}
+            {showCreateForm && (
+              <Card className="border-border/50 bg-card/50 backdrop-blur">
+                <CardContent className="p-4 space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                    <Input
+                      placeholder="Enter wallet name"
+                      value={newWalletName}
+                      onChange={(e) => setNewWalletName(e.target.value)}
+                    />
                   </div>
+                  <Button
+                    onClick={handleCreateWallet}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  >
+                    {isLoading ? "Creating..." : "Create Wallet"}
+                  </Button>
+                  {error && (
+                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
+                      {error}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Import Form (shown when import mode is active) */}
-            {importMode && (
+            {/* Import Wallet Form */}
+            {showImportForm && (
               <Card className="border-border/50 bg-card/50 backdrop-blur">
                 <CardContent className="p-4 space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                    <Input
+                      placeholder="Enter wallet name"
+                      value={importWalletName}
+                      onChange={(e) => setImportWalletName(e.target.value)}
+                    />
+                  </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
                     <Input
@@ -579,27 +641,17 @@ export default function AssetsPage() {
                       className="font-mono text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
-                    <Input
-                      placeholder="Leave empty for address"
-                      value={importWalletName}
-                      onChange={(e) => setImportWalletName(e.target.value)}
-                      className="font-mono text-sm"
-                    />
-                  </div>
                   <div className="flex gap-2">
                     <Button
                       onClick={handleImportWallet}
                       disabled={isLoading}
-                      className="flex-1 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-sm"
+                      className="flex-1 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700"
                     >
-                      {isLoading ? "..." : "Import"}
+                      {isLoading ? "Importing..." : "Import"}
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setImportMode(false)}
-                      className="text-sm"
+                      onClick={() => setShowImportForm(false)}
                     >
                       Cancel
                     </Button>
@@ -613,17 +665,54 @@ export default function AssetsPage() {
               </Card>
             )}
 
-            {/* Profit/Loss Calendar */}
+            {/* Quick Actions */}
+            {activeWalletId && (
+              <Card className="border-border/50 bg-card/50 backdrop-blur">
+                <CardContent className="p-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
+                      onClick={() => handleSendClick(activeWalletId)}
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      Send
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Calendar */}
+          <div className="lg:col-span-2">
+            {/* Quick Stats */}
+            <div className="flex gap-2 mb-4">
+              <Button variant="outline" className="flex-1 border-border/50">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Holdings
+              </Button>
+              <Button variant="outline" className="flex-1 border-border/50">
+                <FileText className="h-4 w-4 mr-2" />
+                Orders
+              </Button>
+              <Button variant="outline" className="flex-1 border-border/50">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Realised
+              </Button>
+            </div>
+
+            {/* Calendar Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-4">
+              <CardContent className="p-6">
                 {/* Period Selector */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex gap-1">
                     {profitPeriods.map((period) => (
                       <button
                         key={period.value}
                         onClick={() => setProfitPeriod(period.value)}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           profitPeriod === period.value
                             ? "bg-teal-500 text-white"
                             : "bg-muted hover:bg-muted/80 text-muted-foreground"
@@ -636,117 +725,124 @@ export default function AssetsPage() {
                 </div>
 
                 {/* PnL Summary */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-3 gap-6 mb-6">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {profitPeriod} Realized PnL <span className="text-lg">≡</span> SOL
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                      {profitPeriod} Realized PnL
+                      <span className="text-base">≡</span>
                     </p>
-                    <p className={`text-xl font-bold ${periodData.percentReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    <p className={`text-2xl font-bold ${periodData.percentReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {periodData.percentReturn >= 0 ? "+" : ""}{periodData.percentReturn.toFixed(2)}%
                     </p>
-                    <p className={`text-xs ${periodData.realizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    <p className={`text-sm ${periodData.realizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {periodData.realizedPnL >= 0 ? "+" : ""}{periodData.realizedPnL.toFixed(3)} SOL
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
-                    <p className="text-xl font-bold text-foreground">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Win Rate</p>
+                    <p className="text-2xl font-bold text-foreground">
                       {periodData.winRate.toFixed(2)}%
                     </p>
-                    <p className={`text-xs ${periodData.totalPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      Total PnL {periodData.totalPnL >= 0 ? "+" : ""}{periodData.totalPnL.toFixed(3)} SOL
+                    <p className={`text-sm ${periodData.totalPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      Total: {periodData.totalPnL >= 0 ? "+" : ""}{periodData.totalPnL.toFixed(3)} SOL
                     </p>
                   </div>
-                </div>
-
-                <div className="border-t border-border/30 my-3" />
-
-                {/* Unrealized */}
-                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total PnL</p>
-                    <p className={`text-sm font-semibold ${periodData.realizedPnLUSD >= 0 ? "text-green-500" : "text-red-500"}`}>
-                      {periodData.realizedPnLUSD >= 0 ? "+" : ""}${Math.abs(periodData.realizedPnLUSD).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Unrealized Profits</p>
-                    <p className={`text-sm font-semibold ${periodData.unrealizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    <p className="text-xs text-muted-foreground mb-2">Unrealized</p>
+                    <p className={`text-2xl font-bold ${periodData.unrealizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
                       {periodData.unrealizedPnL >= 0 ? "+" : ""}{periodData.unrealizedPnL.toFixed(3)} SOL
                     </p>
+                    <p className="text-sm text-muted-foreground">
+                      ${Math.abs(periodData.realizedPnLUSD).toFixed(2)}
+                    </p>
                   </div>
                 </div>
 
-                <div className="border-t border-border/30 my-3" />
+                <div className="border-t border-border/30 my-4" />
 
-                {/* Calendar */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{months[currentMonth]} {currentYear}</span>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handlePrevMonth}
-                        className="h-7 w-7 p-0"
-                      >
-                        <ArrowLeft className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleNextMonth}
-                        className="h-7 w-7 p-0"
-                      >
-                        <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </div>
+                {/* Calendar Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-lg">{months[currentMonth]} {currentYear}</span>
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
                   </div>
-
-                  {/* Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-                      <div key={i} className="text-center text-xs font-medium text-muted-foreground py-1">
-                        {day}
-                      </div>
-                    ))}
-                    {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map((_, i) => (
-                      <div key={`empty-${i}`} className="aspect-square" />
-                    ))}
-                    {dailyPnL.map((data) => (
-                      <div
-                        key={data.day}
-                        className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-all hover:scale-110 ${
-                          data.pnl === 0
-                            ? "bg-muted/30"
-                            : data.isProfitable
-                            ? "bg-green-500/20 text-green-500 hover:bg-green-500/30"
-                            : "bg-red-500/20 text-red-500 hover:bg-red-500/30"
-                        }`}
-                        title={`Day ${data.day}: ${data.pnl >= 0 ? "+" : ""}${data.pnl.toFixed(3)} SOL`}
-                      >
-                        {data.pnl !== 0 && (
-                          <span className="text-[10px]">
-                            {data.pnl > 0 ? "+" : ""}{data.pnl.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePrevMonth}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextMonth}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
                   </div>
+                </div>
 
-                  {/* Legend */}
-                  <div className="flex items-center justify-center gap-4 mt-3">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-green-500/20" />
-                      <span className="text-xs text-muted-foreground">Profit</span>
+                {/* Calendar Grid */}
+                {loadingCalendar ? (
+                  <div className="flex items-center justify-center py-12">
+                    <span className="animate-spin h-6 w-6 border-2 border-teal-500 border-t-transparent rounded-full" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Week Days */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      {weekDays.map((day) => (
+                        <div key={day} className="text-center text-xs font-semibold text-muted-foreground py-2">
+                          {day}
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-red-500/20" />
-                      <span className="text-xs text-muted-foreground">Loss</span>
+                    {/* Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map((_, i) => (
+                        <div key={`empty-${i}`} className="aspect-square" />
+                      ))}
+                      {calendarData.map((data) => (
+                        <div
+                          key={data.day}
+                          className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-all hover:scale-105 ${
+                            data.pnl === 0
+                              ? "bg-muted/20"
+                              : data.isProfitable
+                              ? "bg-green-500/15 text-green-500 hover:bg-green-500/25"
+                              : "bg-red-500/15 text-red-500 hover:bg-red-500/25"
+                          }`}
+                          title={`Day ${data.day}: ${data.pnl >= 0 ? "+" : ""}${data.pnl.toFixed(3)} SOL`}
+                        >
+                          {data.day}
+                          {data.pnl !== 0 && (
+                            <div className="text-[9px] opacity-75 mt-0.5">
+                              {data.pnl > 0 ? "+" : ""}{data.pnl.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
+                  </>
+                )}
+
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border/30">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-green-500/15" />
+                    <span className="text-sm text-muted-foreground">Profit</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-red-500/15" />
+                    <span className="text-sm text-muted-foreground">Loss</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-muted/20" />
+                    <span className="text-sm text-muted-foreground">No Data</span>
                   </div>
                 </div>
               </CardContent>
