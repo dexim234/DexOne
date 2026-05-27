@@ -59,6 +59,8 @@ export interface PumpCoinsParams {
 }
 
 // Интерфейс для данных токена в формате TrenchCard
+export type LaunchpadSource = 'pumpfun' | 'pumpswap' | 'letsbonk' | 'meteora';
+
 export interface TokenMarketData {
   rank: string;
   logo: string;
@@ -81,6 +83,7 @@ export interface TokenMarketData {
   twitter?: string;
   telegram?: string;
   website?: string;
+  source?: LaunchpadSource;
   // Дополнительные метрики для карточки
   kingOfTheHillRank?: string;
   kingOfTheHillTotal?: string;
@@ -288,6 +291,7 @@ export class PumpFunApiService {
       twitter: anyToken.twitter,
       telegram: anyToken.telegram,
       website: anyToken.website,
+      source: 'pumpfun' as LaunchpadSource,
       // Дополнительные метрики
       kingOfTheHillRank: pseudoRandInt(1, 600).toString(),
       kingOfTheHillTotal: '595',
