@@ -48,9 +48,7 @@ export default function AssetsPage() {
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPrivateKeys, setShowPrivateKeys] = useState<Record<string, boolean>>({});
   const [newWalletName, setNewWalletName] = useState("");
-  const [importMode, setImportMode] = useState(false);
   const [importPrivateKey, setImportPrivateKey] = useState("");
   const [importWalletName, setImportWalletName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +56,10 @@ export default function AssetsPage() {
   const [balances, setBalances] = useState<WalletBalance>({});
   const [showMoreWallets, setShowMoreWallets] = useState(false);
   const [showPrivateKeys, setShowPrivateKeys] = useState<Record<string, boolean>>({});
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [calendarData, setCalendarData] = useState<DailyPnL[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [calendarData, setCalendarData] = useState<DailyPnL[]>([]);
-  const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showImportForm, setShowImportForm] = useState(false);
   
