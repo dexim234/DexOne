@@ -3,6 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { WidgetProvider } from "@/contexts/WidgetContext";
 import MainContent from "@/components/MainContent";
 
 const geistMono = Geist_Mono({
@@ -39,7 +40,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <MainContent>{children}</MainContent>
+          <WidgetProvider>
+            <MainContent>{children}</MainContent>
+          </WidgetProvider>
         </ThemeProvider>
       </body>
     </html>
