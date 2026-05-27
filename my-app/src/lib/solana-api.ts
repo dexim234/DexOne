@@ -254,6 +254,83 @@ async function getCurrentSlot(): Promise<number> {
 }
 
 /**
+ * Получение транзакций кошелька с расчетом баланса
+ */
+export async function getWalletBalanceFromTransactions(
+  address: string
+): Promise<{ balance: string; usdValue: string; lastActivity: number }> {
+  try {
+    // 1. Получаем текущий баланс SOL напрямую
+    const balanceResponse = await fetch(HELIUS_RPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "get-balance",
+        method: "getBalance",
+        params: [address],
+      }),
+    });
+
+    const balanceData = await balanceResponse.json();
+    const solBalance = balanceData.result?.value || 0;
+    const solPrice = await getSolPrice();
+    const usdValue = (solBalance / 1e9) * solPrice;
+
+    // 2. Получаем последние транзакции для определения активности
+    const txResponse = await fetch(HELIUS_RPC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "get-signatures",
+        method: "getSignaturesForAddress",
+        params: [address, { limit: 50 }],
+      }),
+    });
+
+    const txData = await txResponse.json();
+    const transactions = txData.result?.signatures || [];
+
+    // 3. Последняя активность
+    let lastActivity = Date.now();
+    if (transactions.length > 0) {
+      const lastTx = transactions[0];
+      const txDetail = await fetch(HELIUS_RPC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "get-transaction",
+          method: "getTransaction",
+          params: [lastTx.signature, { encoding: "json", commitment: "confirmed" }],
+        }),
+      });
+
+      const txDetailData = await txDetail.json();
+      const slot = txDetailData.result?.slot;
+      if (slot) {
+        // Примерное время по слоту (400мс на слот)
+        lastActivity = Date.now() - (slot * 400);
+      }
+    }
+
+    return {
+      balance: `${(solBalance / 1e9).toFixed(4)} SOL`,
+      usdValue: `$${usdValue.toFixed(2)}`,
+      lastActivity,
+    };
+  } catch (error) {
+    console.error("Error fetching wallet balance:", error);
+    return {
+      balance: "0 SOL",
+      usdValue: "$0.00",
+      lastActivity: Date.now(),
+    };
+  }
+}
+
+/**
  * Получение истории транзакций кошелька
  */
 export async function getWalletTransactions(
@@ -343,6 +420,13 @@ function isValidSolanaAddress(address: string): boolean {
 }
 
 /**
+ * Проверка валидности адреса Solana (публичная)
+ */
+export function validateSolanaAddress(address: string): boolean {
+  return isValidSolanaAddress(address);
+}
+
+/**
  * Моковые данные для демонстрации
  * Заменить на реальные данные из API
  */
@@ -407,3 +491,5 @@ export async function findSimilarWallets(
   // - Одних и тех же пар
   return [];
 }
+
+export { getWalletBalanceFromTransactions };

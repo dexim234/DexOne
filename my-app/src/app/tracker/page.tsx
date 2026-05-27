@@ -58,7 +58,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { useRef } from "react";
-import { searchWallet, getWalletTransactions } from "../../lib/solana-api";
+import { searchWallet, getWalletTransactions, validateSolanaAddress, getWalletBalanceFromTransactions } from "../../lib/solana-api";
 import {
   WalletData,
   GroupData,
@@ -81,6 +81,7 @@ interface Wallet {
   active: boolean;
   lastActivity: number;
   name?: string;
+  emoji?: string;
   firebaseId?: string;
 }
 
@@ -121,18 +122,20 @@ export default function TrackerPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
-  const [groups, setGroups] = useState<{ name: string; emoji?: string }[]>([]);
+  const [groups, setGroups] = useState<{ name: string; emoji?: string; hidden?: boolean }[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
   const [isLoadingWallets, setIsLoadingWallets] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [walletEmoji, setWalletEmoji] = useState("");
+  const [editingWalletEmoji, setEditingWalletEmoji] = useState("");
 
   // Load data from Firestore on mount
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadWallets = async () => {
     setIsLoadingWallets(true);
     setError(null);
     try {
@@ -152,16 +155,27 @@ export default function TrackerPage() {
       // Load wallets
       try {
         const walletsData = await getWalletsFromFirestore();
-        const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
-          id: index + 1,
-          group: w.group,
-          wallet: w.wallet,
-          balance: w.balance,
-          active: w.active,
-          lastActivity: w.lastActivity,
-          name: w.name,
-          firebaseId: w.id,
-        }));
+        
+        // Для каждого кошелька получаем актуальный баланс из транзакций
+        const formattedWallets: Wallet[] = [];
+        for (let i = 0; i < walletsData.length; i++) {
+          const w = walletsData[i];
+          // Получаем актуальный баланс
+          const balanceData = await getWalletBalanceFromTransactions(w.wallet);
+          
+          formattedWallets.push({
+            id: i + 1,
+            group: w.group,
+            wallet: w.wallet,
+            balance: balanceData.balance,
+            active: w.active,
+            lastActivity: balanceData.lastActivity,
+            name: w.name,
+            firebaseId: w.id,
+            emoji: w.emoji,
+          });
+        }
+        
         setWallets(formattedWallets);
 
         // Load positions from wallets
@@ -256,6 +270,54 @@ export default function TrackerPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [importText, setImportText] = useState("");
   const [positions, setPositions] = useState<Position[]>([]);
+  const [showWalletEmojiPicker, setShowWalletEmojiPicker] = useState(false);
+  const [showEditingWalletEmojiPicker, setShowEditingWalletEmojiPicker] = useState(false);
+
+  // Load filters from localStorage
+  useEffect(() => {
+    try {
+      const savedFilters = localStorage.getItem("trackerFilters");
+      if (savedFilters) {
+        const parsed = JSON.parse(savedFilters);
+        setColumnVisibility(parsed.columnVisibility || columnVisibility);
+        setFilterGroup(parsed.filterGroup || "All");
+        setFilterWallets(parsed.filterWallets || "");
+        setFilterAsset(parsed.filterAsset || "All");
+        setFilterAction(parsed.filterAction || "All");
+        setFilterMcMin(parsed.filterMcMin || "");
+        setFilterMcMax(parsed.filterMcMax || "");
+        setFilterLiqMin(parsed.filterLiqMin || "");
+        setFilterLiqMax(parsed.filterLiqMax || "");
+        setFilterMakersMin(parsed.filterMakersMin || "");
+        setFilterMakersMax(parsed.filterMakersMax || "");
+      }
+    } catch (err) {
+      console.error("Error loading filters from localStorage:", err);
+    }
+  }, []);
+
+  // Save filters to localStorage
+  useEffect(() => {
+    try {
+      const filters = {
+        columnVisibility,
+        filterGroup,
+        filterWallets,
+        filterAsset,
+        filterAction,
+        filterMcMin,
+        filterMcMax,
+        filterLiqMin,
+        filterLiqMax,
+        filterMakersMin,
+        filterMakersMax,
+      };
+      localStorage.setItem("trackerFilters", JSON.stringify(filters));
+    } catch (err) {
+      console.error("Error saving filters to localStorage:", err);
+    }
+  }, [columnVisibility, filterGroup, filterWallets, filterAsset, filterAction, 
+      filterMcMin, filterMcMax, filterLiqMin, filterLiqMax, filterMakersMin, filterMakersMax]);
 
   const toggleActive = async (id: number) => {
     const wallet = wallets.find(w => w.id === id);
@@ -323,31 +385,32 @@ export default function TrackerPage() {
     if (!newWallet.wallet) return;
     
     try {
-      // Get wallet balance and data from API
-      const walletData = await searchWallet(newWallet.wallet);
-      const balance = walletData?.balance || "0 SOL";
-      const lastActivity = walletData?.lastActive ? Date.now() : Date.now();
+        // Получаем актуальный баланс
+        const balanceData = await getWalletBalanceFromTransactions(newWallet.wallet);
+        const balance = balanceData.balance;
+        const lastActivity = balanceData.lastActivity;
 
-      const walletId = await addWalletToFirestore({
-        group: newWallet.group,
-        wallet: newWallet.wallet,
-        balance: balance,
-        active: true,
-        lastActivity,
-        name: newWallet.name || formatAddressName(newWallet.wallet),
-      });
+        const walletId = await addWalletToFirestore({
+          group: newWallet.group,
+          wallet: newWallet.wallet,
+          balance: balance,
+          active: true,
+          lastActivity,
+          name: newWallet.name || formatAddressName(newWallet.wallet),
+        });
 
-      const newId = Math.max(...wallets.map(w => w.id), 0) + 1;
-      setWallets(prev => [...prev, {
-        id: newId,
-        group: newWallet.group,
-        wallet: newWallet.wallet,
-        balance: balance,
-        active: true,
-        lastActivity,
-        name: newWallet.name || formatAddressName(newWallet.wallet),
-        firebaseId: walletId,
-      }]);
+        const newId = Math.max(...wallets.map(w => w.id), 0) + 1;
+        setWallets(prev => [...prev, {
+          id: newId,
+          group: newWallet.group,
+          wallet: newWallet.wallet,
+          balance: balance,
+          active: true,
+          lastActivity,
+          name: newWallet.name || formatAddressName(newWallet.wallet),
+          firebaseId: walletId,
+          emoji: walletEmoji,
+        }]);
 
       // Reload positions for this wallet
       await loadPositionsFromWallets([{
@@ -388,7 +451,7 @@ export default function TrackerPage() {
       setWallets(prev =>
         prev.map(w =>
           w.id === editingWallet.id
-            ? { ...w, name: updates.name!, group: updates.group!, wallet: updates.wallet! }
+            ? { ...w, name: updates.name!, group: updates.group!, wallet: updates.wallet!, emoji: editingWalletEmoji }
             : w
         )
       );
@@ -522,6 +585,7 @@ export default function TrackerPage() {
   const openEditWalletDialog = (wallet: Wallet) => {
     setEditingWallet(wallet);
     setNewWallet({ name: wallet.name || "", wallet: wallet.wallet, group: wallet.group });
+    setEditingWalletEmoji(wallet.emoji || "");
     setShowEditWalletDialog(true);
   };
 
@@ -684,10 +748,26 @@ export default function TrackerPage() {
               />
             </div>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 setShowAddWalletDialog(true);
                 if (walletSearchQuery.trim()) {
-                  setNewWallet({ name: "", wallet: walletSearchQuery, group: "All" });
+                  // Validate Solana address
+                  if (validateSolanaAddress(walletSearchQuery.trim())) {
+                    // Try to get from clipboard first
+                    try {
+                      const clipboardText = await navigator.clipboard.readText();
+                      if (validateSolanaAddress(clipboardText.trim())) {
+                        setNewWallet({ name: "", wallet: clipboardText.trim(), group: "All" });
+                      } else {
+                        setNewWallet({ name: "", wallet: walletSearchQuery.trim(), group: "All" });
+                      }
+                    } catch (err) {
+                      // Fallback to search query
+                      setNewWallet({ name: "", wallet: walletSearchQuery.trim(), group: "All" });
+                    }
+                  } else {
+                    alert("Invalid Solana address format");
+                  }
                 }
               }}
               className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"

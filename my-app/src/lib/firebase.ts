@@ -37,6 +37,7 @@ export interface GroupData {
   id?: string;
   name: string;
   emoji?: string;
+  hidden?: boolean;
   createdAt?: Timestamp;
 }
 
