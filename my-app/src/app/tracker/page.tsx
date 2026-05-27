@@ -1697,10 +1697,10 @@ export default function TrackerPage() {
                 className="w-full h-64 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
                 placeholder={`[
   {
-    "address": "64P56FHSBUPiudvgygvXotxuCjJkpVzrvYajFTN9a9uk",
+    "address": "DEXgACZ6VFwVCq9uLaU92oFfWmpXkQpGXXyfKFt8j4pP",
     "name": "My Wallet",
     "emoji": "🚀",
-    "groups": ["ARCA Team"]
+    "groups": ["Dev"]
   }
 ]`}
                 value={importText}
