@@ -50,7 +50,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Pin,
+  ShoppingCart,
   Filter,
   X,
   Check,
@@ -148,6 +148,7 @@ export default function TrackerPage() {
           name: g.name,
           emoji: g.emoji,
           hidden: g.hidden,
+          pinned: g.pinned,
         }));
         setGroups([{ name: "All", emoji: "" }, ...formattedGroups]);
       } catch (groupsError) {
@@ -404,6 +405,17 @@ export default function TrackerPage() {
   const addWallet = async () => {
     if (!newWallet.wallet || isAddingWallet) return;
     
+    // Check if wallet already exists
+    const existingWallet = wallets.find(w => w.wallet.toLowerCase() === newWallet.wallet.toLowerCase());
+    if (existingWallet) {
+      alert("This wallet is already added!");
+      return;
+    }
+
+    // Limit name to 12 characters
+    const truncatedName = newWallet.name.length > 12 ? newWallet.name.slice(0, 12) : newWallet.name;
+    setNewWallet(prev => ({ ...prev, name: truncatedName }));
+    
     setIsAddingWallet(true);
     try {
         // Получаем актуальный баланс
@@ -417,7 +429,7 @@ export default function TrackerPage() {
         balance: balance,
         active: true,
         lastActivity,
-        name: newWallet.name || formatAddressName(newWallet.wallet),
+        name: truncatedName || formatAddressName(newWallet.wallet),
         emoji: walletEmoji,
       });
 
@@ -429,7 +441,7 @@ export default function TrackerPage() {
           balance: balance,
           active: true,
           lastActivity,
-          name: newWallet.name || formatAddressName(newWallet.wallet),
+          name: truncatedName || formatAddressName(newWallet.wallet),
           firebaseId: walletId,
           emoji: walletEmoji,
         }]);
@@ -442,7 +454,7 @@ export default function TrackerPage() {
         balance: balance,
         active: true,
         lastActivity,
-        name: newWallet.name || formatAddressName(newWallet.wallet),
+        name: truncatedName || formatAddressName(newWallet.wallet),
       }]);
 
       setNewWallet({ name: "", wallet: "", group: "All" });
@@ -642,6 +654,11 @@ export default function TrackerPage() {
         const data = walletsData[i];
         if (!data.address) continue;
         
+        // Skip if wallet already exists
+        if (wallets.some(w => w.wallet.toLowerCase() === data.address.toLowerCase())) {
+          continue;
+        }
+        
         // Получаем баланс из транзакций
         const balanceData = await getWalletBalanceFromTransactions(data.address);
         
@@ -659,6 +676,7 @@ export default function TrackerPage() {
         
         const newId = Math.max(...wallets.map(w => w.id), 0) + i + 1;
         const walletName = getDefaultWalletName(data.address, data.name);
+        const truncatedName = walletName.length > 12 ? walletName.slice(0, 12) : walletName;
         
         newWallets.push({
           id: newId,
@@ -667,7 +685,7 @@ export default function TrackerPage() {
           balance: balanceData.balance,
           active: true,
           lastActivity: balanceData.lastActivity,
-          name: walletName,
+          name: truncatedName,
           emoji: data.emoji || "",
         });
       }
@@ -697,12 +715,16 @@ export default function TrackerPage() {
   };
 
   const exportWallets = () => {
+    exportWalletsByGroups();
+  };
+
+  const exportWalletsByGroups = (groupNames?: string[]) => {
     const exportData = wallets.map(w => ({
       address: w.wallet,
       name: w.name || "",
       emoji: w.emoji || "",
       groups: [w.group],
-    }));
+    })).filter(w => !groupNames || groupNames.includes(w.groups[0]));
     
     const jsonStr = JSON.stringify(exportData, null, 2);
     setImportText(jsonStr);
@@ -756,17 +778,19 @@ export default function TrackerPage() {
     if (walletOrder.length === 0) return filteredWallets;
     
     const walletMap = new Map(filteredWallets.map(w => [w.id, w]));
-    const sorted = walletOrder
-      .map(id => walletMap.get(id))
-      .filter((w): w is Wallet => w !== undefined);
+    const sorted: Wallet[] = [];
     
-    // Add wallets that are not in order array
-    const orderSet = new Set(walletOrder);
-    filteredWallets.forEach(w => {
-      if (!orderSet.has(w.id)) {
-        sorted.push(w);
+    // Add wallets in order
+    walletOrder.forEach(id => {
+      const wallet = walletMap.get(id);
+      if (wallet) {
+        sorted.push(wallet);
+        walletMap.delete(id);
       }
     });
+    
+    // Add remaining wallets not in order
+    walletMap.forEach(wallet => sorted.push(wallet));
     
     return sorted;
   };
@@ -968,7 +992,10 @@ export default function TrackerPage() {
 
             {/* Group Management */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {groups.filter(g => g.name !== "All" && !g.hidden).map((group) => (
+              {[
+                ...groups.filter(g => g.name !== "All" && !g.hidden && g.pinned),
+                ...groups.filter(g => g.name !== "All" && !g.hidden && !g.pinned),
+              ].map((group) => (
                 <Button
                   key={group.name}
                   variant={selectedGroup === group.name ? "default" : "secondary"}
@@ -978,6 +1005,7 @@ export default function TrackerPage() {
                 >
                   {group.emoji && <span className="mr-1">{group.emoji}</span>}
                   {group.name}
+                  {group.pinned && <span className="ml-1 text-teal-500">📌</span>}
                 </Button>
               ))}
               <Button
@@ -1007,6 +1035,10 @@ export default function TrackerPage() {
                   <DropdownMenuItem onClick={exportWallets}>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Export
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/market-hub')}>
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Market
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setShowManageGroupsDialog(true); }}>
                     <Users className="h-4 w-4 mr-2" />
