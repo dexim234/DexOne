@@ -75,6 +75,7 @@ export default function AssetsPage() {
   // Create/Import modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [profitPeriod, setProfitPeriod] = useState("7D");
 
   useEffect(() => {
     loadWallets();
