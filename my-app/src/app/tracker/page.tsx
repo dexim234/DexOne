@@ -146,6 +146,7 @@ export default function TrackerPage() {
         const formattedGroups = groupsData.map(g => ({
           name: g.name,
           emoji: g.emoji,
+          hidden: g.hidden,
         }));
         setGroups([{ name: "All", emoji: "" }, ...formattedGroups]);
       } catch (groupsError) {
@@ -1697,10 +1698,10 @@ export default function TrackerPage() {
                 className="w-full h-64 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
                 placeholder={`[
   {
-    "address": "DEXgACZ6VFwVCq9uLaU92oFfWmpXkQpGXXyfKFt8j4pP",
-    "name": "My Wallet",
+    "address": "22dRPLbm4jo86CdRQwQBbdNMx3VLoYV2Yor3NsMzVkzV",
+    "name": "My Wallet - 1",
     "emoji": "🚀",
-    "groups": ["Dev"]
+    "groups": ["My wallets"]
   }
 ]`}
                 value={importText}
