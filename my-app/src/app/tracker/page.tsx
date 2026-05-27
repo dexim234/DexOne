@@ -137,29 +137,40 @@ export default function TrackerPage() {
     setError(null);
     try {
       // Load groups
-      const groupsData = await getGroupsFromFirestore();
-      const formattedGroups = groupsData.map(g => ({
-        name: g.name,
-        emoji: g.emoji,
-      }));
-      setGroups([{ name: "All", emoji: "" }, ...formattedGroups]);
+      try {
+        const groupsData = await getGroupsFromFirestore();
+        const formattedGroups = groupsData.map(g => ({
+          name: g.name,
+          emoji: g.emoji,
+        }));
+        setGroups([{ name: "All", emoji: "" }, ...formattedGroups]);
+      } catch (groupsError) {
+        console.warn("Error loading groups, using default:", groupsError);
+        setGroups([{ name: "All", emoji: "" }]);
+      }
 
       // Load wallets
-      const walletsData = await getWalletsFromFirestore();
-      const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
-        id: index + 1,
-        group: w.group,
-        wallet: w.wallet,
-        balance: w.balance,
-        active: w.active,
-        lastActivity: w.lastActivity,
-        name: w.name,
-        firebaseId: w.id,
-      }));
-      setWallets(formattedWallets);
+      try {
+        const walletsData = await getWalletsFromFirestore();
+        const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
+          id: index + 1,
+          group: w.group,
+          wallet: w.wallet,
+          balance: w.balance,
+          active: w.active,
+          lastActivity: w.lastActivity,
+          name: w.name,
+          firebaseId: w.id,
+        }));
+        setWallets(formattedWallets);
 
-      // Load positions from wallets
-      await loadPositionsFromWallets(formattedWallets);
+        // Load positions from wallets
+        await loadPositionsFromWallets(formattedWallets);
+      } catch (walletsError) {
+        console.error("Error loading wallets:", walletsError);
+        setError("Failed to load wallets from Firestore");
+        setWallets([]);
+      }
     } catch (err) {
       console.error("Error loading data:", err);
       setError("Failed to load data from Firestore");
