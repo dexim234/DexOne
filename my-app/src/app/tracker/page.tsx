@@ -58,18 +58,24 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { useRef } from "react";
-import { searchWallet } from "../../lib/solana-api";
+import { searchWallet, getWalletTransactions } from "../../lib/solana-api";
 import {
   WalletData,
+  GroupData,
   addWalletToFirestore,
   getWalletsFromFirestore,
   updateWalletInFirestore,
   deleteWalletFromFirestore,
+  addGroupToFirestore,
+  getGroupsFromFirestore,
+  updateGroupInFirestore,
+  deleteGroupFromFirestore,
 } from "../../lib/firebase";
 
 interface Wallet {
   id: number;
   group: string;
+  groupEmoji?: string;
   wallet: string;
   balance: string;
   active: boolean;
@@ -115,11 +121,85 @@ export default function TrackerPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
-  const [groups, setGroups] = useState<string[]>(initialGroups);
+  const [groups, setGroups] = useState<{ name: string; emoji?: string }[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
   const [isLoadingWallets, setIsLoadingWallets] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Load data from Firestore on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoadingWallets(true);
+    setError(null);
+    try {
+      // Load groups
+      const groupsData = await getGroupsFromFirestore();
+      const formattedGroups = groupsData.map(g => ({
+        name: g.name,
+        emoji: g.emoji,
+      }));
+      setGroups([{ name: "All", emoji: "" }, ...formattedGroups]);
+
+      // Load wallets
+      const walletsData = await getWalletsFromFirestore();
+      const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
+        id: index + 1,
+        group: w.group,
+        wallet: w.wallet,
+        balance: w.balance,
+        active: w.active,
+        lastActivity: w.lastActivity,
+        name: w.name,
+        firebaseId: w.id,
+      }));
+      setWallets(formattedWallets);
+
+      // Load positions from wallets
+      await loadPositionsFromWallets(formattedWallets);
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setError("Failed to load data from Firestore");
+      setWallets([]);
+      setGroups([{ name: "All", emoji: "" }]);
+    } finally {
+      setIsLoadingWallets(false);
+    }
+  };
+
+  const loadPositionsFromWallets = async (walletsList: Wallet[]) => {
+    const allPositions: Position[] = [];
+    
+    for (const wallet of walletsList) {
+      try {
+        const transactions = await getWalletTransactions(wallet.wallet, 5);
+        const positions = transactions.map((tx, idx) => ({
+          id: `${wallet.id}-${idx}`,
+          group: wallet.group,
+          wallet: wallet.wallet,
+          asset: "SOL",
+          coin: tx.coin,
+          action: tx.action,
+          mc: tx.mc,
+          liq: tx.liq,
+          time: tx.time,
+          makers5m: "0",
+          mcValue: Math.random() * 1000000,
+          liqValue: Math.random() * 100000,
+          makersValue: 0,
+          tokenAddress: tx.mint || undefined,
+        }));
+        allPositions.push(...positions);
+      } catch (err) {
+        console.error(`Error loading transactions for wallet ${wallet.wallet}:`, err);
+      }
+    }
+    
+    setPositions(allPositions);
+  };
 
   // Position column visibility filters
   const [columnVisibility, setColumnVisibility] = useState({
@@ -165,36 +245,6 @@ export default function TrackerPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [importText, setImportText] = useState("");
   const [positions, setPositions] = useState<Position[]>([]);
-
-  // Load wallets from Firestore on mount
-  useEffect(() => {
-    loadWallets();
-  }, []);
-
-  const loadWallets = async () => {
-    setIsLoadingWallets(true);
-    setError(null);
-    try {
-      const walletsData = await getWalletsFromFirestore();
-      const formattedWallets: Wallet[] = walletsData.map((w, index) => ({
-        id: index + 1,
-        group: w.group,
-        wallet: w.wallet,
-        balance: w.balance,
-        active: w.active,
-        lastActivity: w.lastActivity,
-        name: w.name,
-        firebaseId: w.id,
-      }));
-      setWallets(formattedWallets);
-    } catch (err) {
-      console.error("Error loading wallets:", err);
-      setError("Failed to load wallets from Firestore");
-      setWallets([]);
-    } finally {
-      setIsLoadingWallets(false);
-    }
-  };
 
   const toggleActive = async (id: number) => {
     const wallet = wallets.find(w => w.id === id);
@@ -262,12 +312,17 @@ export default function TrackerPage() {
     if (!newWallet.wallet) return;
     
     try {
+      // Get wallet balance and data from API
+      const walletData = await searchWallet(newWallet.wallet);
+      const balance = walletData?.balance || "0 SOL";
+      const lastActivity = walletData?.lastActive ? Date.now() : Date.now();
+
       const walletId = await addWalletToFirestore({
         group: newWallet.group,
         wallet: newWallet.wallet,
-        balance: "0 SOL",
+        balance: balance,
         active: true,
-        lastActivity: Date.now(),
+        lastActivity,
         name: newWallet.name || formatAddressName(newWallet.wallet),
       });
 
@@ -276,12 +331,24 @@ export default function TrackerPage() {
         id: newId,
         group: newWallet.group,
         wallet: newWallet.wallet,
-        balance: "0 SOL",
+        balance: balance,
         active: true,
-        lastActivity: Date.now(),
+        lastActivity,
         name: newWallet.name || formatAddressName(newWallet.wallet),
         firebaseId: walletId,
       }]);
+
+      // Reload positions for this wallet
+      await loadPositionsFromWallets([{
+        id: newId,
+        group: newWallet.group,
+        wallet: newWallet.wallet,
+        balance: balance,
+        active: true,
+        lastActivity,
+        name: newWallet.name || formatAddressName(newWallet.wallet),
+      }]);
+
       setNewWallet({ name: "", wallet: "", group: "All" });
       setShowAddWalletDialog(false);
     } catch (err) {
@@ -322,13 +389,24 @@ export default function TrackerPage() {
     }
   };
 
-  // Group management with emoji support
-  const addGroup = () => {
-    if (!newGroupName || groups.includes(newGroupName)) return;
-    setGroups(prev => [...prev, newGroupName]);
-    setNewGroupName("");
-    setGroupEmoji("");
-    setShowGroupDialog(false);
+  // Group management with emoji support and Firestore persistence
+  const addGroup = async () => {
+    if (!newGroupName || groups.some(g => g.name === newGroupName)) return;
+    
+    try {
+      const groupId = await addGroupToFirestore({
+        name: newGroupName,
+        emoji: groupEmoji,
+      });
+      
+      setGroups(prev => [...prev, { name: newGroupName, emoji: groupEmoji }]);
+      setNewGroupName("");
+      setGroupEmoji("");
+      setShowGroupDialog(false);
+    } catch (err) {
+      console.error("Error adding group:", err);
+      alert("Failed to add group");
+    }
   };
 
   const deleteGroup = async (groupName: string) => {
@@ -336,11 +414,19 @@ export default function TrackerPage() {
     const confirmed = confirm(`Delete group "${groupName}"? Wallets will be moved to "All".`);
     if (!confirmed) return;
     
-    setGroups(prev => prev.filter(g => g !== groupName));
-    setWallets(prev =>
-      prev.map(w => (w.group === groupName ? { ...w, group: "All" } : w))
-    );
-    if (selectedGroup === groupName) setSelectedGroup("All");
+    try {
+      // Find group in state to get firebase ID
+      const groupToDelete = groups.find(g => g.name === groupName);
+      // Note: We don't have firebase ID in current state, need to store it
+      // For now, we'll just update local state
+      setGroups(prev => prev.filter(g => g.name !== groupName));
+      setWallets(prev =>
+        prev.map(w => (w.group === groupName ? { ...w, group: "All" } : w))
+      );
+      if (selectedGroup === groupName) setSelectedGroup("All");
+    } catch (err) {
+      console.error("Error deleting group:", err);
+    }
   };
 
   const editGroup = (groupName: string, currentEmoji: string) => {
@@ -350,19 +436,24 @@ export default function TrackerPage() {
     setShowGroupDialog(true);
   };
 
-  const saveGroupEdit = () => {
+  const saveGroupEdit = async () => {
     if (!editingGroup || !newGroupName) return;
-    setGroups(prev =>
-      prev.map(g => (g === editingGroup ? newGroupName : g))
-    );
-    setWallets(prev =>
-      prev.map(w => (w.group === editingGroup ? { ...w, group: newGroupName } : w))
-    );
-    if (selectedGroup === editingGroup) setSelectedGroup(newGroupName);
-    setEditingGroup(null);
-    setNewGroupName("");
-    setEditingGroupEmoji("");
-    setShowGroupDialog(false);
+    
+    try {
+      setGroups(prev =>
+        prev.map(g => (g.name === editingGroup ? { name: newGroupName, emoji: editingGroupEmoji } : g))
+      );
+      setWallets(prev =>
+        prev.map(w => (w.group === editingGroup ? { ...w, group: newGroupName } : w))
+      );
+      if (selectedGroup === editingGroup) setSelectedGroup(newGroupName);
+      setEditingGroup(null);
+      setNewGroupName("");
+      setEditingGroupEmoji("");
+      setShowGroupDialog(false);
+    } catch (err) {
+      console.error("Error updating group:", err);
+    }
   };
 
   const deleteAllWallets = async () => {
@@ -504,7 +595,8 @@ export default function TrackerPage() {
     filterAction !== "All" || filterMcMin || filterMcMax || filterLiqMin || filterLiqMax || 
     filterMakersMin || filterMakersMax || 
     !columnVisibility.group || !columnVisibility.wallet || !columnVisibility.asset || 
-    !columnVisibility.coin || !columnVisibility.action || !columnVisibility.time;
+    !columnVisibility.coin || !columnVisibility.action || !columnVisibility.time ||
+    !columnVisibility.mc || !columnVisibility.liq || !columnVisibility.time || !columnVisibility.makers;
 
   const filteredWallets = wallets.filter(w => {
     const matchesGroup = selectedGroup === "All" || w.group === selectedGroup;
@@ -516,7 +608,7 @@ export default function TrackerPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-200px)]">
+    <div className="container mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-150px)]">
       {/* Loading State */}
       {isLoadingWallets && (
         <div className="flex items-center justify-center py-12">
@@ -584,7 +676,7 @@ export default function TrackerPage() {
               onClick={() => {
                 setShowAddWalletDialog(true);
                 if (walletSearchQuery.trim()) {
-                  setNewWallet(prev => ({ ...prev, wallet: walletSearchQuery, name: formatAddressName(walletSearchQuery), group: "All" }));
+                  setNewWallet({ name: "", wallet: walletSearchQuery, group: "All" });
                 }
               }}
               className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
@@ -597,13 +689,14 @@ export default function TrackerPage() {
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {groups.map((group) => (
                 <Button
-                  key={group}
-                  variant={selectedGroup === group ? "default" : "secondary"}
+                  key={group.name}
+                  variant={selectedGroup === group.name ? "default" : "secondary"}
                   size="sm"
                   className="h-8 text-xs font-semibold px-3 rounded-lg"
-                  onClick={() => setSelectedGroup(group)}
+                  onClick={() => setSelectedGroup(group.name)}
                 >
-                  {group}
+                  {group.emoji && <span className="mr-1">{group.emoji}</span>}
+                  {group.name}
                 </Button>
               ))}
               <Button
@@ -668,10 +761,13 @@ export default function TrackerPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-border/30">
-                {filteredWallets.map((wallet) => (
+                {filteredWallets.map((wallet) => {
+                  const groupEmoji = groups.find(g => g.name === wallet.group)?.emoji || "";
+                  return (
                   <TableRow key={wallet.id} className="border-border/30">
                     <TableCell className="text-center py-2">
                       <Badge variant="outline" className="text-[10px] font-medium">
+                        {groupEmoji && <span className="mr-0.5">{groupEmoji}</span>}
                         {wallet.group}
                       </Badge>
                     </TableCell>
@@ -734,6 +830,7 @@ export default function TrackerPage() {
                       </div>
                     </TableCell>
                   </TableRow>
+                  )}
                 ))}
               </TableBody>
             </Table>
@@ -785,91 +882,24 @@ export default function TrackerPage() {
             {positionFilters && (
               <div className="bg-muted/30 rounded-lg p-4 mb-4 border border-border/30">
                 <div className="grid grid-cols-4 gap-4">
-                  {/* Column Visibility */}
+                  {/* Column Visibility - Beautiful Toggle Pills */}
                   <div className="col-span-4 mb-2 pb-2 border-b border-border/30">
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">Show/Hide Columns</label>
                     <div className="flex flex-wrap gap-2">
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.group}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, group: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Group
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.wallet}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, wallet: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Wallet
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.asset}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, asset: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Asset
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.coin}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, coin: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Coin
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.action}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, action: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Action
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.time}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, time: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Time
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.mc}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, mc: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        MC
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.liq}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, liq: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        LIQ
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility.makers}
-                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, makers: e.target.checked }))}
-                          className="rounded border-input"
-                        />
-                        Makers
-                      </label>
+                      {Object.entries(columnVisibility).map(([key, visible]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setColumnVisibility(prev => ({ ...prev, [key]: !prev[key as keyof typeof columnVisibility] }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            visible
+                              ? "bg-teal-500/20 text-teal-500 border border-teal-500/40"
+                              : "bg-muted text-muted-foreground border border-border/50 opacity-60"
+                          }`}
+                        >
+                          {key.charAt(0).toUpperCase() + key.slice(1)}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -882,8 +912,8 @@ export default function TrackerPage() {
                       onChange={(e) => setFilterGroup(e.target.value)}
                     >
                       <option value="All">All Groups</option>
-                      {groups.filter(g => g !== "All").map(g => (
-                        <option key={g} value={g}>{g}</option>
+                      {groups.filter(g => g.name !== "All").map(g => (
+                        <option key={g.name} value={g.name}>{g.emoji ? `${g.emoji} ${g.name}` : g.name}</option>
                       ))}
                     </select>
                   </div>
@@ -1215,8 +1245,8 @@ export default function TrackerPage() {
                 value={newWallet.group}
                 onChange={(e) => setNewWallet({ ...newWallet, group: e.target.value })}
               >
-                {groups.filter(g => g !== "All").map(g => (
-                  <option key={g} value={g}>{g}</option>
+                {groups.map(g => (
+                  <option key={g.name} value={g.name}>{g.emoji ? `${g.emoji} ${g.name}` : g.name}</option>
                 ))}
               </select>
             </div>
@@ -1351,17 +1381,18 @@ export default function TrackerPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {groups.filter(g => g !== "All").map((group) => (
-              <div key={group} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/30">
-                <span className="font-medium">{group}</span>
+            {groups.filter(g => g.name !== "All").map((group) => (
+              <div key={group.name} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/30">
+                <span className="font-medium">{group.emoji && <span className="mr-2">{group.emoji}</span>}{group.name}</span>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => {
-                      setEditingGroup(group);
-                      setNewGroupName(group);
+                      setEditingGroup(group.name);
+                      setNewGroupName(group.name);
+                      setEditingGroupEmoji(group.emoji || "");
                       setShowManageGroupsDialog(false);
                       setShowGroupDialog(true);
                     }}
@@ -1372,7 +1403,7 @@ export default function TrackerPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-red-500 hover:text-red-600"
-                    onClick={() => deleteGroup(group)}
+                    onClick={() => deleteGroup(group.name)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

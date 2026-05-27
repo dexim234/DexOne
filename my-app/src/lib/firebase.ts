@@ -27,7 +27,16 @@ export interface WalletData {
   createdAt?: Timestamp;
 }
 
+// Groups interface
+export interface GroupData {
+  id?: string;
+  name: string;
+  emoji?: string;
+  createdAt?: Timestamp;
+}
+
 export const walletCollection = collection(db, "wallets");
+export const groupsCollection = collection(db, "groups");
 
 // Create wallet
 export const addWalletToFirestore = async (wallet: Omit<WalletData, "id">) => {
@@ -83,6 +92,58 @@ export const deleteWalletFromFirestore = async (walletId: string) => {
     await deleteDoc(walletDoc);
   } catch (error) {
     console.error("Error deleting wallet:", error);
+    throw error;
+  }
+};
+
+// Group operations
+export const addGroupToFirestore = async (group: Omit<GroupData, "id">) => {
+  try {
+    const docRef = await addDoc(groupsCollection, {
+      ...group,
+      createdAt: Timestamp.now(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding group:", error);
+    throw error;
+  }
+};
+
+export const getGroupsFromFirestore = async () => {
+  try {
+    const q = query(groupsCollection, orderBy("createdAt", "asc"));
+    const querySnapshot = await getDocs(q);
+    const groups: GroupData[] = [];
+    querySnapshot.forEach((doc) => {
+      groups.push({
+        id: doc.id,
+        ...doc.data(),
+      } as GroupData);
+    });
+    return groups;
+  } catch (error) {
+    console.error("Error getting groups:", error);
+    throw error;
+  }
+};
+
+export const updateGroupInFirestore = async (groupId: string, updates: Partial<GroupData>) => {
+  try {
+    const groupDoc = doc(db, "groups", groupId);
+    await updateDoc(groupDoc, updates);
+  } catch (error) {
+    console.error("Error updating group:", error);
+    throw error;
+  }
+};
+
+export const deleteGroupFromFirestore = async (groupId: string) => {
+  try {
+    const groupDoc = doc(db, "groups", groupId);
+    await deleteDoc(groupDoc);
+  } catch (error) {
+    console.error("Error deleting group:", error);
     throw error;
   }
 };
