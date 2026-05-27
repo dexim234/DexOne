@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, AlertTriangle, Send, Check, ExternalLink } from "lucide-react";
+import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, AlertTriangle, Send, Check, ChevronDown, TrendingUp, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { generateSolanaWallet, getWalletsFromStorage, removeWalletFromStorage, saveWalletsToStorage, WalletData, importSolanaWallet } from "@/lib/solana-wallet-creator";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { validateSolanaAddress } from "@/lib/solana-api";
 import { useToast } from "@/components/ui/toast";
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 interface WalletBalance {
   [walletId: string]: {
@@ -21,7 +20,20 @@ interface WalletBalance {
   };
 }
 
+interface ProfitData {
+  period: string;
+  profit: number;
+  percent: number;
+}
+
 const HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8";
+
+const profitPeriods: { value: string; label: string }[] = [
+  { value: "1D", label: "1D" },
+  { value: "7D", label: "7D" },
+  { value: "14D", label: "14D" },
+  { value: "30D", label: "30D" },
+];
 
 export default function AssetsPage() {
   const { t } = useTranslation();
@@ -37,6 +49,8 @@ export default function AssetsPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [balances, setBalances] = useState<WalletBalance>({});
+  const [showMoreWallets, setShowMoreWallets] = useState(false);
+  const [profitPeriod, setProfitPeriod] = useState("7D");
   
   // Send modal state
   const [showSendDialog, setShowSendDialog] = useState(false);
@@ -104,6 +118,21 @@ export default function AssetsPage() {
         [walletId]: { solBalance: 0, usdValue: 0, loading: false },
       }));
     }
+  };
+
+  const generateMockProfitData = (period: string): ProfitData => {
+    const baseProfits: Record<string, { profit: number; percent: number }> = {
+      "1D": { profit: Math.random() * 1000, percent: Math.random() * 10 },
+      "7D": { profit: Math.random() * 5000, percent: Math.random() * 20 },
+      "14D": { profit: Math.random() * 10000, percent: Math.random() * 30 },
+      "30D": { profit: Math.random() * 20000, percent: Math.random() * 50 },
+    };
+    const data = baseProfits[period] || baseProfits["7D"];
+    return {
+      period,
+      profit: data.profit,
+      percent: data.percent,
+    };
   };
 
   const handleCreateWallet = async () => {
@@ -228,22 +257,7 @@ export default function AssetsPage() {
     setSendError(null);
 
     try {
-      const connection = new Connection(HELIUS_RPC_URL);
-      const senderWallet = wallets.find(w => w.id === sendWalletId);
-      if (!senderWallet) throw new Error("Wallet not found");
-
-      const { importSolanaWallet: importWalletFn } = await import("@/lib/solana-wallet-creator");
-      const secretKey = Buffer.from(
-        senderWallet.privateKeyBase58.split('').map(char => {
-          const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-          return alphabet.indexOf(char);
-        })
-      );
-
-      // Для демо показываем что транзакция создается
-      // В продакшене нужно правильно парсить base58 и подписывать транзакцию
       addToast("info", "Transaction Processing", "Sending transaction...");
-      
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       addToast("success", "Transaction Sent", `Successfully sent ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}`);
@@ -260,79 +274,203 @@ export default function AssetsPage() {
     }
   };
 
-  const handleWalletClick = (walletId: string) => {
-    setActiveWalletId(walletId);
-  };
-
   const handleAddressClick = async (publicKey: string, walletId: string) => {
     await copyToClipboard(publicKey, `pub-${walletId}`);
   };
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
   const activeBalance = activeWalletId ? balances[activeWalletId] : null;
+  const profitData = generateMockProfitData(profitPeriod);
+
+  const visibleWallets = wallets.slice(0, showMoreWallets ? wallets.length : 1);
+  const hiddenCount = Math.max(0, wallets.length - 1);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Wallet className="h-8 w-8 text-teal-500" />
-              {t("nav.assets")}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your Solana wallets and assets
-            </p>
-          </div>
-          
-          {activeWallet && activeBalance && (
-            <Card className="bg-gradient-to-br from-teal-500/10 to-cyan-500/10 border-teal-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-teal-500/5 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Main Layout */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Left Column - Wallet List */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold flex items-center gap-3">
+                  <Wallet className="h-8 w-8 text-teal-500" />
+                  Assets
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Manage your Solana wallets
+                </p>
+              </div>
+            </div>
+
+            {/* Wallet List Card */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-4">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Active Wallet Balance</p>
-                  <p className="text-2xl font-bold text-teal-400">
-                    {activeBalance.solBalance.toFixed(4)} SOL
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    (${activeBalance.usdValue.toFixed(2)})
-                  </p>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Wallets</h2>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowMoreWallets(!showMoreWallets)}
+                      className="text-xs"
+                    >
+                      {showMoreWallets ? "Show Less" : `+ ${hiddenCount} more`}
+                      {showMoreWallets && <ChevronDown className="h-3 w-3 ml-1 rotate-180" />}
+                      {!showMoreWallets && hiddenCount > 0 && <ChevronDown className="h-3 w-3 ml-1" />}
+                    </Button>
+                  </div>
                 </div>
+
+                {wallets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No wallets yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {visibleWallets.map((wallet) => {
+                      const balance = balances[wallet.id];
+                      const isActive = activeWalletId === wallet.id;
+                      const isPrivateVisible = showPrivateKeys[wallet.id];
+
+                      return (
+                        <div
+                          key={wallet.id}
+                          className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                            isActive
+                              ? "border-teal-500 bg-teal-500/5"
+                              : "border-border/30 hover:border-teal-500/30 hover:bg-teal-500/5"
+                          }`}
+                          onClick={() => setActiveWalletId(wallet.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm">{wallet.name}</span>
+                                {isActive && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Active
+                                  </Badge>
+                                )}
+                              </div>
+                              <code
+                                className="text-xs text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddressClick(wallet.publicKey, wallet.id);
+                                }}
+                              >
+                                {wallet.publicKey}
+                              </code>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                {balance?.loading ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="font-semibold">
+                                      {(balance?.solBalance || 0).toFixed(4)} SOL
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      ${((balance?.usdValue) || 0).toFixed(2)}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePrivateKeyVisibility(wallet.id);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  {isPrivateVisible ? (
+                                    <EyeOff className="h-4 w-4 text-yellow-500" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSendClick(wallet.id);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteWallet(wallet.id);
+                                  }}
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {isPrivateVisible && (
+                            <div className="mt-3 p-2 bg-red-500/5 border border-red-500/20 rounded text-xs">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle className="h-3 w-3 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-semibold text-red-500 mb-1">Private Key Warning</p>
+                                  <p className="text-red-400">
+                                    Never share your private key. Full control over wallet. We will never ask for it.
+                                  </p>
+                                  <div className="mt-2 font-mono bg-red-500/10 p-1 rounded truncate">
+                                    {wallet.privateKeyBase58}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* My Wallets Panel */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Plus className="h-5 w-5 text-green-500" />
-                  My Wallets
-                </CardTitle>
-                <CardDescription>
-                  Create or import your Solana wallets
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!importMode ? (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
-                      <Input
-                        placeholder="Leave empty for address"
-                        value={newWalletName}
-                        onChange={(e) => setNewWalletName(e.target.value)}
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
+          {/* Right Column - Actions & Stats */}
+          <div className="space-y-4">
+            {/* Action Buttons */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  {!importMode ? (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                        <Input
+                          placeholder="Leave empty for address"
+                          value={newWalletName}
+                          onChange={(e) => setNewWalletName(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
                       <Button
                         onClick={handleCreateWallet}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                       >
                         {isLoading ? (
                           <span className="flex items-center gap-2">
@@ -342,45 +480,43 @@ export default function AssetsPage() {
                         ) : (
                           <span className="flex items-center gap-2">
                             <Plus className="h-4 w-4" />
-                            Create New Wallet
+                            New Wallet
                           </span>
                         )}
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => setImportMode(true)}
-                        className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                        className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
                       >
                         <Key className="h-4 w-4 mr-2" />
                         Import Wallet
                       </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
-                      <Input
-                        placeholder="Enter private key..."
-                        value={importPrivateKey}
-                        onChange={(e) => setImportPrivateKey(e.target.value)}
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
-                      <Input
-                        placeholder="Leave empty for address"
-                        value={importWalletName}
-                        onChange={(e) => setImportWalletName(e.target.value)}
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
+                        <Input
+                          placeholder="Enter private key..."
+                          value={importPrivateKey}
+                          onChange={(e) => setImportPrivateKey(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                        <Input
+                          placeholder="Leave empty for address"
+                          value={importWalletName}
+                          onChange={(e) => setImportWalletName(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
                       <Button
                         onClick={handleImportWallet}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700"
+                        className="w-full bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700"
                       >
                         {isLoading ? (
                           <span className="flex items-center gap-2">
@@ -390,250 +526,131 @@ export default function AssetsPage() {
                         ) : (
                           <span className="flex items-center gap-2">
                             <Key className="h-4 w-4" />
-                            Import Wallet
+                            Import
                           </span>
                         )}
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setImportMode(false)}
-                        className="border-muted-foreground/30"
+                        className="w-full"
                       >
                         Cancel
                       </Button>
+                    </>
+                  )}
+                  {error && (
+                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
+                      {error}
                     </div>
-                  </>
-                )}
-                {error && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
-                    {error}
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Active Wallet Info */}
-            {activeWallet && (
-              <Card className="border-teal-500/30 bg-teal-500/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Shield className="h-4 w-4 text-teal-500" />
-                    Active Wallet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Name</p>
-                    <p className="font-semibold">{activeWallet.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Address</p>
-                    <code 
-                      className="text-xs bg-muted px-2 py-1 rounded font-mono cursor-pointer hover:bg-muted/80 transition-colors"
-                      onClick={() => handleAddressClick(activeWallet.publicKey, activeWallet.id)}
-                    >
-                      {activeWallet.publicKey}
-                    </code>
+            {/* Active Wallet Stats */}
+            {activeWallet && activeBalance && (
+              <Card className="border-teal-500/30 bg-gradient-to-br from-teal-500/10 to-cyan-500/10">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Active Wallet</p>
+                      <p className="font-semibold">{activeWallet.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Balance</p>
+                      <p className="text-2xl font-bold text-teal-400">
+                        {activeBalance.solBalance.toFixed(4)} SOL
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        (${activeBalance.usdValue.toFixed(2)})
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             )}
-          </div>
 
-          {/* Wallets List */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-teal-500" />
-                Your Wallets ({wallets.length})
-              </h2>
-            </div>
-
-            {wallets.length === 0 ? (
-              <Card className="border-dashed border-2">
-                <CardContent className="p-12 text-center">
-                  <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No wallets yet. Create your first wallet above.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {wallets.map((wallet) => {
-                  const balance = balances[wallet.id];
-                  const isActive = activeWalletId === wallet.id;
-                  const isPrivateVisible = showPrivateKeys[wallet.id];
-
-                  return (
-                    <Card 
-                      key={wallet.id} 
-                      className={`cursor-pointer transition-all duration-200 ${
-                        isActive 
-                          ? "border-teal-500 ring-2 ring-teal-500/20 shadow-lg shadow-teal-500/10" 
-                          : "border-border/40 hover:border-teal-500/30 hover:shadow-md"
-                      }`}
-                      onClick={() => handleWalletClick(wallet.id)}
+            {/* Profit Calendar */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      Profit/Loss
+                    </h3>
+                    <select
+                      value={profitPeriod}
+                      onChange={(e) => setProfitPeriod(e.target.value)}
+                      className="px-2 py-1 bg-background border border-input rounded text-xs"
                     >
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            {/* Wallet Header */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className={`p-2 rounded-lg ${
-                                  isActive ? "bg-teal-500/20" : "bg-muted"
-                                }`}>
-                                  <Wallet className={`h-4 w-4 ${
-                                    isActive ? "text-teal-500" : "text-muted-foreground"
-                                  }`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <span className="font-semibold truncate block">{wallet.name}</span>
-                                  {isActive && (
-                                    <Badge variant="secondary" className="text-xs mt-0.5">
-                                      Active
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePrivateKeyVisibility(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                  title={isPrivateVisible ? "Hide private key" : "Show private key"}
-                                >
-                                  {isPrivateVisible ? (
-                                    <EyeOff className="h-4 w-4 text-yellow-500" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSendClick(wallet.id);
-                                  }}
-                                  className="h-8 px-3 border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
-                                >
-                                  <Send className="h-3 w-3 mr-1" />
-                                  Send
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteWallet(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
+                      {profitPeriods.map((period) => (
+                        <option key={period.value} value={period.value}>
+                          {period.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{profitPeriod} Profit</span>
+                      <span className={`font-semibold ${profitData.profit >= 0 ? "text-green-500" : "text-red-500"}`}>
+                        {profitData.profit >= 0 ? "+" : ""}${profitData.profit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Return</span>
+                      <span className={`font-semibold ${profitData.percent >= 0 ? "text-green-500" : "text-red-500"}`}>
+                        {profitData.percent >= 0 ? "+" : ""}{profitData.percent.toFixed(2)}%
+                      </span>
+                    </div>
+                    {/* Simple profit visualization */}
+                    <div className="mt-3">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            profitData.profit >= 0
+                              ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                              : "bg-gradient-to-r from-red-500 to-rose-500"
+                          }`}
+                          style={{
+                            width: `${Math.min(Math.abs(profitData.percent), 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                            {/* Balance Display */}
-                            <div className="mb-4">
-                              {balance?.loading ? (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <span className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full" />
-                                  <span className="text-sm">Loading balance...</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-baseline gap-3">
-                                  <span className="text-3xl font-bold bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                                    {balance?.solBalance?.toFixed(4) || "0.0000"} <span className="text-lg">SOL</span>
-                                  </span>
-                                  <span className="text-sm text-muted-foreground">
-                                    (${(balance?.usdValue || 0).toFixed(2)})
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Public Key */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground shrink-0 w-16">Address:</span>
-                              <div className="flex-1 flex items-center gap-2">
-                                <code 
-                                  className={`text-xs px-2 py-1 rounded font-mono truncate flex-1 cursor-pointer transition-colors ${
-                                    isPrivateVisible ? "text-red-400 bg-red-500/10" : "bg-muted hover:bg-muted/80"
-                                  }`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddressClick(wallet.publicKey, wallet.id);
-                                  }}
-                                  title="Click to copy"
-                                >
-                                  {wallet.publicKey}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyToClipboard(wallet.publicKey, `pub-${wallet.id}`);
-                                  }}
-                                  className="h-7 w-7 p-0 shrink-0"
-                                >
-                                  {copiedField === `pub-${wallet.id}` ? (
-                                    <Check className="h-3 w-3 text-green-500" />
-                                  ) : (
-                                    <Copy className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Private Key (with toggle visibility) */}
-                            {isPrivateVisible && (
-                              <div className="mt-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground shrink-0 w-16">Private:</span>
-                                  <div className="flex-1 flex items-center gap-2">
-                                    <code className="text-xs bg-red-500/10 text-red-400 px-2 py-1 rounded font-mono truncate flex-1">
-                                      {wallet.privateKeyBase58}
-                                    </code>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        copyToClipboard(wallet.privateKeyBase58, `priv-${wallet.id}`);
-                                      }}
-                                      className="h-7 w-7 p-0 shrink-0"
-                                    >
-                                      {copiedField === `priv-${wallet.id}` ? (
-                                        <Check className="h-3 w-3 text-green-500" />
-                                      ) : (
-                                        <Copy className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div className="mt-2 p-3 bg-red-500/5 border border-red-500/20 rounded-lg text-xs">
-                                  <AlertTriangle className="h-3 w-3 inline mr-1 text-red-500" />
-                                  <span className="font-semibold text-red-500">Warning: </span>
-                                  <span className="text-red-400">
-                                    Private key gives full control over the wallet. Never share it with anyone. We will never ask for it.
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+            {/* Quick Actions */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-3">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => activeWalletId && handleSendClick(activeWalletId)}
+                    className="border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    Send
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportMode(true)}
+                    className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                  >
+                    <Key className="h-4 w-4 mr-1" />
+                    Import
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -651,25 +668,23 @@ export default function AssetsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {wallets.length > 1 && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">From Wallet</label>
-                <select
-                  value={sendWalletId || ""}
-                  onChange={(e) => setSendWalletId(e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                >
-                  {wallets.map((wallet) => {
-                    const balance = balances[wallet.id];
-                    return (
-                      <option key={wallet.id} value={wallet.id}>
-                        {wallet.name} - {balance?.solBalance?.toFixed(4) || "0.0000"} SOL
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="text-sm font-medium mb-2 block">From Wallet</label>
+              <select
+                value={sendWalletId || ""}
+                onChange={(e) => setSendWalletId(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+              >
+                {wallets.map((wallet) => {
+                  const balance = balances[wallet.id];
+                  return (
+                    <option key={wallet.id} value={wallet.id}>
+                      {wallet.name} - {balance?.solBalance?.toFixed(4) || "0.0000"} SOL
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">Recipient Address (Solana)</label>
@@ -719,7 +734,11 @@ export default function AssetsPage() {
             <Button variant="outline" onClick={() => setShowSendDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSend} disabled={isSending} className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700">
+            <Button
+              onClick={handleSend}
+              disabled={isSending}
+              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700"
+            >
               {isSending ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
