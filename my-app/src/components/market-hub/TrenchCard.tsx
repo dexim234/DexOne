@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Copy, Zap, Crown, Users, MessageSquare, Ship, Flame, Target, Package } from "lucide-react";
 import { useState, useEffect } from "react";
+import { LaunchpadSource } from "@/lib/pump-fun-api";
 
 interface TrenchCardProps {
   rank: string;
@@ -17,6 +18,7 @@ interface TrenchCardProps {
   telegram?: string;
   website?: string;
   selectedMetrics?: string[];
+  source?: LaunchpadSource;
   // Дополнительные метрики
   kingOfTheHillRank?: string;
   kingOfTheHillTotal?: string;
@@ -36,6 +38,13 @@ interface TrenchCardProps {
   dexTaxSell?: string;
 }
 
+const LAUNCHPAD_BORDER: Record<LaunchpadSource, string> = {
+  pumpfun: "border-teal-500/60",
+  pumpswap: "border-yellow-500/60",
+  letsbonk: "border-white/60",
+  meteora: "border-red-500/60",
+};
+
 export default function TrenchCard({
   rank: _rank,
   logo,
@@ -47,6 +56,7 @@ export default function TrenchCard({
   createdTimestamp,
   twitter,
   website,
+  source = "pumpfun",
   selectedMetrics: _selectedMetrics,
   kingOfTheHillRank = "-",
   kingOfTheHillTotal = "-",
@@ -98,7 +108,7 @@ export default function TrenchCard({
       <div className="flex gap-3">
         {/* Left: Avatar + Address */}
         <div className="flex flex-col items-center gap-1 shrink-0 w-16">
-          <div className="relative h-16 w-16 rounded-lg border-2 border-teal-500/60 overflow-hidden">
+          <div className={`relative h-16 w-16 rounded-lg border-2 overflow-hidden ${LAUNCHPAD_BORDER[source]}`}>
             {!imageLoaded && (
               <div className="absolute inset-0 bg-muted animate-pulse" />
             )}
