@@ -197,78 +197,115 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
 
           {/* Market Tab */}
           <TabsContent value="market" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  MC (K)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-2 block">
+                Market Filters
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {marketFilters.map((filter) => (
+                  <div key={filter.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={filter.id}
+                      checked={selectedMarketFilters.includes(filter.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedMarketFilters(prev => [...prev, filter.id]);
+                        } else {
+                          setSelectedMarketFilters(prev => prev.filter(id => id !== filter.id));
+                        }
+                      }}
+                    />
+                    <span className="text-sm cursor-pointer">{filter.label}</span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Liquidity
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* MC */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                MC (K)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Age
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* Liquidity */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Liquidity
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  ATH
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* Age */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Age
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Drop from ATH (%)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* ATH */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                ATH
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  B. Curve (%)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* Drop from ATH */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Drop from ATH (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  DEX Tax
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* B. Curve */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                B. Curve (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
-              <div>
-                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  DEX Paid Boost ($)
-                </span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                  <Input placeholder="Max" type="number" className="h-9 text-sm" />
-                </div>
+            </div>
+
+            {/* DEX Tax */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                DEX Tax
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* DEX Paid Boost */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                DEX Paid Boost ($)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
               </div>
             </div>
           </TabsContent>
@@ -309,6 +346,94 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
                 </div>
               ))}
             </div>
+
+            {/* Min/Max для Volume */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Volume
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Buy Volume */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Buy Volume
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Sell Volume */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Sell Volume
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Bot Fee */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Bot Fee
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Sell Bot Fee */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Sell Bot Fee
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Buys */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Buys
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Sells */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Sells
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* Min/Max для Makers */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Makers
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Holders Tab */}
@@ -331,6 +456,77 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
                 </div>
               ))}
             </div>
+
+            {/* Min/Max для Holders */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Holders
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Top 10 Hold (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Bot Traders (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                New Wallets (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Dev Hold (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Bundle Hold (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Snipers Hold (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
           </TabsContent>
 
           {/* DEV Tab */}
@@ -352,6 +548,107 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
                   <span className="text-sm cursor-pointer">{filter.label}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Min/Max для DEV */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Launched
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Migrated
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Migrated (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                AVG LAST 3 ATH
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                AVG LAST 3 Bot Fee
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                AVG LAST 5 ATH
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                AVG LAST 5 Bot Fee
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Dev SOL Balance
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Funded hours ago
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Funding SOL amount
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
