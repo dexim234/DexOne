@@ -40,7 +40,7 @@ const months = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AssetsPage() {
   const { t } = useTranslation();
@@ -207,8 +207,8 @@ export default function AssetsPage() {
 
       return Array.from({ length: daysInMonth }, (_, i) => ({
         day: i + 1,
-        pnl: dailyPnL[i + 1],
-        isProfitable: dailyPnL[i + 1] >= 0,
+        pnl: 0, // Reset all to 0
+        isProfitable: true,
       }));
     } catch (err) {
       console.error("Failed to fetch PnL data:", err);
@@ -596,59 +596,74 @@ export default function AssetsPage() {
             </Card>
 
             {/* Quick Actions Buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  setShowCreateForm(!showCreateForm);
-                  setShowImportForm(false);
-                }}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-12 text-base"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                New Wallet
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowImportForm(!showImportForm);
-                  setShowCreateForm(false);
-                }}
-                className="flex-1 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 h-12 text-base"
-              >
-                <Key className="h-5 w-5 mr-2" />
-                Import
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => activeWalletId && handleSendClick(activeWalletId)}
-                className="w-32 border-teal-500/30 text-teal-500 hover:bg-teal-500/10 h-12"
-              >
-                <Send className="h-5 w-5 mr-2" />
-                Send
-              </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <Button
+                  onClick={() => {
+                    setShowCreateForm(!showCreateForm);
+                    setShowImportForm(false);
+                  }}
+                  className="w-full h-14 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 shadow-lg shadow-teal-500/25 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-white/20 rounded-lg">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <span>New Wallet</span>
+                  </div>
+                </Button>
+              </div>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowImportForm(!showImportForm);
+                    setShowCreateForm(false);
+                  }}
+                  className="w-full h-14 text-base border-2 border-teal-500/30 hover:border-teal-500/50 hover:bg-teal-500/5 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-teal-500/10 rounded-lg">
+                      <Key className="h-5 w-5 text-teal-500" />
+                    </div>
+                    <span>Import</span>
+                  </div>
+                </Button>
+              </div>
             </div>
 
             {/* Create Wallet Form */}
             {showCreateForm && (
-              <Card className="border-border/50 bg-card/50 backdrop-blur">
-                <CardContent className="p-4 space-y-3">
+              <Card className="border-teal-500/20 bg-gradient-to-r from-teal-500/5 to-cyan-500/5">
+                <CardContent className="p-5 space-y-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-teal-500" />
+                      Wallet Name <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
                     <Input
                       placeholder="Enter wallet name"
                       value={newWalletName}
                       onChange={(e) => setNewWalletName(e.target.value)}
+                      className="border-teal-500/20 focus:border-teal-500"
                     />
                   </div>
                   <Button
                     onClick={handleCreateWallet}
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
                   >
-                    {isLoading ? "Creating..." : "Create Wallet"}
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        Creating...
+                      </span>
+                    ) : (
+                      "Create Wallet"
+                    )}
                   </Button>
                   {error && (
-                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
                       {error}
                     </div>
                   )}
@@ -658,42 +673,57 @@ export default function AssetsPage() {
 
             {/* Import Wallet Form */}
             {showImportForm && (
-              <Card className="border-border/50 bg-card/50 backdrop-blur">
-                <CardContent className="p-4 space-y-3">
+              <Card className="border-teal-500/20 bg-gradient-to-r from-teal-500/5 to-cyan-500/5">
+                <CardContent className="p-5 space-y-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <Key className="h-4 w-4 text-teal-500" />
+                      Wallet Name <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
                     <Input
                       placeholder="Enter wallet name"
                       value={importWalletName}
                       onChange={(e) => setImportWalletName(e.target.value)}
+                      className="border-teal-500/20 focus:border-teal-500"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <Key className="h-4 w-4 text-teal-500" />
+                      Private Key (Base58)
+                    </label>
                     <Input
                       placeholder="Enter private key..."
                       value={importPrivateKey}
                       onChange={(e) => setImportPrivateKey(e.target.value)}
-                      className="font-mono text-sm"
+                      className="font-mono text-sm border-teal-500/20 focus:border-teal-500"
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button
                       onClick={handleImportWallet}
                       disabled={isLoading}
-                      className="flex-1 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700"
+                      className="flex-1 h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
                     >
-                      {isLoading ? "Importing..." : "Import"}
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                          Importing...
+                        </span>
+                      ) : (
+                        "Import Wallet"
+                      )}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setShowImportForm(false)}
+                      className="h-11 px-6 border-teal-500/20 hover:bg-teal-500/5"
                     >
                       Cancel
                     </Button>
                   </div>
                   {error && (
-                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
                       {error}
                     </div>
                   )}
@@ -702,20 +732,33 @@ export default function AssetsPage() {
             )}
 
             {/* Holdings / Orders / Realised Buttons */}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 border-border/50 h-10">
-                <ShoppingBag className="h-4 w-4 mr-2" />
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" className="h-10 border-teal-500/20 hover:bg-teal-500/5 text-sm">
+                <ShoppingBag className="h-4 w-4 mr-2 text-teal-500" />
                 Holdings
               </Button>
-              <Button variant="outline" className="flex-1 border-border/50 h-10">
-                <FileText className="h-4 w-4 mr-2" />
+              <Button variant="outline" className="h-10 border-teal-500/20 hover:bg-teal-500/5 text-sm">
+                <FileText className="h-4 w-4 mr-2 text-teal-500" />
                 Orders
               </Button>
-              <Button variant="outline" className="flex-1 border-border/50 h-10">
-                <TrendingUp className="h-4 w-4 mr-2" />
+              <Button variant="outline" className="h-10 border-teal-500/20 hover:bg-teal-500/5 text-sm">
+                <TrendingUp className="h-4 w-4 mr-2 text-teal-500" />
                 Realised
               </Button>
             </div>
+
+            {/* Send Button */}
+            {activeWalletId && (
+              <Button
+                onClick={() => handleSendClick(activeWalletId)}
+                className="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg shadow-teal-500/25"
+              >
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  <span>Send SOL</span>
+                </div>
+              </Button>
+            )}
           </div>
 
           {/* Right Column - Calendar (1/3) */}
@@ -819,9 +862,9 @@ export default function AssetsPage() {
                         </div>
                       ))}
                     </div>
-                    {/* Days */}
+                    {/* Days - starting from Monday */}
                     <div className="grid grid-cols-7 gap-1">
-                      {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map((_, i) => (
+                      {Array.from({ length: (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7 }).map((_, i) => (
                         <div key={`empty-${i}`} className="aspect-square" />
                       ))}
                       {calendarData.map((data) => (
