@@ -50,6 +50,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Pin,
   Filter,
   X,
   Check,
@@ -123,7 +124,7 @@ export default function TrackerPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
-  const [groups, setGroups] = useState<{ name: string; emoji?: string; hidden?: boolean }[]>([]);
+  const [groups, setGroups] = useState<{ name: string; emoji?: string; hidden?: boolean; pinned?: boolean }[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
   const [isLoadingWallets, setIsLoadingWallets] = useState(true);
@@ -274,6 +275,10 @@ export default function TrackerPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [showWalletEmojiPicker, setShowWalletEmojiPicker] = useState(false);
   const [showEditingWalletEmojiPicker, setShowEditingWalletEmojiPicker] = useState(false);
+  const [isAddingWallet, setIsAddingWallet] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [draggedWalletId, setDraggedWalletId] = useState<number | null>(null);
+  const [walletOrder, setWalletOrder] = useState<number[]>([]);
 
   // Load filters from localStorage
   useEffect(() => {
@@ -292,6 +297,12 @@ export default function TrackerPage() {
         setFilterLiqMax(parsed.filterLiqMax || "");
         setFilterMakersMin(parsed.filterMakersMin || "");
         setFilterMakersMax(parsed.filterMakersMax || "");
+      }
+      
+      // Load wallet order
+      const savedOrder = localStorage.getItem("walletOrder");
+      if (savedOrder) {
+        setWalletOrder(JSON.parse(savedOrder));
       }
     } catch (err) {
       console.error("Error loading filters from localStorage:", err);
@@ -320,6 +331,13 @@ export default function TrackerPage() {
     }
   }, [columnVisibility, filterGroup, filterWallets, filterAsset, filterAction, 
       filterMcMin, filterMcMax, filterLiqMin, filterLiqMax, filterMakersMin, filterMakersMax]);
+
+  // Save wallet order to localStorage
+  useEffect(() => {
+    if (walletOrder.length > 0) {
+      localStorage.setItem("walletOrder", JSON.stringify(walletOrder));
+    }
+  }, [walletOrder]);
 
   const toggleActive = async (id: number) => {
     const wallet = wallets.find(w => w.id === id);
@@ -384,8 +402,9 @@ export default function TrackerPage() {
   };
 
   const addWallet = async () => {
-    if (!newWallet.wallet) return;
+    if (!newWallet.wallet || isAddingWallet) return;
     
+    setIsAddingWallet(true);
     try {
         // Получаем актуальный баланс
         const balanceData = await getWalletBalanceFromTransactions(newWallet.wallet);
@@ -431,6 +450,8 @@ export default function TrackerPage() {
     } catch (err) {
       console.error("Error adding wallet:", err);
       alert("Failed to add wallet to Firestore");
+    } finally {
+      setIsAddingWallet(false);
     }
   };
 
@@ -493,12 +514,12 @@ export default function TrackerPage() {
   };
 
   const deleteGroup = async (groupName: string) => {
-    if (!confirm(`Delete group "${groupName}"?`)) return;
+    if (!confirm(`Delete group "${groupName}"? This cannot be undone.`)) return;
     try {
-      // Find group in state to get firebase ID
-      const groupToDelete = groups.find(g => g.name === groupName);
-      // Note: We don't have firebase ID in current state, need to store it
-      // For now, we'll just update local state
+      // Delete from Firestore
+      await deleteGroupFromFirestore(groupName);
+      
+      // Update local state
       setGroups(prev => prev.filter(g => g.name !== groupName));
       setWallets(prev =>
         prev.map(w => (w.group === groupName ? { ...w, group: "All" } : w))
@@ -506,6 +527,7 @@ export default function TrackerPage() {
       if (selectedGroup === groupName) setSelectedGroup("All");
     } catch (err) {
       console.error("Error deleting group:", err);
+      alert("Failed to delete group from Firestore");
     }
   };
 
@@ -518,11 +540,35 @@ export default function TrackerPage() {
         setGroups(prev =>
           prev.map(g => g.name === groupName ? { ...g, hidden: !isHidden } : g)
         );
-        // Force re-render
-        setSelectedGroup(prev => prev);
       }
     } catch (err) {
       console.error("Error toggling group visibility:", err);
+    }
+  };
+
+  const toggleGroupPinned = async (groupName: string) => {
+    try {
+      const group = groups.find(g => g.name === groupName);
+      if (group) {
+        const isPinned = group.pinned || false;
+        const newPinned = !isPinned;
+        
+        // Check limit if pinning
+        if (newPinned) {
+          const pinnedCount = groups.filter(g => g.pinned).length;
+          if (pinnedCount >= 15) {
+            alert("Maximum 15 groups can be pinned");
+            return;
+          }
+        }
+        
+        await updateGroupInFirestore(groupName, { pinned: newPinned });
+        setGroups(prev =>
+          prev.map(g => g.name === groupName ? { ...g, pinned: newPinned } : g)
+        );
+      }
+    } catch (err) {
+      console.error("Error toggling group pinned:", err);
     }
   };
 
@@ -579,6 +625,9 @@ export default function TrackerPage() {
   };
 
   const processImport = async () => {
+    if (isImporting) return;
+    
+    setIsImporting(true);
     try {
       const walletsData = JSON.parse(importText);
       if (!Array.isArray(walletsData)) {
@@ -642,6 +691,8 @@ export default function TrackerPage() {
     } catch (err) {
       console.error("Error importing wallets:", err);
       alert("Invalid JSON format");
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -669,6 +720,55 @@ export default function TrackerPage() {
 
   const copyWallet = (wallet: string) => {
     navigator.clipboard.writeText(wallet);
+  };
+
+  // Drag and drop handlers for wallets
+  const handleDragStart = (e: React.DragEvent, walletId: number) => {
+    setDraggedWalletId(walletId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetWalletId: number) => {
+    e.preventDefault();
+    if (draggedWalletId === null || draggedWalletId === targetWalletId) return;
+
+    setWalletOrder(prev => {
+      const newOrder = [...prev];
+      const draggedIndex = newOrder.indexOf(draggedWalletId);
+      const targetIndex = newOrder.indexOf(targetWalletId);
+      
+      if (draggedIndex === -1 || targetIndex === -1) return prev;
+      
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedWalletId);
+      
+      return newOrder;
+    });
+    setDraggedWalletId(null);
+  };
+
+  const getSortedWallets = () => {
+    if (walletOrder.length === 0) return filteredWallets;
+    
+    const walletMap = new Map(filteredWallets.map(w => [w.id, w]));
+    const sorted = walletOrder
+      .map(id => walletMap.get(id))
+      .filter((w): w is Wallet => w !== undefined);
+    
+    // Add wallets that are not in order array
+    const orderSet = new Set(walletOrder);
+    filteredWallets.forEach(w => {
+      if (!orderSet.has(w.id)) {
+        sorted.push(w);
+      }
+    });
+    
+    return sorted;
   };
 
   // Get coin icon from DexScreener or return default
@@ -833,6 +933,7 @@ export default function TrackerPage() {
             </div>
             <Button
               onClick={async () => {
+                if (isAddingWallet) return;
                 setShowAddWalletDialog(true);
                 if (walletSearchQuery.trim()) {
                   // Validate Solana address
@@ -854,15 +955,20 @@ export default function TrackerPage() {
                   }
                 }
               }}
-              className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+              className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50"
+              disabled={isAddingWallet}
             >
-              <Plus className="h-4 w-4" />
+              {isAddingWallet ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
             </Button>
             </div>
 
             {/* Group Management */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {groups.map((group) => (
+              {groups.filter(g => g.name !== "All" && !g.hidden).map((group) => (
                 <Button
                   key={group.name}
                   variant={selectedGroup === group.name ? "default" : "secondary"}
@@ -936,10 +1042,17 @@ export default function TrackerPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-border/30">
-                {filteredWallets.map((wallet) => {
+                {getSortedWallets().map((wallet) => {
                   const groupEmoji = groups.find(g => g.name === wallet.group)?.emoji || "";
                   return (
-                  <TableRow key={wallet.id} className="border-border/30">
+                  <TableRow 
+                    key={wallet.id} 
+                    className="border-border/30 cursor-move"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, wallet.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, wallet.id)}
+                  >
                     <TableCell className="text-center py-2">
                       <Badge variant="outline" className="text-[10px] font-medium">
                         {groupEmoji && <span className="mr-0.5">{groupEmoji}</span>}
@@ -1611,9 +1724,23 @@ export default function TrackerPage() {
                 <div className="flex items-center gap-2">
                   {group.emoji && <span className="text-lg">{group.emoji}</span>}
                   <span className="font-medium">{group.name}</span>
+                  {group.pinned && <span className="text-xs text-teal-500">(pinned)</span>}
                   {group.hidden && <span className="text-xs text-muted-foreground">(hidden)</span>}
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => toggleGroupPinned(group.name)}
+                    title={group.pinned ? "Unpin group" : "Pin group (max 15)"}
+                  >
+                    {group.pinned ? (
+                      <span className="text-teal-500 text-sm">📌</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">📍</span>
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1698,10 +1825,10 @@ export default function TrackerPage() {
                 className="w-full h-64 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
                 placeholder={`[
   {
-    "address": "22dRPLbm4jo86CdRQwQBbdNMx3VLoYV2Yor3NsMzVkzV",
-    "name": "My Wallet - 1",
+    "address": "64P56FHSBUPiudvgygvXotxuCjJkpVzrvYajFTN9a9uk",
+    "name": "My Wallet",
     "emoji": "🚀",
-    "groups": ["My wallets"]
+    "groups": ["ARCA Team"]
   }
 ]`}
                 value={importText}
@@ -1733,9 +1860,18 @@ export default function TrackerPage() {
             >
               Cancel
             </Button>
-            <Button onClick={processImport} disabled={!importText.trim()}>
-              <Download className="h-4 w-4 mr-2" />
-              Import Wallets
+            <Button onClick={processImport} disabled={!importText.trim() || isImporting}>
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Import Wallets
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

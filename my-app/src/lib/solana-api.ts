@@ -292,26 +292,30 @@ export async function getWalletBalanceFromTransactions(
     const txData = await txResponse.json();
     const transactions = txData.result?.signatures || [];
 
-    // 3. Последняя активность
+    // 3. Последняя активность - берем время из последней транзакции
     let lastActivity = Date.now();
     if (transactions.length > 0) {
       const lastTx = transactions[0];
-      const txDetail = await fetch(HELIUS_RPC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "get-transaction",
-          method: "getTransaction",
-          params: [lastTx.signature, { encoding: "json", commitment: "confirmed" }],
-        }),
-      });
+      // Используем blockTime если доступен, иначе рассчитываем по слоту
+      if (lastTx.blockTime) {
+        lastActivity = lastTx.blockTime * 1000;
+      } else {
+        const txDetail = await fetch(HELIUS_RPC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "get-transaction",
+            method: "getTransaction",
+            params: [lastTx.signature, { encoding: "json", commitment: "confirmed" }],
+          }),
+        });
 
-      const txDetailData = await txDetail.json();
-      const slot = txDetailData.result?.slot;
-      if (slot) {
-        // Примерное время по слоту (400мс на слот)
-        lastActivity = Date.now() - (slot * 400);
+        const txDetailData = await txDetail.json();
+        const blockTime = txDetailData.result?.blockTime;
+        if (blockTime) {
+          lastActivity = blockTime * 1000;
+        }
       }
     }
 

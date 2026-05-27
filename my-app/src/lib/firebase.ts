@@ -38,6 +38,17 @@ export interface GroupData {
   name: string;
   emoji?: string;
   hidden?: boolean;
+  pinned?: boolean;
+  userId?: string;
+  createdAt?: Timestamp;
+}
+
+export interface GroupData {
+  id?: string;
+  name: string;
+  emoji?: string;
+  hidden?: boolean;
+  pinned?: boolean;
   userId?: string;
   createdAt?: Timestamp;
 }
