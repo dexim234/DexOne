@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { validateSolanaAddress } from "@/lib/solana-api";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
@@ -68,6 +69,25 @@ export default function Header() {
   const [search, setSearch] = React.useState("");
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
+  const handleSearch = () => {
+    if (!search.trim()) return;
+    
+    // Check if it's a Solana address
+    if (validateSolanaAddress(search.trim())) {
+      window.open(`/tracker/${search.trim()}`, '_blank');
+    } else {
+      // Search for token by CA
+      window.open(`/market-hub?search=${encodeURIComponent(search.trim())}`, '_blank');
+    }
+    setSearch("");
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/30 bg-background/80 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 font-outfit">
       <div className="flex h-16 items-center px-4 lg:px-8 gap-6">
@@ -118,8 +138,17 @@ export default function Header() {
               placeholder={t("search.placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               className="pl-10 h-10 bg-muted/30 border-border/50 focus-visible:ring-2 focus-visible:ring-teal-500/50 focus-visible:border-teal-500/50 transition-all rounded-xl"
             />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSearch}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Notifications */}
@@ -284,8 +313,17 @@ export default function Header() {
                     placeholder={t("search.placeholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
                     className="pl-10 h-10 rounded-xl"
                   />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSearch}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
                 </div>
                 <nav className="flex flex-col gap-1">
                   {navItems.map((item) => {

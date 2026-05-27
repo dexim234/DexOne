@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
+import { FilterDialog } from "@/components/market-hub/FilterDialog";
 import {
   Popover,
   PopoverContent,
@@ -48,6 +49,7 @@ export default function MarketHubPage() {
     }
     return "1m";
   });
+  const [appliedFilters, setAppliedFilters] = useState<any>({});
 
   useEffect(() => {
     localStorage.setItem("selectedMetrics", JSON.stringify(selectedMetrics));
@@ -63,6 +65,12 @@ export default function MarketHubPage() {
         ? prev.filter(id => id !== metricId)
         : [...prev, metricId]
     );
+  };
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+    console.log("Applied filters:", filters);
+    // Здесь будет логика применения фильтров к токенам
   };
 
   return (
@@ -90,6 +98,9 @@ export default function MarketHubPage() {
 
           {/* Right: Action Controls */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Filter Button */}
+            <FilterDialog onApplyFilters={handleApplyFilters} />
+
             {/* Quick Buy Button */}
             <Button 
               variant="secondary" 
