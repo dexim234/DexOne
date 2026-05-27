@@ -33,6 +33,15 @@ export interface WalletData {
   createdAt?: Timestamp;
 }
 
+export interface GroupData {
+  id?: string;
+  name: string;
+  emoji?: string;
+  hidden?: boolean;
+  userId?: string;
+  createdAt?: Timestamp;
+}
+
 // Groups interface
 export interface GroupData {
   id?: string;
@@ -135,20 +144,50 @@ export const getGroupsFromFirestore = async () => {
   }
 };
 
-export const updateGroupInFirestore = async (groupId: string, updates: Partial<GroupData>) => {
+export const updateGroupInFirestore = async (groupIdentifier: string, updates: Partial<GroupData>) => {
   try {
-    const groupDoc = doc(db, "groups", groupId);
-    await updateDoc(groupDoc, updates);
+    // Try to find the group document by name
+    const q = query(groupsCollection, orderBy("createdAt", "asc"));
+    const querySnapshot = await getDocs(q);
+    
+    let groupDocRef: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().name === groupIdentifier) {
+        groupDocRef = doc.ref;
+      }
+    });
+    
+    if (!groupDocRef) {
+      console.error("Group not found:", groupIdentifier);
+      return;
+    }
+    
+    await updateDoc(groupDocRef, updates);
   } catch (error) {
     console.error("Error updating group:", error);
     throw error;
   }
 };
 
-export const deleteGroupFromFirestore = async (groupId: string) => {
+export const deleteGroupFromFirestore = async (groupIdentifier: string) => {
   try {
-    const groupDoc = doc(db, "groups", groupId);
-    await deleteDoc(groupDoc);
+    // Try to find the group document by name
+    const q = query(groupsCollection, orderBy("createdAt", "asc"));
+    const querySnapshot = await getDocs(q);
+    
+    let groupDocRef: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().name === groupIdentifier) {
+        groupDocRef = doc.ref;
+      }
+    });
+    
+    if (!groupDocRef) {
+      console.error("Group not found:", groupIdentifier);
+      return;
+    }
+    
+    await deleteDoc(groupDocRef);
   } catch (error) {
     console.error("Error deleting group:", error);
     throw error;
