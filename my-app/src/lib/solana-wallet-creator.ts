@@ -60,12 +60,18 @@ function base58ToUint8Array(str: string): Uint8Array {
   return result;
 }
 
+function formatAddressForName(publicKey: string): string {
+  if (publicKey.length < 10) return publicKey;
+  return `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`;
+}
+
 export async function generateSolanaWallet(name?: string): Promise<WalletData> {
   const keypair = Keypair.generate();
+  const publicKey = keypair.publicKey.toBase58();
   return {
     id: crypto.randomUUID(),
-    name: name || `Wallet ${Date.now().toString().slice(-4)}`,
-    publicKey: keypair.publicKey.toBase58(),
+    name: name || formatAddressForName(publicKey),
+    publicKey,
     privateKeyBase58: uint8ArrayToBase58(keypair.secretKey),
     createdAt: Date.now(),
   };
@@ -74,10 +80,11 @@ export async function generateSolanaWallet(name?: string): Promise<WalletData> {
 export async function importSolanaWallet(secretKeyBase58: string, name?: string): Promise<WalletData> {
   const secretKey = base58ToUint8Array(secretKeyBase58.trim());
   const keypair = Keypair.fromSecretKey(secretKey);
+  const publicKey = keypair.publicKey.toBase58();
   return {
     id: crypto.randomUUID(),
-    name: name || `Wallet ${Date.now().toString().slice(-4)}`,
-    publicKey: keypair.publicKey.toBase58(),
+    name: name || formatAddressForName(publicKey),
+    publicKey,
     privateKeyBase58: secretKeyBase58.trim(),
     createdAt: Date.now(),
   };

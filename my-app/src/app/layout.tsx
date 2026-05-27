@@ -4,6 +4,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WidgetProvider } from "@/contexts/WidgetContext";
+import { ToastProvider } from "@/components/ui/toast";
 import MainContent from "@/components/MainContent";
 
 const geistMono = Geist_Mono({
@@ -40,9 +41,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <WidgetProvider>
-            <MainContent>{children}</MainContent>
-          </WidgetProvider>
+          <ToastProvider>
+            <WidgetProvider>
+              <MainContent>{children}</MainContent>
+            </WidgetProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
