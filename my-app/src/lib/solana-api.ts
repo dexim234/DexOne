@@ -492,4 +492,3 @@ export async function findSimilarWallets(
   return [];
 }
 
-export { getWalletBalanceFromTransactions };

@@ -28,6 +28,7 @@ export interface WalletData {
   active: boolean;
   lastActivity: number;
   name?: string;
+  emoji?: string;
   userId?: string;
   createdAt?: Timestamp;
 }

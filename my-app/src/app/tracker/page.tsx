@@ -132,7 +132,7 @@ export default function TrackerPage() {
 
   // Load data from Firestore on mount
   useEffect(() => {
-    loadData();
+    loadWallets();
   }, []);
 
   const loadWallets = async () => {
