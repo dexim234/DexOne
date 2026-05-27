@@ -29,7 +29,7 @@ function SingleWidget({
     <div
       className={cn(
         "flex flex-col bg-gradient-to-br from-background/95 via-background/90 to-background/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl overflow-hidden flex-shrink-0",
-        isStacked ? "w-full h-52" : "w-64 h-full"
+        isStacked ? "w-full flex-1 min-h-0" : "w-64 h-full"
       )}
     >
       {/* Header */}
