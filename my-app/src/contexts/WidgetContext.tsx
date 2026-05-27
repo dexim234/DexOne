@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 
 export type WidgetType = "tracker" | "smart" | "alerts" | "calls";
-export type WidgetPosition = "left" | "right" | "top" | "bottom";
+export type WidgetPosition = "left" | "right";
 
 export interface Widget {
   id: string;
@@ -15,14 +15,16 @@ export interface Widget {
 
 interface WidgetContextType {
   widgets: Widget[];
+  isStacked: boolean;
   openWidget: (type: WidgetType, title: string) => void;
   closeWidget: (id: string) => void;
   moveWidget: (id: string, position: WidgetPosition) => void;
-  reorderWidgets: (position: WidgetPosition, newOrder: string[]) => void;
+  toggleStacked: () => void;
   isWidgetOpen: (type: WidgetType) => boolean;
 }
 
 const STORAGE_KEY = "dexone-widgets";
+const STACKED_KEY = "dexone-widgets-stacked";
 
 function loadWidgets(): Widget[] {
   if (typeof window === "undefined") return [];
@@ -33,15 +35,30 @@ function loadWidgets(): Widget[] {
   return [];
 }
 
+function loadStacked(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const saved = localStorage.getItem(STACKED_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return false;
+}
+
 function saveWidgets(widgets: Widget[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
+}
+
+function saveStacked(stacked: boolean) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STACKED_KEY, JSON.stringify(stacked));
 }
 
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 export function WidgetProvider({ children }: { children: React.ReactNode }) {
   const [widgets, setWidgets] = useState<Widget[]>(loadWidgets);
+  const [isStacked, setIsStacked] = useState<boolean>(loadStacked);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -53,6 +70,12 @@ export function WidgetProvider({ children }: { children: React.ReactNode }) {
       saveWidgets(widgets);
     }
   }, [widgets, initialized]);
+
+  useEffect(() => {
+    if (initialized) {
+      saveStacked(isStacked);
+    }
+  }, [isStacked, initialized]);
 
   const openWidget = useCallback((type: WidgetType, title: string) => {
     setWidgets((prev) => {
@@ -74,9 +97,8 @@ export function WidgetProvider({ children }: { children: React.ReactNode }) {
   const closeWidget = useCallback((id: string) => {
     setWidgets((prev) => {
       const removed = prev.filter((w) => w.id !== id);
-      // Recalculate orders per position
       const byPos: Record<WidgetPosition, Widget[]> = {
-        left: [], right: [], top: [], bottom: [],
+        left: [], right: [],
       };
       removed.forEach((w) => byPos[w.position].push(w));
       Object.keys(byPos).forEach((pos) => {
@@ -98,15 +120,8 @@ export function WidgetProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const reorderWidgets = useCallback((position: WidgetPosition, newOrder: string[]) => {
-    setWidgets((prev) => {
-      const updated = prev.map((w) => {
-        if (w.position !== position) return w;
-        const idx = newOrder.indexOf(w.id);
-        return { ...w, order: idx >= 0 ? idx : w.order };
-      });
-      return [...updated];
-    });
+  const toggleStacked = useCallback(() => {
+    setIsStacked((prev) => !prev);
   }, []);
 
   const isWidgetOpen = useCallback(
@@ -116,7 +131,7 @@ export function WidgetProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WidgetContext.Provider
-      value={{ widgets, openWidget, closeWidget, moveWidget, reorderWidgets, isWidgetOpen }}
+      value={{ widgets, isStacked, openWidget, closeWidget, moveWidget, toggleStacked, isWidgetOpen }}
     >
       {children}
     </WidgetContext.Provider>
