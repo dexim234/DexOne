@@ -51,7 +51,10 @@ import {
   Loader2,
   Filter,
   X,
+  Check,
+  Image as ImageIcon,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { searchWallet } from "../../lib/solana-api";
 import {
   WalletData,
@@ -86,15 +89,16 @@ interface Position {
   mcValue: number;
   liqValue: number;
   makersValue: number;
+  tokenAddress?: string;
 }
 
-const initialGroups = ["All", "Main", "Trading", "Sniper", "Alpha"];
+const initialGroups = ["All"];
 
 const samplePositions: Position[] = [
   {
     id: 1,
-    group: "Main",
-    wallet: "7xKX...vQp9Z",
+    group: "All",
+    wallet: "7xK...vQp9",
     asset: "SOL",
     coin: "WIF",
     action: "Buy",
@@ -105,11 +109,12 @@ const samplePositions: Position[] = [
     mcValue: 1200000,
     liqValue: 345000,
     makersValue: 234,
+    tokenAddress: "EKpQGSJtjMFqKZ9KQanSqYXRcFQfBbJWev5e9uKx4w8D",
   },
   {
     id: 2,
-    group: "Trading",
-    wallet: "3mPL...kJ8nX",
+    group: "All",
+    wallet: "3mP...kJ8n",
     asset: "SOL",
     coin: "BONK",
     action: "Sell",
@@ -120,11 +125,12 @@ const samplePositions: Position[] = [
     mcValue: 890000,
     liqValue: 123000,
     makersValue: 89,
+    tokenAddress: "DezXAZ8zK7nrnqY445hNqLq3MzYbXKwVZP7z9wQF7w8D",
   },
   {
     id: 3,
-    group: "Sniper",
-    wallet: "9qWZ...hR2mY",
+    group: "All",
+    wallet: "9qW...hR2m",
     asset: "ETH",
     coin: "POPCAT",
     action: "Buy",
@@ -135,11 +141,12 @@ const samplePositions: Position[] = [
     mcValue: 2300000,
     liqValue: 567000,
     makersValue: 456,
+    tokenAddress: "7GCihgDB8feFCXrnbBVKrXh4XqXvXfJbDqKRZzV7w8D",
   },
   {
     id: 4,
-    group: "Main",
-    wallet: "7xKX...vQp9Z",
+    group: "All",
+    wallet: "7xK...vQp9",
     asset: "SOL",
     coin: "MEW",
     action: "Sell",
@@ -150,11 +157,12 @@ const samplePositions: Position[] = [
     mcValue: 1800000,
     liqValue: 234000,
     makersValue: 178,
+    tokenAddress: "CEOE9PphwgVwzs6Jxj8kMKQJQvVbJqZzV7w8D",
   },
   {
     id: 5,
-    group: "Alpha",
-    wallet: "5nBC...pT4kL",
+    group: "All",
+    wallet: "5nB...pT4k",
     asset: "SOL",
     coin: "BOME",
     action: "Buy",
@@ -165,11 +173,12 @@ const samplePositions: Position[] = [
     mcValue: 3400000,
     liqValue: 789000,
     makersValue: 312,
+    tokenAddress: "8sLbNZoA1cfnvMJLPf9w3nR6qZzV7w8D",
   },
   {
     id: 6,
-    group: "Trading",
-    wallet: "3mPL...kJ8nX",
+    group: "All",
+    wallet: "3mP...kJ8n",
     asset: "ETH",
     coin: "SLERF",
     action: "Buy",
@@ -180,11 +189,12 @@ const samplePositions: Position[] = [
     mcValue: 5600000,
     liqValue: 1200000,
     makersValue: 567,
+    tokenAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNL3w8D",
   },
   {
     id: 7,
-    group: "Sniper",
-    wallet: "9qWZ...hR2mY",
+    group: "All",
+    wallet: "9qW...hR2m",
     asset: "SOL",
     coin: "TURBO",
     action: "Sell",
@@ -195,6 +205,7 @@ const samplePositions: Position[] = [
     mcValue: 780000,
     liqValue: 89000,
     makersValue: 45,
+    tokenAddress: "9JZ4XXwZzV7w8D",
   },
 ];
 
@@ -223,6 +234,16 @@ export default function TrackerPage() {
   const [isLoadingWallets, setIsLoadingWallets] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Position column visibility filters
+  const [columnVisibility, setColumnVisibility] = useState({
+    group: true,
+    wallet: true,
+    asset: true,
+    mc: true,
+    liq: true,
+    makers: true,
+  });
+
   // Position filters
   const [positionFilters, setShowPositionFilters] = useState(false);
   const [filterGroup, setFilterGroup] = useState<string>("All");
@@ -240,12 +261,18 @@ export default function TrackerPage() {
   const [showAddWalletDialog, setShowAddWalletDialog] = useState(false);
   const [showEditWalletDialog, setShowEditWalletDialog] = useState(false);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [showManageGroupsDialog, setShowManageGroupsDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   
   // Form states
-  const [newWallet, setNewWallet] = useState({ name: "", wallet: "", group: "Main" });
+  const [newWallet, setNewWallet] = useState({ name: "", wallet: "", group: "All" });
   const [newGroupName, setNewGroupName] = useState("");
+  const [groupEmoji, setGroupEmoji] = useState("");
+  const [editingGroupEmoji, setEditingGroupEmoji] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [importText, setImportText] = useState("");
 
   // Load wallets from Firestore on mount
   useEffect(() => {
@@ -363,7 +390,7 @@ export default function TrackerPage() {
         name: newWallet.name || formatAddressName(newWallet.wallet),
         firebaseId: walletId,
       }]);
-      setNewWallet({ name: "", wallet: "", group: "Main" });
+      setNewWallet({ name: "", wallet: "", group: "All" });
       setShowAddWalletDialog(false);
     } catch (err) {
       console.error("Error adding wallet:", err);
@@ -381,7 +408,7 @@ export default function TrackerPage() {
 
     try {
       const updates: Partial<WalletData> = {
-        group: newWallet.group || "Main",
+        group: newWallet.group || "All",
         wallet: newWallet.wallet,
         name: newWallet.name || formatAddressName(newWallet.wallet),
       };
@@ -403,25 +430,31 @@ export default function TrackerPage() {
     }
   };
 
+  // Group management with emoji support
   const addGroup = () => {
     if (!newGroupName || groups.includes(newGroupName)) return;
     setGroups(prev => [...prev, newGroupName]);
     setNewGroupName("");
+    setGroupEmoji("");
     setShowGroupDialog(false);
   };
 
-  const deleteGroup = (groupName: string) => {
+  const deleteGroup = async (groupName: string) => {
     if (groupName === "All") return;
+    const confirmed = confirm(`Delete group "${groupName}"? Wallets will be moved to "All".`);
+    if (!confirmed) return;
+    
     setGroups(prev => prev.filter(g => g !== groupName));
     setWallets(prev =>
-      prev.map(w => (w.group === groupName ? { ...w, group: "Main" } : w))
+      prev.map(w => (w.group === groupName ? { ...w, group: "All" } : w))
     );
     if (selectedGroup === groupName) setSelectedGroup("All");
   };
 
-  const editGroup = (groupName: string) => {
+  const editGroup = (groupName: string, currentEmoji: string) => {
     setEditingGroup(groupName);
     setNewGroupName(groupName);
+    setEditingGroupEmoji(currentEmoji);
     setShowGroupDialog(true);
   };
 
@@ -436,8 +469,59 @@ export default function TrackerPage() {
     if (selectedGroup === editingGroup) setSelectedGroup(newGroupName);
     setEditingGroup(null);
     setNewGroupName("");
+    setEditingGroupEmoji("");
     setShowGroupDialog(false);
   };
+
+  const deleteAllWallets = async () => {
+    const confirmed = confirm("Are you sure you want to delete ALL wallets and their Live Positions? This cannot be undone.");
+    if (!confirmed) return;
+
+    try {
+      // Delete all wallets from Firestore
+      for (const wallet of wallets) {
+        if (wallet.firebaseId) {
+          await deleteWalletFromFirestore(wallet.firebaseId);
+        }
+      }
+      setWallets([]);
+      // Positions will be cleared as they are tied to wallets
+    } catch (err) {
+      console.error("Error deleting all wallets:", err);
+      alert("Failed to delete all wallets");
+    }
+  };
+
+  const importWallets = () => {
+    setShowImportDialog(true);
+  };
+
+  const processImport = () => {
+    const lines = importText.split("\n").filter(line => line.trim());
+    const newWalletsData: Wallet[] = [];
+    
+    lines.forEach((line, index) => {
+      const addr = line.trim();
+      if (addr.length > 10) {
+        const newId = Math.max(...wallets.map(w => w.id), 0) + index + 1;
+        newWalletsData.push({
+          id: newId,
+          group: "All",
+          wallet: addr,
+          balance: "0 SOL",
+          active: true,
+          lastActivity: Date.now(),
+          name: formatAddressName(addr),
+        });
+      }
+    });
+
+    setWallets(prev => [...prev, ...newWalletsData]);
+    setImportText("");
+    setShowImportDialog(false);
+  };
+
+  const emojis = ["🚀", "💎", "🔥", "⭐", "🌟", "💫", "✨", "🎯", "🎨", "🎮", "⚡", "🌈", "🦄", "🐲", "🏆", "💰", "💎💎", "⚔️", "🛡️", "👑"];
 
   const openEditWalletDialog = (wallet: Wallet) => {
     setEditingWallet(wallet);
@@ -448,6 +532,17 @@ export default function TrackerPage() {
   const copyWallet = (wallet: string) => {
     navigator.clipboard.writeText(wallet);
   };
+
+  // Get coin icon from DexScreener or return default
+  const getCoinIcon = (tokenAddress?: string, coinName?: string) => {
+    if (tokenAddress) {
+      return `https://api.dexscreener.com/token-icons/v1/solana/${tokenAddress}`;
+    }
+    return null;
+  };
+
+  const [hoveredCoin, setHoveredCoin] = useState<string | null>(null);
+  const coinImageRefs = useRef<{ [key: string]: HTMLImageElement | null }>({});
 
   // Filter positions
   const filteredPositions = useMemo(() => {
@@ -570,6 +665,11 @@ export default function TrackerPage() {
                 placeholder="Search wallets..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    searchExternalWallet();
+                  }
+                }}
                 className="pl-9 h-9 text-sm"
               />
             </div>
@@ -577,7 +677,7 @@ export default function TrackerPage() {
               onClick={() => {
                 setShowAddWalletDialog(true);
                 if (walletSearchQuery.trim()) {
-                  setNewWallet(prev => ({ ...prev, wallet: walletSearchQuery, name: formatAddressName(walletSearchQuery) }));
+                  setNewWallet(prev => ({ ...prev, wallet: walletSearchQuery, name: formatAddressName(walletSearchQuery), group: "All" }));
                 }
               }}
               className="h-9 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
@@ -589,35 +689,18 @@ export default function TrackerPage() {
             {/* Group Management */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {groups.map((group) => (
-                <div key={group} className="relative group">
-                  <Button
-                    variant={selectedGroup === group ? "default" : "secondary"}
-                    size="sm"
-                    className="h-8 text-xs font-semibold px-3 rounded-lg"
-                    onClick={() => setSelectedGroup(group)}
-                  >
-                    {group}
-                  </Button>
-                  {group !== "All" && (
-                    <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); editGroup(group); }}
-                        className="p-1 bg-muted rounded-full hover:bg-accent"
-                      >
-                        <Edit2 className="h-3 w-3 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteGroup(group); }}
-                        className="p-1 bg-muted rounded-full hover:bg-red-500/20"
-                      >
-                        <Trash2 className="h-3 w-3 text-red-500" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <Button
+                  key={group}
+                  variant={selectedGroup === group ? "default" : "secondary"}
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-3 rounded-lg"
+                  onClick={() => setSelectedGroup(group)}
+                >
+                  {group}
+                </Button>
               ))}
               <Button
-                onClick={() => { setEditingGroup(null); setNewGroupName(""); setShowGroupDialog(true); }}
+                onClick={() => { setShowManageGroupsDialog(true); }}
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0"
@@ -636,23 +719,19 @@ export default function TrackerPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => { loadWallets(); }}>
+                  <DropdownMenuItem onClick={importWallets}>
                     <Download className="h-4 w-4 mr-2" />
-                    Refresh from Firestore
+                    Import
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Export
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Manage Wallets
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setShowGroupDialog(true); setEditingGroup(null); setNewGroupName(""); }}>
+                  <DropdownMenuItem onClick={() => { setShowManageGroupsDialog(true); }}>
                     <Users className="h-4 w-4 mr-2" />
                     Manage Groups
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem className="text-red-600" onClick={deleteAllWallets}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete All
                   </DropdownMenuItem>
@@ -673,7 +752,7 @@ export default function TrackerPage() {
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center">
                     Balance
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
                     Active
                   </TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
@@ -694,7 +773,7 @@ export default function TrackerPage() {
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
                       title="Click to copy and view analytics"
                     >
-                      {wallet.name || wallet.wallet.slice(0, 8) + "..." + wallet.wallet.slice(-4)}
+                      {wallet.name || formatAddressName(wallet.wallet)}
                     </TableCell>
                     <TableCell 
                       className="text-center text-xs font-semibold cursor-pointer hover:text-teal-500 transition-colors"
@@ -707,8 +786,7 @@ export default function TrackerPage() {
                         className="flex items-center justify-center cursor-pointer"
                         onClick={() => viewWalletAnalytics(wallet.wallet)}
                       >
-                        <div className={`h-2 w-2 rounded-full ${wallet.active ? "bg-green-500" : "bg-gray-500"}`} />
-                        <span className="text-[10px] text-muted-foreground ml-1">
+                        <span className="text-[10px] text-muted-foreground">
                           {formatTimeAgo(wallet.lastActivity)}
                         </span>
                       </div>
@@ -791,6 +869,67 @@ export default function TrackerPage() {
             {positionFilters && (
               <div className="bg-muted/30 rounded-lg p-4 mb-4 border border-border/30">
                 <div className="grid grid-cols-4 gap-4">
+                  {/* Column Visibility */}
+                  <div className="col-span-4 mb-2 pb-2 border-b border-border/30">
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Show/Hide Columns</label>
+                    <div className="flex flex-wrap gap-2">
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.group}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, group: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Group
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.wallet}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, wallet: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Wallet
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.asset}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, asset: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Asset
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.mc}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, mc: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        MC
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.liq}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, liq: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        LIQ
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.makers}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, makers: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Makers
+                      </label>
+                    </div>
+                  </div>
+
                   {/* Group */}
                   <div className="col-span-2">
                     <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Group</label>
@@ -918,33 +1057,45 @@ export default function TrackerPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-border/30">
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
-                    Group
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[100px]">
-                    Wallet
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
-                    Asset
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                  {columnVisibility.group && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                      Group
+                    </TableHead>
+                  )}
+                  {columnVisibility.wallet && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[100px]">
+                      Wallet
+                    </TableHead>
+                  )}
+                  {columnVisibility.asset && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
+                      Asset
+                    </TableHead>
+                  )}
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[120px]">
                     Coin
                   </TableHead>
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
                     Action
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
-                    MC
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
-                    LIQ
-                  </TableHead>
+                  {columnVisibility.mc && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                      MC
+                    </TableHead>
+                  )}
+                  {columnVisibility.liq && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                      LIQ
+                    </TableHead>
+                  )}
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
                     Time
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[90px]">
-                    Makers/5m
-                  </TableHead>
+                  {columnVisibility.makers && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[90px]">
+                      Makers/5m
+                    </TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -958,66 +1109,104 @@ export default function TrackerPage() {
                 ) : (
                   filteredPositions.map((position) => (
                     <TableRow key={position.id} className="border-border/30">
+                      {columnVisibility.group && (
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="text-[10px] font-medium">
+                            {position.group}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.wallet && (
+                        <TableCell 
+                          className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(position.wallet);
+                            router.push(`/tracker/${position.wallet}`);
+                          }}
+                          title="Click to copy and view analytics"
+                        >
+                          {position.wallet}
+                        </TableCell>
+                      )}
+                      {columnVisibility.asset && (
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Coins className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs font-medium">{position.asset}</span>
+                          </div>
+                        </TableCell>
+                      )}
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="text-[10px] font-medium">
-                          {position.group}
-                        </Badge>
-                      </TableCell>
-                      <TableCell 
-                        className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
-                        onClick={() => {
-                          navigator.clipboard.writeText(position.wallet);
-                          router.push(`/tracker/${position.wallet}`);
-                        }}
-                        title="Click to copy and view analytics"
-                      >
-                        {position.wallet}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Coins className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium">{position.asset}</span>
+                        <div 
+                          className="flex items-center justify-center gap-2 cursor-pointer"
+                          onMouseEnter={() => setHoveredCoin(position.coin)}
+                          onMouseLeave={() => setHoveredCoin(null)}
+                        >
+                          {position.tokenAddress ? (
+                            <>
+                              <div className="relative">
+                                <img
+                                  ref={(el) => { coinImageRefs.current[position.coin] = el; }}
+                                  src={getCoinIcon(position.tokenAddress) || ""}
+                                  alt={position.coin}
+                                  className={`h-6 w-6 rounded-full object-cover transition-all duration-200 ${
+                                    hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
+                                  }`}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                                <ImageIcon 
+                                  className={`h-6 w-6 rounded-full bg-muted flex items-center justify-center absolute inset-0 ${
+                                    hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
+                                  }`}
+                                  style={{ display: position.tokenAddress && coinImageRefs.current[position.coin]?.style.display === 'none' ? 'flex' : 'none' }}
+                                />
+                              </div>
+                              <span className="text-xs font-medium text-foreground">{position.coin}</span>
+                            </>
+                          ) : (
+                            <span className="text-xs font-medium text-foreground">{position.coin}</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant={position.action === "Buy" ? "default" : "destructive"}
-                          className="text-[10px] font-semibold"
-                        >
-                          {position.coin}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          className={`text-[10px] font-bold ${
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
                             position.action === "Buy"
-                              ? "bg-green-500 hover:bg-green-600"
-                              : "bg-red-500 hover:bg-red-600"
+                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+                              : "bg-rose-500/10 text-rose-500 border border-rose-500/30"
                           }`}
                         >
                           {position.action}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell className="text-center text-xs font-semibold text-teal-500">
-                        {position.mc}
-                      </TableCell>
-                      <TableCell className="text-center text-xs font-semibold text-blue-500">
-                        {position.liq}
-                      </TableCell>
+                      {columnVisibility.mc && (
+                        <TableCell className="text-center text-xs font-semibold text-teal-500">
+                          {position.mc}
+                        </TableCell>
+                      )}
+                      {columnVisibility.liq && (
+                        <TableCell className="text-center text-xs font-semibold text-blue-500">
+                          {position.liq}
+                        </TableCell>
+                      )}
                       <TableCell className="text-center text-xs text-muted-foreground">
                         <div className="flex items-center justify-center gap-1">
                           <Clock className="h-3 w-3" />
                           {position.time}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Zap className="h-3 w-3 text-yellow-500" />
-                          <span className="text-xs font-bold text-foreground">
-                            {position.makers5m}
-                          </span>
-                        </div>
-                      </TableCell>
+                      {columnVisibility.makers && (
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Zap className="h-3 w-3 text-yellow-500" />
+                            <span className="text-xs font-bold text-foreground">
+                              {position.makers5m}
+                            </span>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -1033,7 +1222,7 @@ export default function TrackerPage() {
           setShowAddWalletDialog(false);
           setShowEditWalletDialog(false);
           setEditingWallet(null);
-          setNewWallet({ name: "", wallet: "", group: "Main" });
+          setNewWallet({ name: "", wallet: "", group: "All" });
         }
       }}>
         <DialogContent>
@@ -1084,7 +1273,7 @@ export default function TrackerPage() {
                 setShowAddWalletDialog(false);
                 setShowEditWalletDialog(false);
                 setEditingWallet(null);
-                setNewWallet({ name: "", wallet: "", group: "Main" });
+                setNewWallet({ name: "", wallet: "", group: "All" });
               }}
             >
               Cancel
@@ -1102,6 +1291,9 @@ export default function TrackerPage() {
           setShowGroupDialog(false);
           setEditingGroup(null);
           setNewGroupName("");
+          setGroupEmoji("");
+          setEditingGroupEmoji("");
+          setShowEmojiPicker(false);
         }
       }}>
         <DialogContent>
@@ -1111,18 +1303,59 @@ export default function TrackerPage() {
             </DialogTitle>
             <DialogDescription>
               {editingGroup
-                ? `Edit group name: ${editingGroup}`
-                : "Enter a name for the new group"}
+                ? `Edit group: ${editingGroup}`
+                : "Enter a name and emoji for the new group"}
             </DialogDescription>
           </DialogHeader>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Group Name</label>
-            <Input
-              placeholder="Group name"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              autoFocus
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Group Name</label>
+              <Input
+                placeholder="Group name"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Emoji (optional)</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Choose emoji..."
+                  value={editingGroup ? editingGroupEmoji : groupEmoji}
+                  onChange={(e) => editingGroup ? setEditingGroupEmoji(e.target.value) : setGroupEmoji(e.target.value)}
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                >
+                  {editingGroup ? (editingGroupEmoji || "Select") : (groupEmoji || "Select")}
+                </Button>
+              </div>
+              {showEmojiPicker && (
+                <div className="grid grid-cols-10 gap-2 mt-2 p-2 bg-muted/50 rounded-lg">
+                  {emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="text-xl p-2 hover:bg-muted rounded transition-colors"
+                      onClick={() => {
+                        if (editingGroup) {
+                          setEditingGroupEmoji(emoji);
+                        } else {
+                          setGroupEmoji(emoji);
+                        }
+                        setShowEmojiPicker(false);
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -1131,12 +1364,129 @@ export default function TrackerPage() {
                 setShowGroupDialog(false);
                 setEditingGroup(null);
                 setNewGroupName("");
+                setGroupEmoji("");
+                setEditingGroupEmoji("");
+                setShowEmojiPicker(false);
               }}
             >
               Cancel
             </Button>
             <Button onClick={editingGroup ? saveGroupEdit : addGroup}>
               {editingGroup ? "Save Changes" : "Create Group"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Groups Dialog */}
+      <Dialog open={showManageGroupsDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowManageGroupsDialog(false);
+          setNewGroupName("");
+          setGroupEmoji("");
+          setEditingGroup(null);
+          setEditingGroupEmoji("");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Groups</DialogTitle>
+            <DialogDescription>
+              Create, edit, or delete wallet groups
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {groups.filter(g => g !== "All").map((group) => (
+              <div key={group} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/30">
+                <span className="font-medium">{group}</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      setEditingGroup(group);
+                      setNewGroupName(group);
+                      setShowManageGroupsDialog(false);
+                      setShowGroupDialog(true);
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                    onClick={() => deleteGroup(group)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {groups.filter(g => g !== "All").length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No groups yet. Create your first group!</p>
+              </div>
+            )}
+          </div>
+          <div className="pt-4 border-t border-border/30">
+            <Button
+              className="w-full"
+              onClick={() => {
+                setShowManageGroupsDialog(false);
+                setEditingGroup(null);
+                setNewGroupName("");
+                setGroupEmoji("");
+                setShowGroupDialog(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Group
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowImportDialog(false);
+          setImportText("");
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Wallets</DialogTitle>
+            <DialogDescription>
+              Paste wallet addresses (one per line) to import them all at once
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Wallet Addresses</label>
+              <textarea
+                className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
+                placeholder={`7xKXtg2jm...Zk9pQx\n3mPLk8nXv...Bn2wQr\n9qWZhR2mY...Tp5kLs`}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowImportDialog(false);
+                setImportText("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={processImport} disabled={!importText.trim()}>
+              <Download className="h-4 w-4 mr-2" />
+              Import {importText.split('\n').filter(l => l.trim().length > 10).length} Wallets
             </Button>
           </DialogFooter>
         </DialogContent>
