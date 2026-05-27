@@ -639,7 +639,7 @@ export default function AssetsPage() {
                       Import
                     </Button>
                     <Button
-                      onClick={() => handleSendClick(activeWalletId)}
+                      onClick={() => activeWalletId && handleSendClick(activeWalletId)}
                       variant="outline"
                       className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
                     >
