@@ -53,6 +53,9 @@ import {
   X,
   Check,
   Image as ImageIcon,
+  AlertTriangle,
+  Shield,
+  TrendingDown,
 } from "lucide-react";
 import { useRef } from "react";
 import { searchWallet } from "../../lib/solana-api";
@@ -94,120 +97,8 @@ interface Position {
 
 const initialGroups = ["All"];
 
-const samplePositions: Position[] = [
-  {
-    id: 1,
-    group: "All",
-    wallet: "7xK...vQp9",
-    asset: "SOL",
-    coin: "WIF",
-    action: "Buy",
-    mc: "$1.2M",
-    liq: "$345K",
-    time: "2m ago",
-    makers5m: "234",
-    mcValue: 1200000,
-    liqValue: 345000,
-    makersValue: 234,
-    tokenAddress: "EKpQGSJtjMFqKZ9KQanSqYXRcFQfBbJWev5e9uKx4w8D",
-  },
-  {
-    id: 2,
-    group: "All",
-    wallet: "3mP...kJ8n",
-    asset: "SOL",
-    coin: "BONK",
-    action: "Sell",
-    mc: "$890K",
-    liq: "$123K",
-    time: "5m ago",
-    makers5m: "89",
-    mcValue: 890000,
-    liqValue: 123000,
-    makersValue: 89,
-    tokenAddress: "DezXAZ8zK7nrnqY445hNqLq3MzYbXKwVZP7z9wQF7w8D",
-  },
-  {
-    id: 3,
-    group: "All",
-    wallet: "9qW...hR2m",
-    asset: "ETH",
-    coin: "POPCAT",
-    action: "Buy",
-    mc: "$2.3M",
-    liq: "$567K",
-    time: "1m ago",
-    makers5m: "456",
-    mcValue: 2300000,
-    liqValue: 567000,
-    makersValue: 456,
-    tokenAddress: "7GCihgDB8feFCXrnbBVKrXh4XqXvXfJbDqKRZzV7w8D",
-  },
-  {
-    id: 4,
-    group: "All",
-    wallet: "7xK...vQp9",
-    asset: "SOL",
-    coin: "MEW",
-    action: "Sell",
-    mc: "$1.8M",
-    liq: "$234K",
-    time: "8m ago",
-    makers5m: "178",
-    mcValue: 1800000,
-    liqValue: 234000,
-    makersValue: 178,
-    tokenAddress: "CEOE9PphwgVwzs6Jxj8kMKQJQvVbJqZzV7w8D",
-  },
-  {
-    id: 5,
-    group: "All",
-    wallet: "5nB...pT4k",
-    asset: "SOL",
-    coin: "BOME",
-    action: "Buy",
-    mc: "$3.4M",
-    liq: "$789K",
-    time: "3m ago",
-    makers5m: "312",
-    mcValue: 3400000,
-    liqValue: 789000,
-    makersValue: 312,
-    tokenAddress: "8sLbNZoA1cfnvMJLPf9w3nR6qZzV7w8D",
-  },
-  {
-    id: 6,
-    group: "All",
-    wallet: "3mP...kJ8n",
-    asset: "ETH",
-    coin: "SLERF",
-    action: "Buy",
-    mc: "$5.6M",
-    liq: "$1.2M",
-    time: "12m ago",
-    makers5m: "567",
-    mcValue: 5600000,
-    liqValue: 1200000,
-    makersValue: 567,
-    tokenAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNL3w8D",
-  },
-  {
-    id: 7,
-    group: "All",
-    wallet: "9qW...hR2m",
-    asset: "SOL",
-    coin: "TURBO",
-    action: "Sell",
-    mc: "$780K",
-    liq: "$89K",
-    time: "15m ago",
-    makers5m: "45",
-    mcValue: 780000,
-    liqValue: 89000,
-    makersValue: 45,
-    tokenAddress: "9JZ4XXwZzV7w8D",
-  },
-];
+// Empty positions - will be populated from wallets
+const samplePositions: Position[] = [];
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -239,8 +130,11 @@ export default function TrackerPage() {
     group: true,
     wallet: true,
     asset: true,
+    coin: true,
+    action: true,
     mc: true,
     liq: true,
+    time: true,
     makers: true,
   });
 
@@ -263,6 +157,7 @@ export default function TrackerPage() {
   const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [showManageGroupsDialog, setShowManageGroupsDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   
@@ -274,7 +169,8 @@ export default function TrackerPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [importText, setImportText] = useState("");
 
-  // Load wallets from Firestore on mount
+  // Positions from wallets - will be populated dynamically
+  const [positions, setPositions] = useState<Position[]>([]);
   useEffect(() => {
     loadWallets();
   }, []);
@@ -474,9 +370,10 @@ export default function TrackerPage() {
   };
 
   const deleteAllWallets = async () => {
-    const confirmed = confirm("Are you sure you want to delete ALL wallets and their Live Positions? This cannot be undone.");
-    if (!confirmed) return;
+    setShowDeleteAllDialog(true);
+  };
 
+  const deleteAllWalletsConfirmed = async () => {
     try {
       // Delete all wallets from Firestore
       for (const wallet of wallets) {
@@ -485,7 +382,8 @@ export default function TrackerPage() {
         }
       }
       setWallets([]);
-      // Positions will be cleared as they are tied to wallets
+      setPositions([]);
+      setShowDeleteAllDialog(false);
     } catch (err) {
       console.error("Error deleting all wallets:", err);
       alert("Failed to delete all wallets");
@@ -521,7 +419,7 @@ export default function TrackerPage() {
     setShowImportDialog(false);
   };
 
-  const emojis = ["🚀", "💎", "🔥", "⭐", "🌟", "💫", "✨", "🎯", "🎨", "🎮", "⚡", "🌈", "🦄", "🐲", "🏆", "💰", "💎💎", "⚔️", "🛡️", "👑"];
+  const emojis = ["🚀", "💎", "🔥", "⭐", "🌟", "💫", "✨", "🎯", "🎨", "🎮", "⚡", "🌈", "🦄", "🐲", "🏆", "💰", "⚔️", "🛡️", "👑", "🎪", "🎭", "🎨", "🌺", "🌻", "🌹", "🍀", "🍁", "❄️", "🔥", "⛵", "🚀", "🛸", "🌙", "🌞", "🌟", "💥", "🎵", "🎶", "🎸", "🎹", "🎺", "🎻", "🥁", "🎬", "🎮", "🎲", "🎯", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🎗️"];
 
   const openEditWalletDialog = (wallet: Wallet) => {
     setEditingWallet(wallet);
@@ -593,11 +491,24 @@ export default function TrackerPage() {
     setFilterLiqMax("");
     setFilterMakersMin("");
     setFilterMakersMax("");
+    setColumnVisibility({
+      group: true,
+      wallet: true,
+      asset: true,
+      coin: true,
+      action: true,
+      mc: true,
+      liq: true,
+      time: true,
+      makers: true,
+    });
   };
 
   const hasActiveFilters = filterGroup !== "All" || filterWallets || filterAsset !== "All" || 
     filterAction !== "All" || filterMcMin || filterMcMax || filterLiqMin || filterLiqMax || 
-    filterMakersMin || filterMakersMax;
+    filterMakersMin || filterMakersMax || 
+    !columnVisibility.group || !columnVisibility.wallet || !columnVisibility.asset || 
+    !columnVisibility.coin || !columnVisibility.action || !columnVisibility.time;
 
   const filteredWallets = wallets.filter(w => {
     const matchesGroup = selectedGroup === "All" || w.group === selectedGroup;
@@ -609,7 +520,7 @@ export default function TrackerPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-200px)]">
       {/* Loading State */}
       {isLoadingWallets && (
         <div className="flex items-center justify-center py-12">
@@ -626,7 +537,7 @@ export default function TrackerPage() {
       )}
 
       {/* External Wallet Search */}
-      <div className="mb-6">
+      <div className="mb-6 flex-shrink-0">
         <div className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/30 rounded-xl p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
@@ -653,10 +564,10 @@ export default function TrackerPage() {
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex gap-6 flex-1 min-h-0">
         {/* Left Side - Wallets Table */}
-        <div className="w-1/3 shrink-0">
-          <div className="bg-card rounded-xl border border-border/50 p-4">
+        <div className="w-1/3 shrink-0 flex flex-col min-h-0">
+          <div className="bg-card rounded-xl border border-border/50 p-4 flex flex-col flex-1 min-h-0">
             {/* Header with Add Button */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
@@ -731,7 +642,7 @@ export default function TrackerPage() {
                     <Users className="h-4 w-4 mr-2" />
                     Manage Groups
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600" onClick={deleteAllWallets}>
+                  <DropdownMenuItem className="text-red-600" onClick={() => setShowDeleteAllDialog(true)}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete All
                   </DropdownMenuItem>
@@ -740,8 +651,8 @@ export default function TrackerPage() {
             </div>
 
             {/* Wallets Table */}
-            <Table>
-              <TableHeader>
+            <Table className="flex-1 min-h-0">
+              <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow className="border-border/30">
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
                     Group
@@ -755,33 +666,33 @@ export default function TrackerPage() {
                   <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
                     Active
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[110px]">
                     Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-border/30">
                 {filteredWallets.map((wallet) => (
                   <TableRow key={wallet.id} className="border-border/30">
-                    <TableCell className="text-center">
+                    <TableCell className="text-center py-2">
                       <Badge variant="outline" className="text-[10px] font-medium">
                         {wallet.group}
                       </Badge>
                     </TableCell>
                     <TableCell 
-                      className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
+                      className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors py-2"
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
                       title="Click to copy and view analytics"
                     >
                       {wallet.name || formatAddressName(wallet.wallet)}
                     </TableCell>
                     <TableCell 
-                      className="text-center text-xs font-semibold cursor-pointer hover:text-teal-500 transition-colors"
+                      className="text-center text-xs font-semibold cursor-pointer hover:text-teal-500 transition-colors py-2"
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
                     >
                       {wallet.balance}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center py-2">
                       <div 
                         className="flex items-center justify-center cursor-pointer"
                         onClick={() => viewWalletAnalytics(wallet.wallet)}
@@ -791,29 +702,38 @@ export default function TrackerPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center py-2">
                       <div className="flex items-center justify-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={(e) => { e.stopPropagation(); copyWallet(wallet.wallet); }}
                           title="Copy"
                         >
-                          <Copy className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                          <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={(e) => { e.stopPropagation(); toggleActive(wallet.id); }}
                           title={wallet.active ? "Mute" : "Unmute"}
                         >
                           {wallet.active ? (
-                            <Bell className="h-3.5 w-3.5 text-green-500" />
+                            <Bell className="h-3 w-3 text-green-500" />
                           ) : (
-                            <BellOff className="h-3.5 w-3.5 text-muted-foreground" />
+                            <BellOff className="h-3 w-3 text-muted-foreground" />
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); deleteWallet(wallet.id); }}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500 hover:text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -825,8 +745,8 @@ export default function TrackerPage() {
         </div>
 
         {/* Right Side - Positions Table */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-card rounded-xl border border-border/50 p-4">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <div className="bg-card rounded-xl border border-border/50 p-4 flex flex-col flex-1 min-h-0">
             {/* Positions Header with Filters */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
@@ -899,6 +819,33 @@ export default function TrackerPage() {
                           className="rounded border-input"
                         />
                         Asset
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.coin}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, coin: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Coin
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.action}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, action: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Action
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility.time}
+                          onChange={(e) => setColumnVisibility(prev => ({ ...prev, time: e.target.checked }))}
+                          className="rounded border-input"
+                        />
+                        Time
                       </label>
                       <label className="flex items-center gap-1.5 text-xs">
                         <input
@@ -1054,8 +1001,8 @@ export default function TrackerPage() {
             )}
 
             {/* Positions Table */}
-            <Table>
-              <TableHeader>
+            <Table className="flex-1 min-h-0">
+              <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow className="border-border/30">
                   {columnVisibility.group && (
                     <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
@@ -1072,12 +1019,16 @@ export default function TrackerPage() {
                       Asset
                     </TableHead>
                   )}
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[120px]">
-                    Coin
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
-                    Action
-                  </TableHead>
+                  {columnVisibility.coin && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[120px]">
+                      Coin
+                    </TableHead>
+                  )}
+                  {columnVisibility.action && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[70px]">
+                      Action
+                    </TableHead>
+                  )}
                   {columnVisibility.mc && (
                     <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
                       MC
@@ -1088,9 +1039,11 @@ export default function TrackerPage() {
                       LIQ
                     </TableHead>
                   )}
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
-                    Time
-                  </TableHead>
+                  {columnVisibility.time && (
+                    <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[80px]">
+                      Time
+                    </TableHead>
+                  )}
                   {columnVisibility.makers && (
                     <TableHead className="text-xs font-semibold text-muted-foreground text-center w-[90px]">
                       Makers/5m
@@ -1098,7 +1051,7 @@ export default function TrackerPage() {
                   )}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-border/30">
                 {filteredPositions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
@@ -1110,7 +1063,7 @@ export default function TrackerPage() {
                   filteredPositions.map((position) => (
                     <TableRow key={position.id} className="border-border/30">
                       {columnVisibility.group && (
-                        <TableCell className="text-center">
+                        <TableCell className="text-center py-2">
                           <Badge variant="outline" className="text-[10px] font-medium">
                             {position.group}
                           </Badge>
@@ -1118,7 +1071,7 @@ export default function TrackerPage() {
                       )}
                       {columnVisibility.wallet && (
                         <TableCell 
-                          className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors"
+                          className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors py-2"
                           onClick={() => {
                             navigator.clipboard.writeText(position.wallet);
                             router.push(`/tracker/${position.wallet}`);
@@ -1129,76 +1082,82 @@ export default function TrackerPage() {
                         </TableCell>
                       )}
                       {columnVisibility.asset && (
-                        <TableCell className="text-center">
+                        <TableCell className="text-center py-2">
                           <div className="flex items-center justify-center gap-1">
                             <Coins className="h-3 w-3 text-muted-foreground" />
                             <span className="text-xs font-medium">{position.asset}</span>
                           </div>
                         </TableCell>
                       )}
-                      <TableCell className="text-center">
-                        <div 
-                          className="flex items-center justify-center gap-2 cursor-pointer"
-                          onMouseEnter={() => setHoveredCoin(position.coin)}
-                          onMouseLeave={() => setHoveredCoin(null)}
-                        >
-                          {position.tokenAddress ? (
-                            <>
-                              <div className="relative">
-                                <img
-                                  ref={(el) => { coinImageRefs.current[position.coin] = el; }}
-                                  src={getCoinIcon(position.tokenAddress) || ""}
-                                  alt={position.coin}
-                                  className={`h-6 w-6 rounded-full object-cover transition-all duration-200 ${
-                                    hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
-                                  }`}
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = "none";
-                                  }}
-                                />
-                                <ImageIcon 
-                                  className={`h-6 w-6 rounded-full bg-muted flex items-center justify-center absolute inset-0 ${
-                                    hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
-                                  }`}
-                                  style={{ display: position.tokenAddress && coinImageRefs.current[position.coin]?.style.display === 'none' ? 'flex' : 'none' }}
-                                />
-                              </div>
+                      {columnVisibility.coin && (
+                        <TableCell className="text-center py-2">
+                          <div 
+                            className="flex items-center justify-center gap-2 cursor-pointer"
+                            onMouseEnter={() => setHoveredCoin(position.coin)}
+                            onMouseLeave={() => setHoveredCoin(null)}
+                          >
+                            {position.tokenAddress ? (
+                              <>
+                                <div className="relative">
+                                  <img
+                                    ref={(el) => { coinImageRefs.current[position.coin] = el; }}
+                                    src={getCoinIcon(position.tokenAddress) || ""}
+                                    alt={position.coin}
+                                    className={`h-6 w-6 rounded-full object-cover transition-all duration-200 ${
+                                      hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
+                                    }`}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                    }}
+                                  />
+                                  <ImageIcon 
+                                    className={`h-6 w-6 rounded-full bg-muted flex items-center justify-center absolute inset-0 ${
+                                      hoveredCoin === position.coin ? "scale-150 shadow-lg" : ""
+                                    }`}
+                                    style={{ display: position.tokenAddress && coinImageRefs.current[position.coin]?.style.display === 'none' ? 'flex' : 'none' }}
+                                  />
+                                </div>
+                                <span className="text-xs font-medium text-foreground">{position.coin}</span>
+                              </>
+                            ) : (
                               <span className="text-xs font-medium text-foreground">{position.coin}</span>
-                            </>
-                          ) : (
-                            <span className="text-xs font-medium text-foreground">{position.coin}</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                            position.action === "Buy"
-                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
-                              : "bg-rose-500/10 text-rose-500 border border-rose-500/30"
-                          }`}
-                        >
-                          {position.action}
-                        </span>
-                      </TableCell>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.action && (
+                        <TableCell className="text-center py-2">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                              position.action === "Buy"
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+                                : "bg-rose-500/10 text-rose-500 border border-rose-500/30"
+                            }`}
+                          >
+                            {position.action}
+                          </span>
+                        </TableCell>
+                      )}
                       {columnVisibility.mc && (
-                        <TableCell className="text-center text-xs font-semibold text-teal-500">
+                        <TableCell className="text-center text-xs font-semibold text-teal-500 py-2">
                           {position.mc}
                         </TableCell>
                       )}
                       {columnVisibility.liq && (
-                        <TableCell className="text-center text-xs font-semibold text-blue-500">
+                        <TableCell className="text-center text-xs font-semibold text-blue-500 py-2">
                           {position.liq}
                         </TableCell>
                       )}
-                      <TableCell className="text-center text-xs text-muted-foreground">
-                        <div className="flex items-center justify-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {position.time}
-                        </div>
-                      </TableCell>
+                      {columnVisibility.time && (
+                        <TableCell className="text-center text-xs text-muted-foreground py-2">
+                          <div className="flex items-center justify-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {position.time}
+                          </div>
+                        </TableCell>
+                      )}
                       {columnVisibility.makers && (
-                        <TableCell className="text-center">
+                        <TableCell className="text-center py-2">
                           <div className="flex items-center justify-center gap-1">
                             <Zap className="h-3 w-3 text-yellow-500" />
                             <span className="text-xs font-bold text-foreground">
@@ -1487,6 +1446,53 @@ export default function TrackerPage() {
             <Button onClick={processImport} disabled={!importText.trim()}>
               <Download className="h-4 w-4 mr-2" />
               Import {importText.split('\n').filter(l => l.trim().length > 10).length} Wallets
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <Dialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-red-500/10 flex items-center justify-center">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-lg font-bold">Delete All Wallets?</DialogTitle>
+            <DialogDescription className="text-center">
+              This will permanently remove all wallets and their associated Live Positions from your tracker. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 mt-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-red-500 flex-shrink-0" />
+              <div className="text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground mb-1">Warning:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>All wallet data will be deleted</li>
+                  <li>All live positions will be cleared</li>
+                  <li>This action is irreversible</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteAllDialog(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={deleteAllWalletsConfirmed}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              <TrendingDown className="h-4 w-4 mr-2" />
+              Delete All
             </Button>
           </DialogFooter>
         </DialogContent>
