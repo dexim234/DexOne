@@ -438,6 +438,11 @@ export default function TrackerPage() {
     return `${addr.slice(0, 3)}...${addr.slice(-4)}`;
   };
 
+  const getDefaultWalletName = (addr: string, customName?: string): string => {
+    if (customName && customName.trim()) return customName.trim();
+    return formatAddressName(addr);
+  };
+
   const saveEditWallet = async () => {
     if (!editingWallet || !newWallet.wallet) return;
 
@@ -512,6 +517,8 @@ export default function TrackerPage() {
         setGroups(prev =>
           prev.map(g => g.name === groupName ? { ...g, hidden: !isHidden } : g)
         );
+        // Force re-render
+        setSelectedGroup(prev => prev);
       }
     } catch (err) {
       console.error("Error toggling group visibility:", err);
@@ -579,6 +586,7 @@ export default function TrackerPage() {
       }
 
       const newWallets: Wallet[] = [];
+      const createdGroups = new Set<string>();
       
       for (let i = 0; i < walletsData.length; i++) {
         const data = walletsData[i];
@@ -589,16 +597,19 @@ export default function TrackerPage() {
         
         // Создаем группу если её нет
         const groupName = data.groups && data.groups.length > 0 ? data.groups[0] : "All";
-        if (groupName !== "All" && !groups.find(g => g.name === groupName)) {
+        if (groupName !== "All" && !groups.find(g => g.name === groupName) && !createdGroups.has(groupName)) {
           try {
             await addGroupToFirestore({ name: groupName });
             setGroups(prev => [...prev, { name: groupName, emoji: "" }]);
+            createdGroups.add(groupName);
           } catch (err) {
             console.error("Error creating group:", err);
           }
         }
         
         const newId = Math.max(...wallets.map(w => w.id), 0) + i + 1;
+        const walletName = getDefaultWalletName(data.address, data.name);
+        
         newWallets.push({
           id: newId,
           group: groupName,
@@ -606,7 +617,7 @@ export default function TrackerPage() {
           balance: balanceData.balance,
           active: true,
           lastActivity: balanceData.lastActivity,
-          name: data.name || formatAddressName(data.address),
+          name: walletName,
           emoji: data.emoji || "",
         });
       }
@@ -642,13 +653,8 @@ export default function TrackerPage() {
     }));
     
     const jsonStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wallets-export-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setImportText(jsonStr);
+    setShowImportDialog(true);
   };
 
   const emojis = ["🚀", "💎", "🔥", "⭐", "🌟", "💫", "✨", "🎯", "🎨", "🎮", "⚡", "🌈", "🦄", "🐲", "🏆", "💰", "⚔️", "🛡️", "👑", "🎪", "🎭", "🎨", "🌺", "🌻", "🌹", "🍀", "🍁", "❄️", "🔥", "⛵", "🚀", "🛸", "🌙", "🌞", "🌟", "💥", "🎵", "🎶", "🎸", "🎹", "🎺", "🎻", "🥁", "🎬", "🎮", "🎲", "🎯", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🎗️"];
@@ -748,7 +754,7 @@ export default function TrackerPage() {
     const group = groups.find(g => g.name === w.group);
     const groupIsHidden = group?.hidden || false;
     
-    // Skip wallets from hidden groups (unless they belong to multiple visible groups)
+    // Skip wallets from hidden groups
     if (groupIsHidden) return false;
     
     const matchesGroup = selectedGroup === "All" || w.group === selectedGroup;
@@ -1670,7 +1676,7 @@ export default function TrackerPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Import Dialog */}
+      {/* Import/Export Dialog */}
       <Dialog open={showImportDialog} onOpenChange={(open) => {
         if (!open) {
           setShowImportDialog(false);
@@ -1679,9 +1685,9 @@ export default function TrackerPage() {
       }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import Wallets</DialogTitle>
+            <DialogTitle>Import/Export Wallets</DialogTitle>
             <DialogDescription>
-              Paste wallet data in JSON format. Supports: address, name, emoji, groups
+              Paste wallet data in JSON format to import, or copy the JSON below to export
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1700,6 +1706,20 @@ export default function TrackerPage() {
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
               />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(importText);
+                  alert("Copied to clipboard!");
+                }}
+                className="flex-1"
+                disabled={!importText.trim()}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy to Clipboard
+              </Button>
             </div>
           </div>
           <DialogFooter>
