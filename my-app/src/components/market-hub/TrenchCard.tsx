@@ -96,16 +96,16 @@ export default function TrenchCard({
     <div className="relative rounded-xl border border-border/40 bg-card p-3 hover:bg-accent/20 transition-colors cursor-pointer group">
       <div className="flex gap-3">
         {/* Left: Avatar + Address */}
-        <div className="flex flex-col items-center gap-1 shrink-0 w-[52px]">
-          <div className="relative h-[52px] w-[52px] rounded-lg border-2 border-teal-500/60 overflow-hidden">
+        <div className="flex flex-col items-center gap-1 shrink-0 w-16">
+          <div className="relative h-16 w-16 rounded-lg border-2 border-teal-500/60 overflow-hidden">
             {!imageLoaded && (
               <div className="absolute inset-0 bg-muted animate-pulse" />
             )}
             <Image
               src={logo}
               alt={name}
-              width={52}
-              height={52}
+              width={64}
+              height={64}
               className={`object-cover w-full h-full transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImageLoaded(true)}
               onError={(e) => {
@@ -121,7 +121,7 @@ export default function TrenchCard({
               e.stopPropagation();
               copyToClipboard();
             }}
-            className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-teal-400 transition-colors group/addr"
+            className="flex items-center justify-center gap-0.5 w-full text-[10px] text-muted-foreground hover:text-teal-400 transition-colors group/addr"
           >
             <span className="font-mono">{formatAddress(mint)}</span>
             <Copy className="h-2.5 w-2.5 opacity-0 group-hover/addr:opacity-100 transition-opacity" />
