@@ -97,9 +97,6 @@ interface Position {
 
 const initialGroups = ["All"];
 
-// Empty positions - will be populated from wallets
-const samplePositions: Position[] = [];
-
 function formatTimeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
   const seconds = Math.floor(diff / 1000);
@@ -120,7 +117,6 @@ export default function TrackerPage() {
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
   const [groups, setGroups] = useState<string[]>(initialGroups);
   const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [positions] = useState<Position[]>(samplePositions);
   const [isSearchingWallet, setIsSearchingWallet] = useState(false);
   const [isLoadingWallets, setIsLoadingWallets] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -168,9 +164,9 @@ export default function TrackerPage() {
   const [editingGroupEmoji, setEditingGroupEmoji] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [importText, setImportText] = useState("");
-
-  // Positions from wallets - will be populated dynamically
   const [positions, setPositions] = useState<Position[]>([]);
+
+  // Load wallets from Firestore on mount
   useEffect(() => {
     loadWallets();
   }, []);
