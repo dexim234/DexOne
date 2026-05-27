@@ -45,11 +45,12 @@ function MainArea({
   showLoading: boolean;
   isClient: boolean;
 }) {
-  const { className } = useWidgetLayout();
+  const { className, style } = useWidgetLayout();
   
   return (
     <main 
       className={`flex-1 pb-14 transition-all duration-300 ${isClient && showLoading ? 'hidden' : ''} ${className}`}
+      style={style}
     >
       {children}
     </main>
