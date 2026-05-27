@@ -131,30 +131,24 @@ export default function TrenchCard({
 
         {/* Center: Info */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          {/* Row 1: Name + Icons + MC/Vol */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-sm text-foreground truncate">{name}</span>
-              {symbol && (
-                <span className="text-xs text-muted-foreground shrink-0 uppercase">{symbol}</span>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard();
-                }}
-                className="shrink-0 text-muted-foreground hover:text-teal-400 transition-colors"
-                title="Copy address"
-              >
-                <Copy className="h-3 w-3" />
-              </button>
-              <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <span className="text-xs text-muted-foreground shrink-0">$</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs shrink-0 ml-auto">
-              <span className="text-muted-foreground">V <span className="text-teal-400 font-semibold">{volume24h}</span></span>
-              <span className="text-muted-foreground">MC <span className="text-teal-400 font-semibold">{mc}</span></span>
-            </div>
+          {/* Row 1: Name + Icons */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-bold text-sm text-foreground truncate">{name}</span>
+            {symbol && (
+              <span className="text-xs text-muted-foreground shrink-0 uppercase">{symbol}</span>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                copyToClipboard();
+              }}
+              className="shrink-0 text-muted-foreground hover:text-teal-400 transition-colors"
+              title="Copy address"
+            >
+              <Copy className="h-3 w-3" />
+            </button>
+            <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+            <span className="text-xs text-muted-foreground shrink-0">$</span>
           </div>
 
           {/* Row 2: Time + Socials + 1M/Stats */}
@@ -236,8 +230,12 @@ export default function TrenchCard({
           </div>
         </div>
 
-        {/* Right: Action button */}
-        <div className="shrink-0 flex flex-col justify-end">
+        {/* Right: V/MC + Action button */}
+        <div className="shrink-0 flex flex-col justify-between items-end">
+          <div className="flex flex-col items-end gap-0.5 text-[11px]">
+            <span className="text-muted-foreground">V <span className="text-teal-400 font-semibold">{volume24h}</span></span>
+            <span className="text-muted-foreground">MC <span className="text-teal-400 font-semibold">{mc}</span></span>
+          </div>
           <button
             onClick={(e) => e.stopPropagation()}
             className="h-10 w-10 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
