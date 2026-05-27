@@ -17,7 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger,0
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -48,6 +48,7 @@ import {
   Edit2,
   ExternalLink,
   Eye,
+  EyeOff,
   Loader2,
   Filter,
   X,
@@ -390,14 +391,15 @@ export default function TrackerPage() {
         const balance = balanceData.balance;
         const lastActivity = balanceData.lastActivity;
 
-        const walletId = await addWalletToFirestore({
-          group: newWallet.group,
-          wallet: newWallet.wallet,
-          balance: balance,
-          active: true,
-          lastActivity,
-          name: newWallet.name || formatAddressName(newWallet.wallet),
-        });
+      const walletId = await addWalletToFirestore({
+        group: newWallet.group,
+        wallet: newWallet.wallet,
+        balance: balance,
+        active: true,
+        lastActivity,
+        name: newWallet.name || formatAddressName(newWallet.wallet),
+        emoji: walletEmoji,
+      });
 
         const newId = Math.max(...wallets.map(w => w.id), 0) + 1;
         setWallets(prev => [...prev, {
@@ -444,6 +446,7 @@ export default function TrackerPage() {
         group: newWallet.group || "All",
         wallet: newWallet.wallet,
         name: newWallet.name || formatAddressName(newWallet.wallet),
+        emoji: editingWalletEmoji,
       };
 
       await updateWalletInFirestore(editingWallet.firebaseId!, updates);
@@ -484,10 +487,7 @@ export default function TrackerPage() {
   };
 
   const deleteGroup = async (groupName: string) => {
-    if (groupName === "All") return;
-    const confirmed = confirm(`Delete group "${groupName}"? Wallets will be moved to "All".`);
-    if (!confirmed) return;
-    
+    if (!confirm(`Delete group "${groupName}"?`)) return;
     try {
       // Find group in state to get firebase ID
       const groupToDelete = groups.find(g => g.name === groupName);
@@ -500,6 +500,21 @@ export default function TrackerPage() {
       if (selectedGroup === groupName) setSelectedGroup("All");
     } catch (err) {
       console.error("Error deleting group:", err);
+    }
+  };
+
+  const toggleGroupVisibility = async (groupName: string) => {
+    try {
+      const group = groups.find(g => g.name === groupName);
+      if (group) {
+        const isHidden = group.hidden || false;
+        await updateGroupInFirestore(groupName, { hidden: !isHidden });
+        setGroups(prev =>
+          prev.map(g => g.name === groupName ? { ...g, hidden: !isHidden } : g)
+        );
+      }
+    } catch (err) {
+      console.error("Error toggling group visibility:", err);
     }
   };
 
@@ -555,29 +570,85 @@ export default function TrackerPage() {
     setShowImportDialog(true);
   };
 
-  const processImport = () => {
-    const lines = importText.split("\n").filter(line => line.trim());
-    const newWalletsData: Wallet[] = [];
-    
-    lines.forEach((line, index) => {
-      const addr = line.trim();
-      if (addr.length > 10) {
-        const newId = Math.max(...wallets.map(w => w.id), 0) + index + 1;
-        newWalletsData.push({
+  const processImport = async () => {
+    try {
+      const walletsData = JSON.parse(importText);
+      if (!Array.isArray(walletsData)) {
+        alert("Invalid import format: expected an array");
+        return;
+      }
+
+      const newWallets: Wallet[] = [];
+      
+      for (let i = 0; i < walletsData.length; i++) {
+        const data = walletsData[i];
+        if (!data.address) continue;
+        
+        // Получаем баланс из транзакций
+        const balanceData = await getWalletBalanceFromTransactions(data.address);
+        
+        // Создаем группу если её нет
+        const groupName = data.groups && data.groups.length > 0 ? data.groups[0] : "All";
+        if (groupName !== "All" && !groups.find(g => g.name === groupName)) {
+          try {
+            await addGroupToFirestore({ name: groupName });
+            setGroups(prev => [...prev, { name: groupName, emoji: "" }]);
+          } catch (err) {
+            console.error("Error creating group:", err);
+          }
+        }
+        
+        const newId = Math.max(...wallets.map(w => w.id), 0) + i + 1;
+        newWallets.push({
           id: newId,
-          group: "All",
-          wallet: addr,
-          balance: "0 SOL",
+          group: groupName,
+          wallet: data.address,
+          balance: balanceData.balance,
           active: true,
-          lastActivity: Date.now(),
-          name: formatAddressName(addr),
+          lastActivity: balanceData.lastActivity,
+          name: data.name || formatAddressName(data.address),
+          emoji: data.emoji || "",
         });
       }
-    });
 
-    setWallets(prev => [...prev, ...newWalletsData]);
-    setImportText("");
-    setShowImportDialog(false);
+      // Сохраняем все кошельки в Firestore
+      for (const wallet of newWallets) {
+        await addWalletToFirestore({
+          group: wallet.group,
+          wallet: wallet.wallet,
+          balance: wallet.balance,
+          active: wallet.active,
+          lastActivity: wallet.lastActivity,
+          name: wallet.name,
+          emoji: wallet.emoji,
+        });
+      }
+
+      setWallets(prev => [...prev, ...newWallets]);
+      setImportText("");
+      setShowImportDialog(false);
+    } catch (err) {
+      console.error("Error importing wallets:", err);
+      alert("Invalid JSON format");
+    }
+  };
+
+  const exportWallets = () => {
+    const exportData = wallets.map(w => ({
+      address: w.wallet,
+      name: w.name || "",
+      emoji: w.emoji || "",
+      groups: [w.group],
+    }));
+    
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wallets-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const emojis = ["🚀", "💎", "🔥", "⭐", "🌟", "💫", "✨", "🎯", "🎨", "🎮", "⚡", "🌈", "🦄", "🐲", "🏆", "💰", "⚔️", "🛡️", "👑", "🎪", "🎭", "🎨", "🌺", "🌻", "🌹", "🍀", "🍁", "❄️", "🔥", "⛵", "🚀", "🛸", "🌙", "🌞", "🌟", "💥", "🎵", "🎶", "🎸", "🎹", "🎺", "🎻", "🥁", "🎬", "🎮", "🎲", "🎯", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🎗️"];
@@ -674,6 +745,12 @@ export default function TrackerPage() {
     !columnVisibility.mc || !columnVisibility.liq || !columnVisibility.time || !columnVisibility.makers;
 
   const filteredWallets = wallets.filter(w => {
+    const group = groups.find(g => g.name === w.group);
+    const groupIsHidden = group?.hidden || false;
+    
+    // Skip wallets from hidden groups (unless they belong to multiple visible groups)
+    if (groupIsHidden) return false;
+    
     const matchesGroup = selectedGroup === "All" || w.group === selectedGroup;
     const matchesSearch =
       w.wallet.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -814,7 +891,7 @@ export default function TrackerPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Import
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportWallets}>
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
                     Export
                   </DropdownMenuItem>
@@ -862,13 +939,14 @@ export default function TrackerPage() {
                         {wallet.group}
                       </Badge>
                     </TableCell>
-                    <TableCell 
-                      className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors py-2"
-                      onClick={() => viewWalletAnalytics(wallet.wallet)}
-                      title="Click to copy and view analytics"
-                    >
-                      {wallet.name || formatAddressName(wallet.wallet)}
-                    </TableCell>
+    <TableCell 
+      className="text-center font-mono text-xs cursor-pointer hover:text-teal-500 transition-colors py-2"
+      onClick={() => viewWalletAnalytics(wallet.wallet)}
+      title="Click to copy and view analytics"
+    >
+      {wallet.emoji && <span className="mr-1">{wallet.emoji}</span>}
+      {wallet.name || formatAddressName(wallet.wallet)}
+    </TableCell>
                     <TableCell 
                       className="text-center text-xs font-semibold cursor-pointer hover:text-teal-500 transition-colors py-2"
                       onClick={() => viewWalletAnalytics(wallet.wallet)}
@@ -1299,6 +1377,10 @@ export default function TrackerPage() {
           setShowEditWalletDialog(false);
           setEditingWallet(null);
           setNewWallet({ name: "", wallet: "", group: "All" });
+          setWalletEmoji("");
+          setEditingWalletEmoji("");
+          setShowWalletEmojiPicker(false);
+          setShowEditingWalletEmojiPicker(false);
         }
       }}>
         <DialogContent>
@@ -1330,9 +1412,50 @@ export default function TrackerPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium mb-2 block">Emoji (optional)</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Choose emoji..."
+                  value={showEditWalletDialog ? (editingWalletEmoji || "Select") : (walletEmoji || "Select")}
+                  readOnly
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => showEditWalletDialog ? setShowEditingWalletEmojiPicker(!showEditingWalletEmojiPicker) : setShowWalletEmojiPicker(!showWalletEmojiPicker)}
+                  className="shrink-0"
+                >
+                  {showEditWalletDialog ? (editingWalletEmoji || "👤") : (walletEmoji || "👤")}
+                </Button>
+              </div>
+              {(showWalletEmojiPicker || showEditingWalletEmojiPicker) && (
+                <div className="grid grid-cols-10 gap-2 mt-2 p-2 bg-muted/50 rounded-lg">
+                  {emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="text-xl p-2 hover:bg-muted rounded transition-colors"
+                      onClick={() => {
+                        if (showEditWalletDialog) {
+                          setEditingWalletEmoji(emoji);
+                          setShowEditingWalletEmojiPicker(false);
+                        } else {
+                          setWalletEmoji(emoji);
+                          setShowWalletEmojiPicker(false);
+                        }
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
               <label className="text-sm font-medium mb-2 block">Group</label>
               <select
-                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm"
                 value={newWallet.group}
                 onChange={(e) => setNewWallet({ ...newWallet, group: e.target.value })}
               >
@@ -1350,6 +1473,10 @@ export default function TrackerPage() {
                 setShowEditWalletDialog(false);
                 setEditingWallet(null);
                 setNewWallet({ name: "", wallet: "", group: "All" });
+                setWalletEmoji("");
+                setEditingWalletEmoji("");
+                setShowWalletEmojiPicker(false);
+                setShowEditingWalletEmojiPicker(false);
               }}
             >
               Cancel
@@ -1474,8 +1601,25 @@ export default function TrackerPage() {
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
             {groups.filter(g => g.name !== "All").map((group) => (
               <div key={group.name} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/30">
-                <span className="font-medium">{group.emoji && <span className="mr-2">{group.emoji}</span>}{group.name}</span>
+                <div className="flex items-center gap-2">
+                  {group.emoji && <span className="text-lg">{group.emoji}</span>}
+                  <span className="font-medium">{group.name}</span>
+                  {group.hidden && <span className="text-xs text-muted-foreground">(hidden)</span>}
+                </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => toggleGroupVisibility(group.name)}
+                    title={group.hidden ? "Show group" : "Hide group"}
+                  >
+                    {group.hidden ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-green-500" />
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1537,15 +1681,22 @@ export default function TrackerPage() {
           <DialogHeader>
             <DialogTitle>Import Wallets</DialogTitle>
             <DialogDescription>
-              Paste wallet addresses (one per line) to import them all at once
+              Paste wallet data in JSON format. Supports: address, name, emoji, groups
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Wallet Addresses</label>
+              <label className="text-sm font-medium mb-2 block">Wallet Data (JSON)</label>
               <textarea
-                className="w-full h-48 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
-                placeholder={`7xKXtg2jm...Zk9pQx\n3mPLk8nXv...Bn2wQr\n9qWZhR2mY...Tp5kLs`}
+                className="w-full h-64 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
+                placeholder={`[
+  {
+    "address": "64P56FHSBUPiudvgygvXotxuCjJkpVzrvYajFTN9a9uk",
+    "name": "My Wallet",
+    "emoji": "🚀",
+    "groups": ["ARCA Team"]
+  }
+]`}
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
               />
@@ -1563,7 +1714,7 @@ export default function TrackerPage() {
             </Button>
             <Button onClick={processImport} disabled={!importText.trim()}>
               <Download className="h-4 w-4 mr-2" />
-              Import {importText.split('\n').filter(l => l.trim().length > 10).length} Wallets
+              Import Wallets
             </Button>
           </DialogFooter>
         </DialogContent>
