@@ -72,6 +72,7 @@ export default function AssetsPage() {
   const [sendWalletId, setSendWalletId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [pinnedWallets, setPinnedWallets] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadWallets();
@@ -420,6 +421,33 @@ export default function AssetsPage() {
     }
   };
 
+  const togglePinWallet = (walletId: string) => {
+    setPinnedWallets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(walletId)) {
+        newSet.delete(walletId);
+      } else {
+        newSet.add(walletId);
+      }
+      return newSet;
+    });
+  };
+
+  const getSortedWalletsForSend = () => {
+    const walletsWithBalance = wallets.map(w => ({
+      ...w,
+      balance: balances[w.id]?.solBalance || 0,
+    }));
+    
+    const pinned = walletsWithBalance.filter(w => pinnedWallets.has(w.id));
+    const unpinned = walletsWithBalance.filter(w => !pinnedWallets.has(w.id));
+    
+    pinned.sort((a, b) => b.balance - a.balance);
+    unpinned.sort((a, b) => b.balance - a.balance);
+    
+    return [...pinned, ...unpinned];
+  };
+
   const handleAddressClick = async (publicKey: string, walletId: string) => {
     await copyToClipboard(publicKey, `pub-${walletId}`);
   };
@@ -446,8 +474,8 @@ export default function AssetsPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Wallet List */}
-          <div className="lg:col-span-1 space-y-4">
+          {/* Left Column - Wallet List (2/3) */}
+          <div className="lg:col-span-2 space-y-4">
             {/* Wallet List Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-4">
@@ -567,16 +595,16 @@ export default function AssetsPage() {
               </CardContent>
             </Card>
 
-            {/* Action Buttons */}
+            {/* Quick Actions Buttons */}
             <div className="flex gap-2">
               <Button
                 onClick={() => {
                   setShowCreateForm(!showCreateForm);
                   setShowImportForm(false);
                 }}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-12 text-base"
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-5 w-5 mr-2" />
                 New Wallet
               </Button>
               <Button
@@ -585,10 +613,18 @@ export default function AssetsPage() {
                   setShowImportForm(!showImportForm);
                   setShowCreateForm(false);
                 }}
-                className="flex-1 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10"
+                className="flex-1 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 h-12 text-base"
               >
-                <Key className="h-4 w-4 mr-1" />
+                <Key className="h-5 w-5 mr-2" />
                 Import
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => activeWalletId && handleSendClick(activeWalletId)}
+                className="w-32 border-teal-500/30 text-teal-500 hover:bg-teal-500/10 h-12"
+              >
+                <Send className="h-5 w-5 mr-2" />
+                Send
               </Button>
             </div>
 
@@ -665,46 +701,28 @@ export default function AssetsPage() {
               </Card>
             )}
 
-            {/* Quick Actions */}
-            {activeWalletId && (
-              <Card className="border-border/50 bg-card/50 backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1 border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
-                      onClick={() => handleSendClick(activeWalletId)}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      Send
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column - Calendar */}
-          <div className="lg:col-span-2">
-            {/* Quick Stats */}
-            <div className="flex gap-2 mb-4">
-              <Button variant="outline" className="flex-1 border-border/50">
+            {/* Holdings / Orders / Realised Buttons */}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 border-border/50 h-10">
                 <ShoppingBag className="h-4 w-4 mr-2" />
                 Holdings
               </Button>
-              <Button variant="outline" className="flex-1 border-border/50">
+              <Button variant="outline" className="flex-1 border-border/50 h-10">
                 <FileText className="h-4 w-4 mr-2" />
                 Orders
               </Button>
-              <Button variant="outline" className="flex-1 border-border/50">
+              <Button variant="outline" className="flex-1 border-border/50 h-10">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Realised
               </Button>
             </div>
+          </div>
 
+          {/* Right Column - Calendar (1/3) */}
+          <div className="lg:col-span-1">
             {/* Calendar Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 {/* Period Selector */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex gap-1">
@@ -864,6 +882,7 @@ export default function AssetsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* From Wallet */}
             <div>
               <label className="text-sm font-medium mb-2 block">From Wallet</label>
               <select
@@ -882,19 +901,35 @@ export default function AssetsPage() {
               </select>
             </div>
 
+            {/* Recipient Wallet Selector */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Recipient Address (Solana)</label>
-              <Input
-                placeholder="Enter Solana address..."
+              <label className="text-sm font-medium mb-2 block">Recipient (Select or Enter Address)</label>
+              <select
                 value={sendToAddress}
                 onChange={(e) => setSendToAddress(e.target.value)}
-                className="font-mono text-sm"
-              />
+                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm mb-2"
+              >
+                <option value="">-- Select a wallet --</option>
+                {getSortedWalletsForSend().map((wallet) => (
+                  <option key={wallet.id} value={wallet.publicKey}>
+                    {pinnedWallets.has(wallet.id) ? "📌 " : ""}{wallet.name} - {wallet.balance.toFixed(4)} SOL
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Or enter Solana address..."
+                  value={sendToAddress}
+                  onChange={(e) => setSendToAddress(e.target.value)}
+                  className="font-mono text-sm flex-1"
+                />
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Paste a valid Solana address (32-44 base58 characters)
+                Select from your wallets or paste an address
               </p>
             </div>
 
+            {/* Amount */}
             <div>
               <label className="text-sm font-medium mb-2 block">Amount (SOL)</label>
               <Input
