@@ -54,7 +54,7 @@ import {
   Check,
   Image as ImageIcon,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { searchWallet } from "../../lib/solana-api";
 import {
   WalletData,
