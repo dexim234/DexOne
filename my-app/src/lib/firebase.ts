@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -10,8 +10,13 @@ const firebaseConfig = {
   appId: "1:1032769450215:web:3711c31a94f58d342c3242"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase - check if already initialized
+let app;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
 export const db = getFirestore(app);
 
 // Firestore operations
