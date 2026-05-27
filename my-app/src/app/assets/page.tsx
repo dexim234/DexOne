@@ -484,151 +484,131 @@ export default function AssetsPage() {
                     <p className="text-sm text-muted-foreground">No wallets</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {visibleWallets.map((wallet) => {
-                      const balance = balances[wallet.id];
-                      const isActive = activeWalletId === wallet.id;
-                      const isPrivateVisible = showPrivateKeys[wallet.id];
+                  <>
+                    <div className="space-y-2">
+                      {visibleWallets.map((wallet) => {
+                        const balance = balances[wallet.id];
+                        const isActive = activeWalletId === wallet.id;
+                        const isPrivateVisible = showPrivateKeys[wallet.id];
 
-                      return (
-                        <div
-                          key={wallet.id}
-                          className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                            isActive
-                              ? "border-teal-500 bg-teal-500/5"
-                              : "border-border/30 hover:border-teal-500/30 hover:bg-teal-500/5"
-                          }`}
-                          onClick={() => setActiveWalletId(wallet.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-sm">{wallet.name}</span>
-                                {isActive && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Active
-                                  </Badge>
-                                )}
+                        return (
+                          <div
+                            key={wallet.id}
+                            className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                              isActive
+                                ? "border-teal-500 bg-teal-500/5"
+                                : "border-border/30 hover:border-teal-500/30 hover:bg-teal-500/5"
+                            }`}
+                            onClick={() => setActiveWalletId(wallet.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-sm">{wallet.name}</span>
+                                  {isActive && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Active
+                                    </Badge>
+                                  )}
+                                </div>
+                                <code
+                                  className="text-xs text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddressClick(wallet.publicKey, wallet.id);
+                                  }}
+                                >
+                                  {wallet.publicKey}
+                                </code>
                               </div>
-                              <code
-                                className="text-xs text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddressClick(wallet.publicKey, wallet.id);
-                                }}
-                              >
-                                {wallet.publicKey}
-                              </code>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-right">
-                                {balance?.loading ? (
-                                  <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
-                                ) : (
-                                  <div className="font-semibold text-sm">
-                                    {(balance?.solBalance || 0).toFixed(4)} SOL
-                                  </div>
-                                )}
+                              <div className="flex items-center gap-2">
+                                <div className="text-right">
+                                  {balance?.loading ? (
+                                    <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
+                                  ) : (
+                                    <div className="font-semibold text-sm">
+                                      {(balance?.solBalance || 0).toFixed(4)} SOL
+                                    </div>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePrivateKeyVisibility(wallet.id);
+                                  }}
+                                  className="h-7 w-7 p-0"
+                                >
+                                  {isPrivateVisible ? (
+                                    <EyeOff className="h-3 w-3 text-yellow-500" />
+                                  ) : (
+                                    <Eye className="h-3 w-3" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteWallet(wallet.id);
+                                  }}
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  togglePrivateKeyVisibility(wallet.id);
-                                }}
-                                className="h-7 w-7 p-0"
-                              >
-                                {isPrivateVisible ? (
-                                  <EyeOff className="h-3 w-3 text-yellow-500" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteWallet(wallet.id);
-                                }}
-                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
                             </div>
+
+                            {isPrivateVisible && (
+                              <div className="mt-2 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded text-xs">
+                                <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
+                                  Private Key Warning
+                                </p>
+                                <p className="text-muted-foreground mb-1">
+                                  Full control over wallet. Never share.
+                                </p>
+                                <div className="font-mono bg-background/50 p-1 rounded break-all">
+                                  {wallet.privateKeyBase58}
+                                </div>
+                              </div>
+                            )}
                           </div>
+                        );
+                      })}
+                    </div>
 
-                          {isPrivateVisible && (
-                            <div className="mt-2 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded text-xs">
-                              <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
-                                Private Key Warning
-                              </p>
-                              <p className="text-muted-foreground mb-1">
-                                Full control over wallet. Never share.
-                              </p>
-                              <div className="font-mono bg-background/50 p-1 rounded break-all">
-                                {wallet.privateKeyBase58}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                      <Button
+                        onClick={() => setShowCreateModal(true)}
+                        variant="outline"
+                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2 text-teal-500" />
+                        New
+                      </Button>
+                      <Button
+                        onClick={() => setShowImportModal(true)}
+                        variant="outline"
+                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                      >
+                        <Key className="h-4 w-4 mr-2 text-teal-500" />
+                        Import
+                      </Button>
+                      <Button
+                        onClick={() => activeWalletId && handleSendClick(activeWalletId)}
+                        variant="outline"
+                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                      >
+                        <Send className="h-4 w-4 mr-2 text-teal-500" />
+                        Send
+                      </Button>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
-
-            {/* Active Wallet Card with Action Buttons */}
-            {activeWallet && activeBalance && (
-              <Card className="border-teal-500/30 bg-gradient-to-br from-teal-500/10 to-cyan-500/10">
-                <CardContent className="p-4 space-y-4">
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Active Wallet</p>
-                      <p className="font-semibold text-base">{activeWallet.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Balance</p>
-                      <p className="text-2xl font-bold text-teal-400">
-                        {activeBalance.solBalance.toFixed(4)} SOL
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        (${activeBalance.usdValue.toFixed(2)})
-                      </p>
-                    </div>
-                  </div>
-                  {/* Action Buttons - same size as Holdings */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      onClick={() => setShowCreateModal(true)}
-                      variant="outline"
-                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
-                    >
-                      <Plus className="h-4 w-4 mr-2 text-teal-500" />
-                      New
-                    </Button>
-                    <Button
-                      onClick={() => setShowImportModal(true)}
-                      variant="outline"
-                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
-                    >
-                      <Key className="h-4 w-4 mr-2 text-teal-500" />
-                      Import
-                    </Button>
-                    <Button
-                      onClick={() => activeWalletId && handleSendClick(activeWalletId)}
-                      variant="outline"
-                      className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
-                    >
-                      <Send className="h-4 w-4 mr-2 text-teal-500" />
-                      Send
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Holdings / Orders / Realised Buttons */}
             <div className="grid grid-cols-3 gap-2">
