@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, AlertTriangle, Send, Check, ChevronDown, TrendingUp, DollarSign } from "lucide-react";
+import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, TrendingUp, Calendar, ArrowLeft, ArrowRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,19 +20,24 @@ interface WalletBalance {
   };
 }
 
-interface ProfitData {
-  period: string;
-  profit: number;
-  percent: number;
+interface DailyPnL {
+  day: number;
+  pnl: number;
+  isProfitable: boolean;
 }
 
 const HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8";
 
-const profitPeriods: { value: string; label: string }[] = [
+const profitPeriods = [
   { value: "1D", label: "1D" },
   { value: "7D", label: "7D" },
   { value: "14D", label: "14D" },
   { value: "30D", label: "30D" },
+];
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
 ];
 
 export default function AssetsPage() {
@@ -51,6 +56,8 @@ export default function AssetsPage() {
   const [balances, setBalances] = useState<WalletBalance>({});
   const [showMoreWallets, setShowMoreWallets] = useState(false);
   const [profitPeriod, setProfitPeriod] = useState("7D");
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   
   // Send modal state
   const [showSendDialog, setShowSendDialog] = useState(false);
@@ -120,19 +127,71 @@ export default function AssetsPage() {
     }
   };
 
-  const generateMockProfitData = (period: string): ProfitData => {
-    const baseProfits: Record<string, { profit: number; percent: number }> = {
-      "1D": { profit: Math.random() * 1000, percent: Math.random() * 10 },
-      "7D": { profit: Math.random() * 5000, percent: Math.random() * 20 },
-      "14D": { profit: Math.random() * 10000, percent: Math.random() * 30 },
-      "30D": { profit: Math.random() * 20000, percent: Math.random() * 50 },
-    };
-    const data = baseProfits[period] || baseProfits["7D"];
+  const generateDailyPnL = (month: number, year: number): DailyPnL[] => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dailyData: DailyPnL[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isTradingDay = Math.random() > 0.3;
+      if (isTradingDay) {
+        dailyData.push({
+          day,
+          pnl: (Math.random() - 0.45) * 0.5,
+          isProfitable: Math.random() > 0.4,
+        });
+      } else {
+        dailyData.push({ day, pnl: 0, isProfitable: true });
+      }
+    }
+    return dailyData;
+  };
+
+  const calculatePeriodPnL = (period: string) => {
+    const now = new Date();
+    const days = period === "1D" ? 1 : period === "7D" ? 7 : period === "14D" ? 14 : 30;
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    let totalPnL = 0;
+    let profitableDays = 0;
+    let tradingDays = 0;
+
+    for (let d = new Date(); d >= startDate; d.setDate(d.getDate() - 1)) {
+      const dailyPnL = (Math.random() - 0.45) * 0.1;
+      totalPnL += dailyPnL;
+      tradingDays++;
+      if (dailyPnL > 0) profitableDays++;
+    }
+
+    const winRate = tradingDays > 0 ? (profitableDays / tradingDays) * 100 : 0;
+    const totalPnLUSD = totalPnL * 140;
+    const percentReturn = (totalPnL * 100);
+
     return {
-      period,
-      profit: data.profit,
-      percent: data.percent,
+      realizedPnL: totalPnL,
+      realizedPnLUSD: totalPnLUSD,
+      percentReturn,
+      winRate,
+      totalPnL: totalPnL * 0.6,
+      unrealizedPnL: totalPnL * 0.4,
     };
+  };
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
   };
 
   const handleCreateWallet = async () => {
@@ -280,48 +339,44 @@ export default function AssetsPage() {
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
   const activeBalance = activeWalletId ? balances[activeWalletId] : null;
-  const profitData = generateMockProfitData(profitPeriod);
-
+  const periodData = calculatePeriodPnL(profitPeriod);
+  const dailyPnL = generateDailyPnL(currentMonth, currentYear);
+  
   const visibleWallets = wallets.slice(0, showMoreWallets ? wallets.length : 1);
   const hiddenCount = Math.max(0, wallets.length - 1);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-teal-500/5 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Main Layout */}
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Wallet className="h-8 w-8 text-teal-500" />
+            Assets
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your Solana wallets
+          </p>
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Column - Wallet List */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-3">
-                  <Wallet className="h-8 w-8 text-teal-500" />
-                  Assets
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Manage your Solana wallets
-                </p>
-              </div>
-            </div>
-
             {/* Wallet List Card */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Wallets</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowMoreWallets(!showMoreWallets)}
-                      className="text-xs"
-                    >
-                      {showMoreWallets ? "Show Less" : `+ ${hiddenCount} more`}
-                      {showMoreWallets && <ChevronDown className="h-3 w-3 ml-1 rotate-180" />}
-                      {!showMoreWallets && hiddenCount > 0 && <ChevronDown className="h-3 w-3 ml-1" />}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMoreWallets(!showMoreWallets)}
+                    className="text-xs"
+                  >
+                    {showMoreWallets ? "Show Less" : `+ ${hiddenCount} more`}
+                    {showMoreWallets && <ChevronDown className="h-3 w-3 ml-1 rotate-180" />}
+                    {!showMoreWallets && hiddenCount > 0 && <ChevronDown className="h-3 w-3 ml-1" />}
+                  </Button>
                 </div>
 
                 {wallets.length === 0 ? (
@@ -426,15 +481,23 @@ export default function AssetsPage() {
                           </div>
 
                           {isPrivateVisible && (
-                            <div className="mt-3 p-2 bg-red-500/5 border border-red-500/20 rounded text-xs">
-                              <div className="flex items-start gap-2">
-                                <AlertTriangle className="h-3 w-3 text-red-500 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="font-semibold text-red-500 mb-1">Private Key Warning</p>
-                                  <p className="text-red-400">
-                                    Never share your private key. Full control over wallet. We will never ask for it.
+                            <div className="mt-3 p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 bg-yellow-500/20 rounded-full">
+                                  <Info className="h-4 w-4 text-yellow-500" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
+                                    Private Key Warning
                                   </p>
-                                  <div className="mt-2 font-mono bg-red-500/10 p-1 rounded truncate">
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    This key gives <span className="font-semibold text-foreground">full control</span> over your wallet. 
+                                    You can send funds and import this wallet anywhere.
+                                  </p>
+                                  <p className="text-sm font-semibold text-red-500 mb-2">
+                                    ⚠️ Never share this with anyone. We will never ask for it.
+                                  </p>
+                                  <div className="font-mono text-xs bg-background/50 p-2 rounded break-all">
                                     {wallet.privateKeyBase58}
                                   </div>
                                 </div>
@@ -450,115 +513,19 @@ export default function AssetsPage() {
             </Card>
           </div>
 
-          {/* Right Column - Actions & Stats */}
+          {/* Right Column - Actions & Calendar */}
           <div className="space-y-4">
-            {/* Action Buttons */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  {!importMode ? (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
-                        <Input
-                          placeholder="Leave empty for address"
-                          value={newWalletName}
-                          onChange={(e) => setNewWalletName(e.target.value)}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <Button
-                        onClick={handleCreateWallet}
-                        disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                      >
-                        {isLoading ? (
-                          <span className="flex items-center gap-2">
-                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                            Creating...
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            <Plus className="h-4 w-4" />
-                            New Wallet
-                          </span>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setImportMode(true)}
-                        className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
-                      >
-                        <Key className="h-4 w-4 mr-2" />
-                        Import Wallet
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
-                        <Input
-                          placeholder="Enter private key..."
-                          value={importPrivateKey}
-                          onChange={(e) => setImportPrivateKey(e.target.value)}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
-                        <Input
-                          placeholder="Leave empty for address"
-                          value={importWalletName}
-                          onChange={(e) => setImportWalletName(e.target.value)}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <Button
-                        onClick={handleImportWallet}
-                        disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700"
-                      >
-                        {isLoading ? (
-                          <span className="flex items-center gap-2">
-                            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                            Importing...
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            <Key className="h-4 w-4" />
-                            Import
-                          </span>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setImportMode(false)}
-                        className="w-full"
-                      >
-                        Cancel
-                      </Button>
-                    </>
-                  )}
-                  {error && (
-                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
-                      {error}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Active Wallet Stats */}
+            {/* Active Wallet */}
             {activeWallet && activeBalance && (
               <Card className="border-teal-500/30 bg-gradient-to-br from-teal-500/10 to-cyan-500/10">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Active Wallet</p>
-                      <p className="font-semibold">{activeWallet.name}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Active Wallet</p>
+                      <p className="font-semibold text-base">{activeWallet.name}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Balance</p>
+                      <p className="text-xs text-muted-foreground mb-1">Balance</p>
                       <p className="text-2xl font-bold text-teal-400">
                         {activeBalance.solBalance.toFixed(4)} SOL
                       </p>
@@ -566,88 +533,221 @@ export default function AssetsPage() {
                         (${activeBalance.usdValue.toFixed(2)})
                       </p>
                     </div>
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <Button
+                        onClick={handleCreateWallet}
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-sm"
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full" />
+                            ...
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <Plus className="h-3 w-3" />
+                            New Wallet
+                          </span>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setImportMode(!importMode)}
+                        className="border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10 text-sm"
+                      >
+                        <Key className="h-3 w-3 mr-1" />
+                        Import
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Profit Calendar */}
+            {/* Import Form (shown when import mode is active) */}
+            {importMode && (
+              <Card className="border-border/50 bg-card/50 backdrop-blur">
+                <CardContent className="p-4 space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Private Key (Base58)</label>
+                    <Input
+                      placeholder="Enter private key..."
+                      value={importPrivateKey}
+                      onChange={(e) => setImportPrivateKey(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Wallet Name (optional)</label>
+                    <Input
+                      placeholder="Leave empty for address"
+                      value={importWalletName}
+                      onChange={(e) => setImportWalletName(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleImportWallet}
+                      disabled={isLoading}
+                      className="flex-1 bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-sm"
+                    >
+                      {isLoading ? "..." : "Import"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setImportMode(false)}
+                      className="text-sm"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  {error && (
+                    <div className="p-2 bg-red-500/10 border border-red-500/30 rounded text-red-500 text-xs">
+                      {error}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Profit/Loss Calendar */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      Profit/Loss
-                    </h3>
-                    <select
-                      value={profitPeriod}
-                      onChange={(e) => setProfitPeriod(e.target.value)}
-                      className="px-2 py-1 bg-background border border-input rounded text-xs"
-                    >
-                      {profitPeriods.map((period) => (
-                        <option key={period.value} value={period.value}>
-                          {period.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{profitPeriod} Profit</span>
-                      <span className={`font-semibold ${profitData.profit >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {profitData.profit >= 0 ? "+" : ""}${profitData.profit.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Return</span>
-                      <span className={`font-semibold ${profitData.percent >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {profitData.percent >= 0 ? "+" : ""}{profitData.percent.toFixed(2)}%
-                      </span>
-                    </div>
-                    {/* Simple profit visualization */}
-                    <div className="mt-3">
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            profitData.profit >= 0
-                              ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                              : "bg-gradient-to-r from-red-500 to-rose-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(Math.abs(profitData.percent), 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+                {/* Period Selector */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex gap-1">
+                    {profitPeriods.map((period) => (
+                      <button
+                        key={period.value}
+                        onClick={() => setProfitPeriod(period.value)}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                          profitPeriod === period.value
+                            ? "bg-teal-500 text-white"
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Quick Actions */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-3">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => activeWalletId && handleSendClick(activeWalletId)}
-                    className="border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    Send
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImportMode(true)}
-                    className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
-                  >
-                    <Key className="h-4 w-4 mr-1" />
-                    Import
-                  </Button>
+                {/* PnL Summary */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {profitPeriod} Realized PnL <span className="text-lg">≡</span> SOL
+                    </p>
+                    <p className={`text-xl font-bold ${periodData.percentReturn >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {periodData.percentReturn >= 0 ? "+" : ""}{periodData.percentReturn.toFixed(2)}%
+                    </p>
+                    <p className={`text-xs ${periodData.realizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {periodData.realizedPnL >= 0 ? "+" : ""}{periodData.realizedPnL.toFixed(3)} SOL
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
+                    <p className="text-xl font-bold text-foreground">
+                      {periodData.winRate.toFixed(2)}%
+                    </p>
+                    <p className={`text-xs ${periodData.totalPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      Total PnL {periodData.totalPnL >= 0 ? "+" : ""}{periodData.totalPnL.toFixed(3)} SOL
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/30 my-3" />
+
+                {/* Unrealized */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total PnL</p>
+                    <p className={`text-sm font-semibold ${periodData.realizedPnLUSD >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {periodData.realizedPnLUSD >= 0 ? "+" : ""}${Math.abs(periodData.realizedPnLUSD).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Unrealized Profits</p>
+                    <p className={`text-sm font-semibold ${periodData.unrealizedPnL >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {periodData.unrealizedPnL >= 0 ? "+" : ""}{periodData.unrealizedPnL.toFixed(3)} SOL
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border/30 my-3" />
+
+                {/* Calendar */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{months[currentMonth]} {currentYear}</span>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handlePrevMonth}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ArrowLeft className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleNextMonth}
+                        className="h-7 w-7 p-0"
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <div key={i} className="text-center text-xs font-medium text-muted-foreground py-1">
+                        {day}
+                      </div>
+                    ))}
+                    {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map((_, i) => (
+                      <div key={`empty-${i}`} className="aspect-square" />
+                    ))}
+                    {dailyPnL.map((data) => (
+                      <div
+                        key={data.day}
+                        className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium cursor-pointer transition-all hover:scale-110 ${
+                          data.pnl === 0
+                            ? "bg-muted/30"
+                            : data.isProfitable
+                            ? "bg-green-500/20 text-green-500 hover:bg-green-500/30"
+                            : "bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                        }`}
+                        title={`Day ${data.day}: ${data.pnl >= 0 ? "+" : ""}${data.pnl.toFixed(3)} SOL`}
+                      >
+                        {data.pnl !== 0 && (
+                          <span className="text-[10px]">
+                            {data.pnl > 0 ? "+" : ""}{data.pnl.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="flex items-center justify-center gap-4 mt-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-green-500/20" />
+                      <span className="text-xs text-muted-foreground">Profit</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-red-500/20" />
+                      <span className="text-xs text-muted-foreground">Loss</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
