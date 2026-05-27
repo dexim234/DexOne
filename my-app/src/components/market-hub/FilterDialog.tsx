@@ -201,7 +201,7 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
               <span className="text-xs font-medium text-muted-foreground mb-2 block">
                 Market Filters
               </span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {marketFilters.map((filter) => (
                   <div key={filter.id} className="flex items-center space-x-2">
                     <Checkbox
@@ -328,118 +328,112 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {(volumeTab === "total" ? volumeFiltersTotal : volumeFiltersShort).map((filter) => (
-                <div key={filter.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={filter.id}
-                    checked={selectedVolumeFilters.includes(filter.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedVolumeFilters(prev => [...prev, filter.id]);
-                      } else {
-                        setSelectedVolumeFilters(prev => prev.filter(id => id !== filter.id));
-                      }
-                    }}
-                  />
-                  <span className="text-sm cursor-pointer">{filter.label}</span>
+            {/* Short timeframes */}
+            {volumeTab !== "total" && (
+              <>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Buy Volume
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Min/Max для Volume */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Volume
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Sell Volume
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Buy Volume */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Buy Volume
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Sell Bot Fee
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Sell Volume */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Sell Volume
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Makers
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* Min/Max для Bot Fee */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Bot Fee
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+            {/* Total */}
+            {volumeTab === "total" && (
+              <>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Volume
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Sell Bot Fee */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Sell Bot Fee
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Bot Fee
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Buys */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Buys
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Global Fees
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Sells */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Sells
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Buys
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
 
-            {/* Min/Max для Makers */}
-            <div>
-              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Makers
-              </span>
-              <div className="flex items-center gap-2">
-                <Input placeholder="Min" type="number" className="h-9 text-sm" />
-                <Input placeholder="Max" type="number" className="h-9 text-sm" />
-              </div>
-            </div>
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Sells
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                    <Input placeholder="Max" type="number" className="h-9 text-sm" />
+                  </div>
+                </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Holders Tab */}
           <TabsContent value="holders" className="space-y-4">
+            {/* Checkboxes */}
             <div className="grid grid-cols-2 gap-2">
-              {holdersFilters.map((filter) => (
+              {holdersFilters.filter(f => f.id !== "bottraders" && f.id !== "newwallets").map((filter) => (
                 <div key={filter.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={filter.id}
@@ -457,7 +451,7 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
               ))}
             </div>
 
-            {/* Min/Max для Holders */}
+            {/* Holders Min/Max */}
             <div>
               <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 Holders
@@ -478,6 +472,7 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
               </div>
             </div>
 
+            {/* Bot Traders - % and Count */}
             <div>
               <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 Bot Traders (%)
@@ -490,7 +485,28 @@ export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
 
             <div>
               <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Bot Traders (Count)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            {/* New Wallets - % and Count */}
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 New Wallets (%)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input placeholder="Min" type="number" className="h-9 text-sm" />
+                <Input placeholder="Max" type="number" className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                New Wallets (Count)
               </span>
               <div className="flex items-center gap-2">
                 <Input placeholder="Min" type="number" className="h-9 text-sm" />
