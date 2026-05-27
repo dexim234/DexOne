@@ -1,121 +1,194 @@
 "use client";
 
-import Image from "next/image";
-import { formatSolanaAddress, getSolanaExplorerUrl } from "@/lib/solana-config";
+import { useState, useEffect, useRef } from "react";
+import { Copy, ExternalLink, Zap } from "lucide-react";
 
 interface TrenchCardProps {
   rank: string;
   logo: string;
   name: string;
+  symbol?: string;
   mc: string;
-  mcChange: string;
   volume24h: string;
-  volumeChange: string;
-  priceChange1h: string;
-  priceChange24h: string;
-  priceChange7d: string;
-  trades: string;
-  holders: string;
-  isVerified?: boolean;
   mint?: string;
-  imageUrl?: string;
+  createdTimestamp?: number;
+  isVerified?: boolean;
+  twitter?: string;
+  telegram?: string;
+  website?: string;
+  selectedMetrics?: string[];
+  kingOfTheHillRank?: string;
+  kingOfTheHillTotal?: string;
+  watchers?: string;
+  replies?: string;
+  replyRate?: string;
+  buySellRatio?: string;
+  fomoScore?: string;
+  devHold?: string;
+  top10Hold?: string;
+  lpBurn?: string;
+  snipersCount?: string;
+  bundlersCount?: string;
+  freshWallets?: string;
+  botTraders?: string;
+  dexTaxBuy?: string;
+  dexTaxSell?: string;
 }
 
 export default function TrenchCard({
-  rank,
   logo,
   name,
+  symbol,
   mc,
-  mcChange,
   volume24h,
-  volumeChange,
-  priceChange1h,
-  priceChange24h,
-  priceChange7d,
-  trades,
-  holders,
+  mint = "",
+  createdTimestamp,
   isVerified = false,
-  mint,
-  imageUrl,
+  twitter,
+  website,
 }: TrenchCardProps) {
-  const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
-  const isNegative = (val: string) => val.includes("-");
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const imgTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleCardClick = () => {
-    if (mint) {
-      const url = getSolanaExplorerUrl(mint);
-      window.open(url, '_blank');
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageFailed(false);
+    imgTimeoutRef.current = setTimeout(() => setImageFailed(true), 5000);
+    return () => {
+      if (imgTimeoutRef.current) clearTimeout(imgTimeoutRef.current);
+    };
+  }, [logo]);
+
+  const copyToClipboard = async () => {
+    if (!mint) return;
+    try {
+      await navigator.clipboard.writeText(mint);
+    } catch (err) {
+      console.error("Failed to copy:", err);
     }
   };
 
-  const displayImage = imageUrl || logo || '';
+  const formatAddress = (addr: string) => {
+    if (addr.length < 9) return addr;
+    return `${addr.slice(0, 4)}...pump`;
+  };
+
+  const formatTimeAgo = (timestamp?: number) => {
+    if (!timestamp) return null;
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
+  };
+
+  const timeAgo = formatTimeAgo(createdTimestamp);
+  const displaySymbol = symbol ? `$${symbol}` : name;
+  const displayName = symbol && name && symbol !== name ? name : undefined;
 
   return (
-    <div 
-      className="rounded-lg border bg-card p-3 hover:bg-accent/30 transition-colors cursor-pointer"
-      onClick={handleCardClick}
-    >
-      {/* Header with Rank, Logo, Name */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-muted-foreground w-4">{rank}</span>
-        <div className="relative h-8 w-8 flex-shrink-0">
-          <Image
-            src={displayImage}
-            alt={name}
-            width={32}
-            height={32}
-            className="rounded-lg object-cover"
-            unoptimized
-            onError={(e) => {
-              e.currentTarget.src = '/placeholder.png';
+    <div className="relative rounded-xl border border-border/40 bg-card p-2.5 hover:bg-accent/20 transition-colors cursor-pointer group">
+      <div className="flex gap-2.5">
+        {/* Left: Avatar + Address */}
+        <div className="flex flex-col items-center gap-1 shrink-0 w-[72px]">
+          <div className="relative h-[72px] w-[72px] rounded-2xl overflow-hidden bg-muted border border-border/30">
+            {!imageLoaded && !imageFailed && (
+              <div className="absolute inset-0 bg-muted animate-pulse" />
+            )}
+            <img
+              src={imageFailed ? "/placeholder.png" : (logo || "/placeholder.png")}
+              alt={name}
+              width={72}
+              height={72}
+              className={`w-full h-full object-cover transition-opacity duration-200 ${(imageLoaded || imageFailed) ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => {
+                setImageLoaded(true);
+                if (imgTimeoutRef.current) clearTimeout(imgTimeoutRef.current);
+              }}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.src.includes("placeholder.png")) target.src = "/placeholder.png";
+                setImageLoaded(true);
+                setImageFailed(true);
+                if (imgTimeoutRef.current) clearTimeout(imgTimeoutRef.current);
+              }}
+              loading="eager"
+            />
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyToClipboard();
             }}
-          />
-        </div>
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <span className="font-medium truncate">{name}</span>
-          {isVerified && (
-            <svg className="h-3 w-3 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-          )}
-        </div>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 text-xs">
-        {/* Row 1: MC */}
-        <div className="col-span-3 flex items-center gap-1 mb-1">
-          <span className="text-muted-foreground">MC</span>
-          <span className="font-medium text-teal">{mc}</span>
-          <span className={isPositive(mcChange) ? "text-green-500" : isNegative(mcChange) ? "text-red-500" : "text-muted-foreground"}>
-            {mcChange}
-          </span>
-        </div>
-        
-        {/* Row 2: 24h Volume */}
-        <div className="col-span-3 flex items-center gap-1 mb-1">
-          <span className="text-muted-foreground">24h</span>
-          <span className="font-medium">{volume24h}</span>
-          <span className={isPositive(volumeChange) ? "text-green-500" : isNegative(volumeChange) ? "text-red-500" : "text-muted-foreground"}>
-            {volumeChange}
-          </span>
+            className="text-[10px] text-muted-foreground hover:text-teal-400 transition-colors font-mono text-center"
+          >
+            {formatAddress(mint)}
+          </button>
         </div>
 
-        {/* Row 3: Price changes */}
-        <div className={isPositive(priceChange1h) ? "text-green-500" : isNegative(priceChange1h) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange1h}
-        </div>
-        <div className={isPositive(priceChange24h) ? "text-green-500" : isNegative(priceChange24h) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange24h}
-        </div>
-        <div className={isPositive(priceChange7d) ? "text-green-500" : isNegative(priceChange7d) ? "text-red-500" : "text-muted-foreground"}>
-          {priceChange7d}
+        {/* Center: Token Info */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+          {/* Row 1: Symbol + Name + Time */}
+          <div className="flex items-start justify-between gap-1">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-sm text-foreground truncate">
+                  {displaySymbol}
+                </span>
+                {isVerified && (
+                  <svg className="h-3.5 w-3.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              {displayName && (
+                <span className="text-[11px] text-muted-foreground truncate leading-tight">
+                  {displayName}
+                </span>
+              )}
+            </div>
+            {timeAgo && (
+              <span className="text-[10px] text-teal-400 font-medium shrink-0 mt-0.5">
+                {timeAgo}
+              </span>
+            )}
+          </div>
+
+          {/* Row 2: Socials + MC/Vol */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              {twitter && (
+                <a href={twitter} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+              )}
+              {website && (
+                <a href={website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-[11px] shrink-0">
+              <span className="text-muted-foreground">
+                MC <span className="text-teal-400 font-semibold">{mc}</span>
+              </span>
+              <span className="text-muted-foreground">
+                Vol <span className="text-teal-400 font-semibold">{volume24h}</span>
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Row 4: Trades and Holders */}
-        <div className="col-span-3 flex items-center gap-2 mt-1">
-          <span className="text-muted-foreground text-xs">{trades}</span>
-          <span className="text-muted-foreground text-xs">{holders}</span>
+        {/* Right: Buy Button */}
+        <div className="shrink-0 flex flex-col justify-center">
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="h-9 w-9 flex items-center justify-center rounded-lg bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 transition-colors"
+          >
+            <Zap className="h-4 w-4 text-green-400" />
+          </button>
         </div>
       </div>
     </div>
