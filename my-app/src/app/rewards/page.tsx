@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Gift, Crown, Zap, Lock, CheckCircle, Copy, Users, TrendingUp, Wallet, Info, Target, Medal, Award, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Gift, Crown, Zap, Copy, Users, TrendingUp, Info, Target, Medal, Award, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useToast } from "@/components/ui/toast";
-import { getWalletsFromStorage } from "@/lib/solana-wallet-creator";
 
 // Tooltip component
 function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
@@ -23,9 +22,9 @@ function Tooltip({ content, children }: { content: string; children: React.React
         {children}
       </div>
       {show && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg text-xs max-w-xs z-50 whitespace-normal">
+        <div className="absolute top-0 left-full ml-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg text-xs max-w-[300px] z-[100] whitespace-normal">
           {content}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-popover" />
+          <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-transparent border-r-popover" />
         </div>
       )}
     </div>
@@ -33,9 +32,8 @@ function Tooltip({ content, children }: { content: string; children: React.React
 }
 
 export default function RewardsPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { addToast } = useToast();
-  const [wallets, setWallets] = useState<any[]>([]);
   
   // Challenge state
   const [currentDay, setCurrentDay] = useState(1);
@@ -56,27 +54,22 @@ export default function RewardsPage() {
   });
 
   useEffect(() => {
-    // Load wallets
-    const loadedWallets = getWalletsFromStorage();
-    setWallets(loadedWallets);
-    
-    // Simulate loading volume (in real app, fetch from blockchain)
-    const totalVolume = loadedWallets.reduce((acc, wallet) => acc + (Math.random() * 0.5), 0);
-    setTodayVolume(Math.min(totalVolume, 1.0));
+    // In real app, fetch trading volume from blockchain
+    setTodayVolume(0);
   }, []);
 
   const handleCopyLink = () => {
     const referralLink = `${window.location.origin}/?ref=your_username`;
     navigator.clipboard.writeText(referralLink);
-    addToast("success", "Copied!", "Referral link copied to clipboard");
+    addToast("success", "Copied!", language === 'en' ? "Referral link copied" : "Ссылка скопирована");
   };
 
   const handleClaim = () => {
     if (claimAmount > 0) {
-      addToast("success", "Claimed!", `${claimAmount} SOL has been claimed`);
+      addToast("success", "Claimed!", language === 'en' ? `${claimAmount} SOL claimed` : `${claimAmount} SOL получено`);
       setClaimAmount(0);
     } else {
-      addToast("info", "Nothing to claim", "No rewards available yet");
+      addToast("info", "Nothing to claim", language === 'en' ? "No rewards available" : "Награды отсутствуют");
     }
   };
 
@@ -85,314 +78,288 @@ export default function RewardsPage() {
   const isCurrentDay = (day: number) => day === currentDay;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-teal-500/5 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-purple-600">
-            <Gift className="h-7 w-7 text-white" />
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-purple-600">
+            <Gift className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {t("nav.rewards")}
             </h1>
-            <p className="text-muted-foreground">
-              Earn rewards by completing challenges and inviting friends
+            <p className="text-sm text-muted-foreground">
+              {language === 'en' ? "Earn rewards by completing challenges" : "Зарабатывайте награды за выполнение задач"}
             </p>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4">
           {/* Left Column - Challenge & Stats (2/3) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             {/* Weekly Challenge Card */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-teal-500" />
-                    <h2 className="text-lg font-bold">Weekly Challenge</h2>
-                    <Tooltip content="Complete the weekly challenge and get 50% cashback. For completing each day of the challenge - up to 0.05 SOL and/or 25% cashback for 24 hours">
+                    <Target className="h-4 w-4 text-teal-500" />
+                    <h2 className="text-base font-bold">{language === 'en' ? "Weekly Challenge" : "Недельный челлендж"}</h2>
+                    <Tooltip content={language === 'en' 
+                      ? "Complete the weekly challenge and get 50% cashback. For completing each day - up to 0.05 SOL and/or 25% cashback for 24h"
+                      : "Выполните недельный челлендж и получите 50% кэшбэк. За выполнение каждого дня - до 0.05 SOL и/или кэшбэк 25% на сутки"
+                    }>
                       <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                     </Tooltip>
                   </div>
-                  <Badge className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold">
-                    {currentDay} of 7
+                  <Badge variant="outline" className="text-xs">
+                    {currentDay}/7
                   </Badge>
                 </div>
 
                 {/* Progress Bar with Days */}
-                <div className="flex items-center justify-between mb-6">
-                  {challengeDays.map((day) => (
-                    <div key={day} className="flex flex-col items-center gap-2">
-                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                        isDayCompleted(day)
-                          ? "bg-gradient-to-br from-green-500 to-emerald-500 border-green-400"
-                          : isCurrentDay(day)
-                          ? "bg-gradient-to-br from-teal-500 to-cyan-500 border-teal-400 animate-pulse"
-                          : "bg-muted border-border"
-                      }`}>
-                        {isDayCompleted(day) ? (
-                          <Gift className="h-5 w-5 text-white" />
-                        ) : (
-                          <span className="text-sm font-bold">{day}</span>
-                        )}
+                <div className="flex items-center gap-1 mb-4">
+                  {challengeDays.map((day, idx) => (
+                    <React.Fragment key={day}>
+                      <div className="flex flex-col items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${
+                          isDayCompleted(day)
+                            ? "bg-green-500/20 border-green-500/40"
+                            : isCurrentDay(day)
+                            ? "bg-teal-500/20 border-teal-500/40"
+                            : "bg-muted border-border"
+                        }`}>
+                          {isDayCompleted(day) ? (
+                            <Gift className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <span className="text-xs font-semibold">{day}</span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">Day {day}</span>
-                    </div>
+                      {idx < challengeDays.length - 1 && (
+                        <div className="w-6 h-px bg-border flex items-center justify-end">
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      )}
+                    </React.Fragment>
                   ))}
                 </div>
 
                 {/* Today's Progress */}
-                <div className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-teal-500" />
-                      <span className="font-semibold">Today's Progress</span>
+                      <Zap className="h-4 w-4 text-teal-500" />
+                      <span className="text-sm font-medium">{language === 'en' ? "Today" : "Сегодня"}</span>
                     </div>
-                    <span className="text-sm font-bold text-teal-600 dark:text-teal-400">
-                      {todayVolume.toFixed(3)} / {targetVolume} SOL
+                    <span className="text-sm font-semibold">
+                      {todayVolume.toFixed(2)} / {targetVolume} SOL
                     </span>
                   </div>
-                  
-                  {/* Progress bar */}
-                  <div className="h-3 bg-muted rounded-full overflow-hidden mb-3">
+
+                  <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
                     <div 
                       className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-500"
                       style={{ width: `${(todayVolume / targetVolume) * 100}%` }}
                     />
                   </div>
-                  
-                  <p className="text-sm text-muted-foreground">
+
+                  <p className="text-xs text-muted-foreground">
                     {todayVolume >= targetVolume 
-                      ? "🎉 Challenge completed! Reward ready to claim" 
-                      : `${(targetVolume - todayVolume).toFixed(3)} SOL remaining for today's gift`}
+                      ? (language === 'en' ? "✓ Reward ready to claim" : "✓ Награда готова к получению") 
+                      : (language === 'en' 
+                          ? `${(targetVolume - todayVolume).toFixed(2)} SOL to gift` 
+                          : `${(targetVolume - todayVolume).toFixed(2)} SOL до подарка`
+                        )
+                    }
                   </p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Reward Cards */}
-            <div className="grid md:grid-cols-3 gap-4">
-              {/* Cashback Rate */}
-              <Card className="border-border/50 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur">
-                <CardContent className="p-4 text-center">
-                  <Crown className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground mb-1">Cashback Rate</p>
-                  <p className="text-3xl font-bold text-purple-500">7%</p>
+            <div className="grid md:grid-cols-3 gap-3">
+              <Card className="border-border bg-card">
+                <CardContent className="p-3 text-center">
+                  <Crown className="h-6 w-6 text-foreground mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? "Cashback" : "Кэшбэк"}</p>
+                  <p className="text-xl font-bold">7%</p>
                 </CardContent>
               </Card>
 
-              {/* Claimable */}
-              <Card className="border-border/50 bg-gradient-to-br from-teal-500/10 to-cyan-500/10 backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Medal className="h-6 w-6 text-teal-500" />
+              <Card className="border-border bg-card">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <Medal className="h-5 w-5 text-foreground" />
                     <Button
                       onClick={handleClaim}
                       disabled={claimAmount === 0}
-                      className="h-7 px-3 text-xs bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50"
+                      variant="outline"
+                      className="h-6 px-2 text-xs"
                     >
-                      Claim
+                      {language === 'en' ? "Claim" : "Забрать"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-1">Claimable</p>
-                  <p className="text-2xl font-bold text-teal-500">{claimAmount.toFixed(4)} SOL</p>
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? "Available" : "Доступно"}</p>
+                  <p className="text-lg font-bold">{claimAmount.toFixed(4)} SOL</p>
                 </CardContent>
               </Card>
 
-              {/* CashBack Coins */}
-              <Card className="border-border/50 bg-gradient-to-br from-orange-500/10 to-yellow-500/10 backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Award className="h-6 w-6 text-orange-500" />
+              <Card className="border-border bg-card">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <Award className="h-5 w-5 text-foreground" />
                     <Button
                       onClick={handleClaim}
                       disabled={cashbackCoins === 0}
-                      className="h-7 px-3 text-xs bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 disabled:opacity-50"
+                      variant="outline"
+                      className="h-6 px-2 text-xs"
                     >
-                      Claim
+                      {language === 'en' ? "Claim" : "Забрать"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-1">CashBack Coins</p>
-                  <p className="text-2xl font-bold text-orange-500">{cashbackCoins}</p>
+                  <p className="text-xs text-muted-foreground">CashBack Coins</p>
+                  <p className="text-lg font-bold">{cashbackCoins}</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Referral Program */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-teal-500" />
-                    <h2 className="text-lg font-bold">Referral Program</h2>
+                    <Users className="h-4 w-4 text-foreground" />
+                    <h2 className="text-base font-bold">{language === 'en' ? "Referrals" : "Рефералы"}</h2>
                   </div>
                   <Button
                     onClick={handleCopyLink}
-                    className="bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white"
+                    variant="outline"
+                    className="h-7 px-3 text-xs"
                   >
-                    Invite Friends
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    {language === 'en' ? "Invite" : "Пригласить"}
+                    <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
 
-                {/* Referral Tiers */}
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  <div className="text-center p-3 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
-                    <p className="text-xs text-muted-foreground mb-1">Tier 1</p>
-                    <p className="text-xl font-bold text-yellow-500">40%</p>
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground">Tier 1</p>
+                    <p className="text-lg font-bold">40%</p>
                   </div>
-                  <div className="text-center p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
-                    <p className="text-xs text-muted-foreground mb-1">Tier 2</p>
-                    <p className="text-xl font-bold text-purple-500">5%</p>
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground">Tier 2</p>
+                    <p className="text-lg font-bold">5%</p>
                   </div>
-                  <div className="text-center p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl border border-blue-500/20">
-                    <p className="text-xs text-muted-foreground mb-1">Tier 3</p>
-                    <p className="text-xl font-bold text-blue-500">2%</p>
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground">Tier 3</p>
+                    <p className="text-lg font-bold">2%</p>
                   </div>
-                  <div className="text-center p-3 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
-                    <p className="text-xs text-muted-foreground mb-1">Call Ref</p>
-                    <p className="text-xl font-bold text-green-500">40%</p>
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground">Call Ref</p>
+                    <p className="text-lg font-bold">40%</p>
                   </div>
                 </div>
 
-                {/* Referral Link */}
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border/30">
-                  <code className="flex-1 text-sm font-mono text-muted-foreground">
-                    https://onedex.io/?ref=your_username
+                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                  <code className="flex-1 text-xs font-mono text-muted-foreground">
+                    onedex.io/?ref=your_username
                   </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopyLink}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Copy className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-6 w-6 p-0">
+                    <Copy className="h-3 w-3" />
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Tasks Button */}
-            <Button
-              className="w-full h-14 text-lg bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 font-bold shadow-lg shadow-teal-500/20"
-            >
-              <Medal className="h-5 w-5 mr-2" />
-              View All Tasks
+            <Button className="w-full h-12 bg-foreground text-background hover:bg-foreground/90">
+              <Medal className="h-4 w-4 mr-2" />
+              {language === 'en' ? "All Tasks" : "Все задания"}
             </Button>
           </div>
 
-          {/* Right Column - Reward Stats (1/3) */}
+          {/* Right Column - Stats (1/3) */}
           <div className="space-y-4">
-            {/* Stats Card */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-teal-500" />
-                  Reward Statistics
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-                    <div className="flex items-center gap-2">
-                      <Crown className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm font-medium">Total Cashback</span>
-                    </div>
-                    <span className="font-bold text-purple-500">{totalCashback.toFixed(4)} SOL</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 rounded-lg border border-teal-500/20">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-teal-500" />
-                      <span className="text-sm font-medium">Referrals</span>
-                    </div>
-                    <span className="font-bold text-teal-500">{referralStats.totalEarned.toFixed(4)} SOL</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/20">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium">Call Rewards</span>
-                    </div>
-                    <span className="font-bold text-green-500">{referralStats.callRewards.toFixed(4)} SOL</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-500/10 to-yellow-500/10 rounded-lg border border-orange-500/20">
-                    <div className="flex items-center gap-2">
-                      <Award className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm font-medium">Sales Alerts</span>
-                    </div>
-                    <span className="font-bold text-orange-500">{referralStats.salesAlerts.toFixed(4)} SOL</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Referral Users by Tier */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-teal-500" />
-                  Referral Users
-                </h2>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">1</span>
-                      </div>
-                      <span className="text-sm font-medium">Tier 1</span>
-                    </div>
-                    <span className="font-bold">{referralStats.tier1}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">2</span>
-                      </div>
-                      <span className="text-sm font-medium">Tier 2</span>
-                    </div>
-                    <span className="font-bold">{referralStats.tier2}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">3</span>
-                      </div>
-                      <span className="text-sm font-medium">Tier 3</span>
-                    </div>
-                    <span className="font-bold">{referralStats.tier3}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Connected Wallets */}
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-teal-500" />
-                  Connected Wallets
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <h2 className="text-base font-bold mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-foreground" />
+                  {language === 'en' ? "Statistics" : "Статистика"}
                 </h2>
                 
                 <div className="space-y-2">
-                  {wallets.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No wallets connected
-                    </p>
-                  ) : (
-                    wallets.map((wallet) => (
-                      <div key={wallet.id} className="p-2 bg-muted/50 rounded-lg border border-border/30">
-                        <code className="text-xs font-mono text-muted-foreground">
-                          {wallet.publicKey.slice(0, 8)}...{wallet.publicKey.slice(-8)}
-                        </code>
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-3.5 w-3.5 text-foreground" />
+                      <span className="text-xs">{language === 'en' ? "Cashback" : "Кэшбэк"}</span>
+                    </div>
+                    <span className="font-semibold text-sm">{totalCashback.toFixed(4)} SOL</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-foreground" />
+                      <span className="text-xs">{language === 'en' ? "Referrals" : "Рефералы"}</span>
+                    </div>
+                    <span className="font-semibold text-sm">{referralStats.totalEarned.toFixed(4)} SOL</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5 text-foreground" />
+                      <span className="text-xs">{language === 'en' ? "Calls" : "Коллы"}</span>
+                    </div>
+                    <span className="font-semibold text-sm">{referralStats.callRewards.toFixed(4)} SOL</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-3.5 w-3.5 text-foreground" />
+                      <span className="text-xs">{language === 'en' ? "Alerts" : "Алерты"}</span>
+                    </div>
+                    <span className="font-semibold text-sm">{referralStats.salesAlerts.toFixed(4)} SOL</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <h2 className="text-base font-bold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-foreground" />
+                  {language === 'en' ? "By Tier" : "По уровням"}
+                </h2>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-[10px] font-bold">1</span>
                       </div>
-                    ))
-                  )}
+                      <span className="text-sm">Tier 1</span>
+                    </div>
+                    <span className="font-semibold">{referralStats.tier1}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-[10px] font-bold">2</span>
+                      </div>
+                      <span className="text-sm">Tier 2</span>
+                    </div>
+                    <span className="font-semibold">{referralStats.tier2}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                        <span className="text-[10px] font-bold">3</span>
+                      </div>
+                      <span className="text-sm">Tier 3</span>
+                    </div>
+                    <span className="font-semibold">{referralStats.tier3}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
