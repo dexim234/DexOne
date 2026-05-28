@@ -118,8 +118,19 @@ export default function Header() {
         loadWallets();
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    // Listen for custom wallet change events from other components
+    const handleCustomWalletChange = (e: CustomEvent) => {
+      const newId = e.detail as string;
+      if (newId && newId !== activeWalletId) {
+        setActiveWalletId(newId);
+      }
+    };
+    window.addEventListener('activeWalletChanged', handleCustomWalletChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('activeWalletChanged', handleCustomWalletChange as EventListener);
+    };
   }, []);
 
   // Save active wallet ID to localStorage when it changes
@@ -426,6 +437,7 @@ export default function Header() {
                             e.stopPropagation();
                             setActiveWalletId(wallet.id);
                             localStorage.setItem('active-wallet-id', wallet.id);
+                            window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: wallet.id }));
                           }}
                         >
                           <div
