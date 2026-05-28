@@ -1,19 +1,20 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from "firebase/firestore";
 
+// Fallback config for local development without .env.local
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBPyESAvFn4wXG9OJjQv1zFcGnkKahJHE8",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "onedex-osnova.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "onedex-osnova",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "onedex-osnova.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1032769450215",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1032769450215:web:3711c31a94f58d342c3242"
 };
 
-// Validate Firebase config
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  console.error("Firebase configuration missing! Please set environment variables.");
-}
+console.log("🔥 Firebase Config:", {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain
+});
 
 // Initialize Firebase - check if already initialized
 let app: FirebaseApp | null = null;

@@ -29,7 +29,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useToast } from "@/components/ui/toast";
 import { useUser } from "@/contexts/UserContext";
-import { validateImageFile } from "@/lib/firebase-storage";
 
 interface SocialLink {
   id: string;
@@ -49,6 +48,16 @@ export default function ProfilePage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Convert file to Base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   useEffect(() => {
     if (profile) {
@@ -80,9 +89,15 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validation = validateImageFile(file);
-    if (!validation.valid) {
-      addToast("error", "Invalid File", validation.error || "Invalid file");
+    // Check file size (max 500KB for Firestore)
+    if (file.size > 500 * 1024) {
+      addToast("error", "File Too Large", "Image must be less than 500KB");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      addToast("error", "Invalid File", "Please select an image file");
       return;
     }
 
@@ -94,12 +109,18 @@ export default function ProfilePage() {
 
     setIsUploading(true);
     try {
-      await uploadAvatar(selectedFile);
+      // Convert to Base64
+      const base64 = await fileToBase64(selectedFile);
+      
+      // Save to Firestore (stored as base64 string)
+      await updateProfile({ avatarUrl: base64 });
+      
       addToast("success", "Avatar Uploaded", "Your avatar has been updated");
       setShowUploadDialog(false);
       setSelectedFile(null);
     } catch (err) {
-      addToast("error", "Upload Failed", "Failed to upload avatar");
+      console.error("Upload failed:", err);
+      addToast("error", "Upload Failed", "Failed to upload avatar (may be too large)");
     } finally {
       setIsUploading(false);
     }
@@ -107,12 +128,8 @@ export default function ProfilePage() {
 
   const handleRemoveAvatar = async () => {
     try {
-      if (profile?.avatarUrl) {
-        const { deleteUserImage } = await import("@/lib/firebase-storage");
-        await deleteUserImage(profile.avatarUrl);
-        await updateProfile({ avatarUrl: undefined });
-        addToast("success", "Avatar Removed", "Your avatar has been removed");
-      }
+      await updateProfile({ avatarUrl: undefined });
+      addToast("success", "Avatar Removed", "Your avatar has been removed");
     } catch (err) {
       addToast("error", "Remove Failed", "Failed to remove avatar");
     }
@@ -238,45 +255,45 @@ export default function ProfilePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-teal/5 via-transparent to-purple/5" />
           <CardContent className="p-6 relative">
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="relative shrink-0 group">
-                {profile?.avatarUrl ? (
-                  <div className="relative">
-                    <img 
-                      src={profile.avatarUrl} 
-                      alt="Avatar" 
-                      className="h-24 w-24 rounded-3xl object-cover shadow-xl"
-                    />
-                    <button
-                      onClick={() => handleRemoveAvatar()}
-                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                      title="Remove avatar"
-                    >
-                      <X className="h-4 w-4 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-teal via-teal-light to-teal-dark flex items-center justify-center shadow-xl">
-                    <User className="h-12 w-12 text-white" />
-                  </div>
-                )}
-                <button
-                  onClick={() => setShowUploadDialog(true)}
-                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-xl bg-background border border-border/50 flex items-center justify-center shadow-sm hover:bg-accent transition-colors"
-                  title="Upload avatar"
-                >
-                  <Camera className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-              <div className="flex-1 text-center sm:text-left space-y-3 w-full">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Nickname</label>
-                  <Input
-                    placeholder="Enter your nickname..."
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    className="max-w-sm border-teal-500/20 focus:border-teal-500 bg-background/50"
-                  />
+                <div className="relative shrink-0 group">
+                  {profile?.avatarUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={profile.avatarUrl} 
+                        alt="Avatar" 
+                        className="h-24 w-24 rounded-3xl object-cover shadow-xl"
+                      />
+                      <button
+                        onClick={() => handleRemoveAvatar()}
+                        className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        title="Remove avatar"
+                      >
+                        <X className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-teal via-teal-light to-teal-dark flex items-center justify-center shadow-xl">
+                      <User className="h-12 w-12 text-white" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setShowUploadDialog(true)}
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-xl bg-background border border-border/50 flex items-center justify-center shadow-sm hover:bg-accent transition-colors"
+                    title="Upload avatar"
+                  >
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 </div>
+                <div className="flex-1 text-center sm:text-left space-y-3 w-full">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Nickname</label>
+                    <Input
+                      placeholder="Enter your nickname..."
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="max-w-sm border-teal-500/20 focus:border-teal-500 bg-background/50"
+                    />
+                  </div>
                 {activeWallet && (
                   <div className="flex items-center gap-2 justify-center sm:justify-start">
                     <Badge className="bg-gradient-to-r from-teal-500 to-purple-600 text-white border-0">
@@ -429,14 +446,14 @@ export default function ProfilePage() {
               Upload Avatar
             </DialogTitle>
             <DialogDescription>
-              Select an image file (JPEG, PNG, GIF, WebP, max 5MB)
+              Select an image file (max 500KB, stored in Firestore)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-teal-500/50 transition-colors">
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
+                accept="image/*"
                 onChange={handleFileSelect}
                 className="hidden"
                 id="avatar-upload"
@@ -458,7 +475,7 @@ export default function ProfilePage() {
                     {selectedFile ? selectedFile.name : "Click to select image"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : "or drag and drop"}
+                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : "Max 500KB"}
                   </p>
                 </div>
               </label>
