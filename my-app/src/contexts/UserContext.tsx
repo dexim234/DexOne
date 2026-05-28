@@ -114,13 +114,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!userId) throw new Error("User not authenticated");
+    console.log("💾 updateProfile called, userId:", userId, "updates:", updates);
     try {
+      console.log("📡 Updating Firestore profile...");
       await updateUserProfile(userId, updates);
+      console.log("✅ Profile updated successfully");
       setProfile(prev => prev ? { ...prev, ...updates } : null);
       addToast("success", "Profile Updated", "Your profile has been saved");
-    } catch (err) {
-      console.error("Failed to update profile:", err);
-      addToast("error", "Update Failed", "Failed to save profile changes");
+    } catch (err: any) {
+      console.error("❌ Failed to update profile:", err);
+      console.error("Error code:", err.code);
+      console.error("Error message:", err.message);
+      addToast("error", "Update Failed", "Failed to save profile");
       throw err;
     }
   };
@@ -131,7 +136,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const encryptedWallets = await getWalletsForUser(userId);
       
       if (encryptedWallets.length > 0) {
-        // Decrypt private keys from Firebase
         const decryptedWallets: WalletData[] = await Promise.all(
           encryptedWallets.map(async (ew) => {
             const privateKey = await decryptWalletPrivateKey(ew.encryptedPrivateKey);
@@ -147,11 +151,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         setWallets(decryptedWallets);
       } else {
-        // Fallback to localStorage if no wallets in Firebase
         const localWallets = getWalletsFromStorage();
         setWallets(localWallets);
         
-        // Save local wallets to Firebase
         for (const wallet of localWallets) {
           try {
             await addWalletToFirestore({
@@ -166,7 +168,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Set active wallet
       if (wallets.length > 0 && !activeWalletId) {
         const savedActive = localStorage.getItem('active-wallet-id');
         if (savedActive && wallets.find(w => w.id === savedActive)) {
@@ -175,9 +176,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           setActiveWalletId(wallets[0].id);
         }
       }
-    } catch (err) {
-      console.error("Failed to load wallets:", err);
-      // Fallback to localStorage
+    } catch (err: any) {
+      console.error("Failed to load wallets from Firebase:", err.message);
       const localWallets = getWalletsFromStorage();
       setWallets(localWallets);
       const savedActive = localStorage.getItem('active-wallet-id');
