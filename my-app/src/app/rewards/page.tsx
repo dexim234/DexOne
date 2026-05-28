@@ -104,11 +104,8 @@ export default function RewardsPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-teal-500" />
-                    <h2 className="text-base font-bold">{language === 'en' ? "Weekly Challenge" : "Недельный челлендж"}</h2>
-                    <Tooltip content={language === 'en' 
-                      ? "Complete the weekly challenge and get 50% cashback. For completing each day - up to 0.05 SOL and/or 25% cashback for 24h"
-                      : "Выполните недельный челлендж и получите 50% кэшбэк. За выполнение каждого дня - до 0.05 SOL и/или кэшбэк 25% на сутки"
-                    }>
+                    <h2 className="text-base font-bold">{t("rewards.weeklyChallenge")}</h2>
+                    <Tooltip content={t("rewards.challengeTooltip")}>
                       <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                     </Tooltip>
                   </div>
@@ -150,7 +147,7 @@ export default function RewardsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-teal-500" />
-                      <span className="text-sm font-medium">{language === 'en' ? "Today" : "Сегодня"}</span>
+                      <span className="text-sm font-medium">{t("rewards.today")}</span>
                     </div>
                     <span className="text-sm font-semibold">
                       {todayVolume.toFixed(2)} / {targetVolume} SOL
@@ -181,8 +178,8 @@ export default function RewardsPage() {
             <div className="grid md:grid-cols-3 gap-3">
               <Card className="border-border bg-card">
                 <CardContent className="p-3 text-center">
-                  <Crown className="h-6 w-6 text-foreground mx-auto mb-1" />
-                  <p className="text-xs text-muted-foreground">{language === 'en' ? "Cashback" : "Кэшбэк"}</p>
+                  <Crown className="h-6 w-6 text-teal-500 mx-auto mb-1" />
+                  <p className="text-xs text-muted-foreground">{t("rewards.cashback")}</p>
                   <p className="text-xl font-bold">7%</p>
                 </CardContent>
               </Card>
@@ -190,17 +187,17 @@ export default function RewardsPage() {
               <Card className="border-border bg-card">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <Medal className="h-5 w-5 text-foreground" />
+                    <Medal className="h-5 w-5 text-teal-500" />
                     <Button
                       onClick={handleClaim}
                       disabled={claimAmount === 0}
                       variant="outline"
-                      className="h-6 px-2 text-xs"
+                      className="h-6 px-2 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
                     >
-                      {language === 'en' ? "Claim" : "Забрать"}
+                      {t("rewards.claim")}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">{language === 'en' ? "Available" : "Доступно"}</p>
+                  <p className="text-xs text-muted-foreground">{t("rewards.available")}</p>
                   <p className="text-lg font-bold">{claimAmount.toFixed(4)} SOL</p>
                 </CardContent>
               </Card>
@@ -208,14 +205,14 @@ export default function RewardsPage() {
               <Card className="border-border bg-card">
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-1">
-                    <Award className="h-5 w-5 text-foreground" />
+                    <Award className="h-5 w-5 text-teal-500" />
                     <Button
                       onClick={handleClaim}
                       disabled={cashbackCoins === 0}
                       variant="outline"
-                      className="h-6 px-2 text-xs"
+                      className="h-6 px-2 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
                     >
-                      {language === 'en' ? "Claim" : "Забрать"}
+                      {t("rewards.claim")}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">CashBack Coins</p>
@@ -229,15 +226,15 @@ export default function RewardsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-foreground" />
-                    <h2 className="text-base font-bold">{language === 'en' ? "Referrals" : "Рефералы"}</h2>
+                    <Users className="h-4 w-4 text-teal-500" />
+                    <h2 className="text-base font-bold">{t("rewards.referrals")}</h2>
                   </div>
                   <Button
                     onClick={handleCopyLink}
                     variant="outline"
-                    className="h-7 px-3 text-xs"
+                    className="h-7 px-3 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
                   >
-                    {language === 'en' ? "Invite" : "Пригласить"}
+                    {t("rewards.invite")}
                     <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
@@ -271,11 +268,6 @@ export default function RewardsPage() {
                 </div>
               </CardContent>
             </Card>
-
-            <Button className="w-full h-12 bg-foreground text-background hover:bg-foreground/90">
-              <Medal className="h-4 w-4 mr-2" />
-              {language === 'en' ? "All Tasks" : "Все задания"}
-            </Button>
           </div>
 
           {/* Right Column - Stats (1/3) */}
@@ -283,39 +275,39 @@ export default function RewardsPage() {
             <Card className="border-border bg-card">
               <CardContent className="p-4">
                 <h2 className="text-base font-bold mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-foreground" />
-                  {language === 'en' ? "Statistics" : "Статистика"}
+                  <TrendingUp className="h-4 w-4 text-teal-500" />
+                  {t("rewards.statistics")}
                 </h2>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Crown className="h-3.5 w-3.5 text-foreground" />
-                      <span className="text-xs">{language === 'en' ? "Cashback" : "Кэшбэк"}</span>
+                      <Crown className="h-3.5 w-3.5 text-teal-500" />
+                      <span className="text-xs">{t("rewards.cashback")}</span>
                     </div>
                     <span className="font-semibold text-sm">{totalCashback.toFixed(4)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Users className="h-3.5 w-3.5 text-foreground" />
-                      <span className="text-xs">{language === 'en' ? "Referrals" : "Рефералы"}</span>
+                      <Users className="h-3.5 w-3.5 text-teal-500" />
+                      <span className="text-xs">{t("rewards.referrals")}</span>
                     </div>
                     <span className="font-semibold text-sm">{referralStats.totalEarned.toFixed(4)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5 text-foreground" />
-                      <span className="text-xs">{language === 'en' ? "Calls" : "Коллы"}</span>
+                      <Zap className="h-3.5 w-3.5 text-teal-500" />
+                      <span className="text-xs">{t("rewards.calls")}</span>
                     </div>
                     <span className="font-semibold text-sm">{referralStats.callRewards.toFixed(4)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Award className="h-3.5 w-3.5 text-foreground" />
-                      <span className="text-xs">{language === 'en' ? "Alerts" : "Алерты"}</span>
+                      <Award className="h-3.5 w-3.5 text-teal-500" />
+                      <span className="text-xs">{t("rewards.alerts")}</span>
                     </div>
                     <span className="font-semibold text-sm">{referralStats.salesAlerts.toFixed(4)} SOL</span>
                   </div>
@@ -327,7 +319,7 @@ export default function RewardsPage() {
               <CardContent className="p-4">
                 <h2 className="text-base font-bold mb-3 flex items-center gap-2">
                   <Users className="h-4 w-4 text-foreground" />
-                  {language === 'en' ? "By Tier" : "По уровням"}
+                  {t("rewards.byTier")}
                 </h2>
                 
                 <div className="space-y-2">
