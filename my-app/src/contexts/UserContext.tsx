@@ -279,12 +279,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const deleteWalletLocal = async (walletId: string): Promise<void> => {
     try {
       await deleteWallet(walletId);
-      setWallets(prev => prev.filter(w => w.id !== walletId));
       
-      if (activeWalletId === walletId) {
-        const remaining = wallets.filter(w => w.id !== walletId);
-        setActiveWalletId(remaining.length > 0 ? remaining[0].id : null);
-      }
+      // Update local state immediately
+      setWallets(prev => {
+        const filtered = prev.filter(w => w.id !== walletId);
+        // Update active wallet if needed
+        if (activeWalletId === walletId && filtered.length > 0) {
+          setActiveWalletId(filtered[0].id);
+        } else if (activeWalletId === walletId && filtered.length === 0) {
+          setActiveWalletId(null);
+        }
+        return filtered;
+      });
+      
+      // Reload wallets from Firebase to ensure sync
+      await loadWallets();
       
       addToast("info", "Wallet Deleted", "Wallet has been removed");
     } catch (err) {
