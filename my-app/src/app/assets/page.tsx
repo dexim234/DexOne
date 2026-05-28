@@ -103,6 +103,19 @@ export default function AssetsPage() {
     if (savedActive) {
       setActiveWalletId(savedActive);
     }
+
+    // Listen for wallet changes from other components (e.g. Header dropdown)
+    const handleWalletChange = (e: CustomEvent) => {
+      const newId = e.detail as string;
+      if (newId) {
+        setActiveWalletId(newId);
+      }
+    };
+    window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -634,7 +647,10 @@ export default function AssetsPage() {
                                 ? "border-teal-500 bg-gradient-to-br from-teal-500/10 via-teal-500/3 to-transparent shadow-lg shadow-teal-500/15"
                                 : "border-transparent bg-card/60 hover:border-teal-500/20 hover:bg-card/80 hover:shadow-md"
                             }`}
-                            onClick={() => setActiveWalletId(wallet.id)}
+                            onClick={() => {
+                              setActiveWalletId(wallet.id);
+                              window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: wallet.id }));
+                            }}
                           >
                             {/* Active indicator glow */}
                             {isActive && (
