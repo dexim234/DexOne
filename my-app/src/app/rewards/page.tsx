@@ -271,9 +271,9 @@ export default function RewardsPage() {
           </div>
 
           {/* Right Column - Stats (1/3) */}
-          <div className="space-y-4">
-            <Card className="border-border bg-card">
-              <CardContent className="p-4">
+          <div className="flex flex-col gap-4">
+            <Card className="border-border bg-card flex-1">
+              <CardContent className="p-4 h-full">
                 <h2 className="text-base font-bold mb-3 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-teal-500" />
                   {t("rewards.statistics")}
@@ -315,10 +315,10 @@ export default function RewardsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-card">
-              <CardContent className="p-4">
+            <Card className="border-border bg-card flex-1">
+              <CardContent className="p-4 h-full">
                 <h2 className="text-base font-bold mb-3 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-foreground" />
+                  <Users className="h-4 w-4 text-teal-500" />
                   {t("rewards.byTier")}
                 </h2>
                 
