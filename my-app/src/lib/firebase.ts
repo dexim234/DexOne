@@ -2,13 +2,18 @@ import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBPyESAvFn4wXG9OJjQv1zFcGnkKahJHE8",
-  authDomain: "onedex-osnova.firebaseapp.com",
-  projectId: "onedex-osnova",
-  storageBucket: "onedex-osnova.firebasestorage.app",
-  messagingSenderId: "1032769450215",
-  appId: "1:1032769450215:web:3711c31a94f58d342c3242"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
+
+// Validate Firebase config
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("Firebase configuration missing! Please set environment variables.");
+}
 
 // Initialize Firebase - check if already initialized
 let app: FirebaseApp | null = null;

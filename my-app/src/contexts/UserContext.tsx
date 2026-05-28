@@ -13,6 +13,7 @@ import {
   UserProfile,
   EncryptedWalletData
 } from "@/lib/firebase-user";
+import { getWalletsFromStorage, saveWalletsToStorage, WalletData as LocalWalletData } from "@/lib/solana-wallet-creator";
 import { useToast } from "@/components/ui/toast";
 
 interface WalletData {
@@ -31,21 +32,17 @@ interface UserContextType {
   activeWalletId: string | null;
   error: string | null;
   
-  // Profile methods
   loadProfile: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  
-  // Wallet methods
   loadWallets: () => Promise<void>;
   createWallet: (name?: string) => Promise<WalletData>;
   importWallet: (privateKey: string, name?: string) => Promise<WalletData>;
   renameWallet: (walletId: string, name: string) => Promise<void>;
   deleteWalletLocal: (walletId: string) => Promise<void>;
   setActiveWallet: (walletId: string) => void;
-  
-  // Avatar
   uploadAvatar: (file: File) => Promise<string>;
   removeAvatar: () => Promise<void>;
+  isFirebaseConnected: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -57,6 +54,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
   
   const { addToast } = useToast();
 
@@ -72,9 +70,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       try {
         const uid = await initializeAuth();
         setUserId(uid);
+        setIsFirebaseConnected(true);
       } catch (err) {
-        setError("Failed to initialize authentication");
-        console.error(err);
+        console.error("Firebase auth failed:", err);
+        setIsFirebaseConnected(false);
+        const localWallets = getWalletsFromStorage();
+        setWallets(localWallets);
+        const savedActive = localStorage.getItem('active-wallet-id');
+        if (savedActive && localWallets.find(w => w.id === savedActive)) {
+          setActiveWalletId(savedActive);
+        } else if (localWallets.length > 0) {
+          setActiveWalletId(localWallets[0].id);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -82,19 +89,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
-  // Load profile when userId is available
   useEffect(() => {
-    if (userId) {
+    if (userId && isFirebaseConnected) {
       loadProfile();
     }
-  }, [userId]);
+  }, [userId, isFirebaseConnected]);
 
   // Load wallets when userId is available
   useEffect(() => {
-    if (userId) {
+    if (userId && isFirebaseConnected) {
       loadWallets();
     }
-  }, [userId]);
+  }, [userId, isFirebaseConnected]);
 
   const loadProfile = async () => {
     if (!userId) return;
@@ -124,34 +130,63 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const encryptedWallets = await getWalletsForUser(userId);
       
-      // Decrypt private keys
-      const decryptedWallets: WalletData[] = await Promise.all(
-        encryptedWallets.map(async (ew) => {
-          const privateKey = await decryptWalletPrivateKey(ew.encryptedPrivateKey);
-          return {
-            id: ew.id!,
-            name: ew.name,
-            publicKey: ew.publicKey,
-            privateKeyBase58: privateKey,
-            createdAt: ew.createdAt?.toDate().getTime() || Date.now()
-          };
-        })
-      );
-      
-      setWallets(decryptedWallets);
+      if (encryptedWallets.length > 0) {
+        // Decrypt private keys from Firebase
+        const decryptedWallets: WalletData[] = await Promise.all(
+          encryptedWallets.map(async (ew) => {
+            const privateKey = await decryptWalletPrivateKey(ew.encryptedPrivateKey);
+            return {
+              id: ew.id!,
+              name: ew.name,
+              publicKey: ew.publicKey,
+              privateKeyBase58: privateKey,
+              createdAt: ew.createdAt?.toDate().getTime() || Date.now()
+            };
+          })
+        );
+        
+        setWallets(decryptedWallets);
+      } else {
+        // Fallback to localStorage if no wallets in Firebase
+        const localWallets = getWalletsFromStorage();
+        setWallets(localWallets);
+        
+        // Save local wallets to Firebase
+        for (const wallet of localWallets) {
+          try {
+            await addWalletToFirestore({
+              name: wallet.name,
+              publicKey: wallet.publicKey,
+              privateKey: wallet.privateKeyBase58,
+              userId
+            });
+          } catch (err) {
+            console.error("Failed to sync wallet to Firebase:", err);
+          }
+        }
+      }
       
       // Set active wallet
-      if (decryptedWallets.length > 0 && !activeWalletId) {
+      if (wallets.length > 0 && !activeWalletId) {
         const savedActive = localStorage.getItem('active-wallet-id');
-        if (savedActive && decryptedWallets.find(w => w.id === savedActive)) {
+        if (savedActive && wallets.find(w => w.id === savedActive)) {
           setActiveWalletId(savedActive);
         } else {
-          setActiveWalletId(decryptedWallets[0].id);
+          setActiveWalletId(wallets[0].id);
         }
       }
     } catch (err) {
       console.error("Failed to load wallets:", err);
-      addToast("error", "Error", "Failed to load wallets");
+      // Fallback to localStorage
+      const localWallets = getWalletsFromStorage();
+      setWallets(localWallets);
+      const savedActive = localStorage.getItem('active-wallet-id');
+      if (savedActive && localWallets.find(w => w.id === savedActive)) {
+        setActiveWalletId(savedActive);
+      } else if (localWallets.length > 0) {
+        setActiveWalletId(localWallets[0].id);
+      }
+      addToast("info", "Firebase Error", "Using local wallets");
     }
   };
 
@@ -293,6 +328,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         wallets,
         activeWalletId,
         error,
+        isFirebaseConnected,
         loadProfile,
         updateProfile,
         loadWallets,

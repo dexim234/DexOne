@@ -41,7 +41,7 @@ interface SocialLink {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const { userId, isLoading, profile, wallets, activeWalletId, setActiveWallet, updateProfile, uploadAvatar } = useUser();
+  const { userId, isLoading, profile, wallets, activeWalletId, setActiveWallet, updateProfile, uploadAvatar, isFirebaseConnected } = useUser();
 
   const [nickname, setNickname] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
@@ -186,7 +186,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (wallets.length === 0) {
+  if (wallets.length === 0 && !isFirebaseConnected) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12 max-w-4xl">
@@ -198,8 +198,8 @@ export default function ProfilePage() {
                   <Wallet className="h-10 w-10 text-white" />
                 </div>
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("profile.connectWallet")}</h1>
-                  <p className="text-muted-foreground max-w-md">{t("profile.connectWalletDesc")}</p>
+                  <h1 className="text-3xl font-bold tracking-tight text-foreground">Firebase Not Connected</h1>
+                  <p className="text-muted-foreground max-w-md">Your wallets are stored locally. Profile features require Firebase connection.</p>
                 </div>
                 <Link href="/assets">
                   <Button size="lg" className="h-14 px-8 gap-3 bg-gradient-to-r from-teal to-teal-light hover:from-teal-dark hover:to-teal text-white text-base font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105">
