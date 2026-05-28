@@ -199,7 +199,9 @@ export default function TrenchCard({
             <div className="flex items-center gap-0.5">
               <Crown className="h-3 w-3 text-amber-400" />
               <span className="text-foreground font-semibold">{kingOfTheHillRank}</span>
-              <span className="text-muted-foreground">/{kingOfTheHillTotal}</span>
+              {kingOfTheHillRank !== '-' && kingOfTheHillTotal !== '-' && (
+                <span className="text-muted-foreground">/{kingOfTheHillTotal}</span>
+              )}
             </div>
             <div className="flex items-center gap-0.5">
               <Users className="h-3 w-3 text-cyan-400" />
@@ -208,7 +210,9 @@ export default function TrenchCard({
             <div className="flex items-center gap-0.5">
               <MessageSquare className="h-3 w-3 text-green-400" />
               <span className="text-foreground font-semibold">{replies}</span>
-              <span className="text-muted-foreground">/{replyRate}%</span>
+              {replyRate !== '-' && (
+                <span className="text-muted-foreground">/{replyRate}%</span>
+              )}
             </div>
             <div className="flex items-center gap-0.5">
               <Ship className="h-3 w-3 text-blue-400" />
@@ -224,23 +228,23 @@ export default function TrenchCard({
           <div className="flex items-center gap-2.5 text-[11px]">
             <div className="flex items-center gap-0.5">
               <Users className="h-3 w-3 text-cyan-400" />
-              <span className="text-foreground font-semibold">{devHold}%</span>
+              <span className="text-foreground font-semibold">{devHold}{devHold !== '-' ? '%' : ''}</span>
             </div>
             <div className="flex items-center gap-0.5">
               <Crown className="h-3 w-3 text-amber-400" />
-              <span className="text-foreground font-semibold">{top10Hold}%</span>
+              <span className="text-foreground font-semibold">{top10Hold}{top10Hold !== '-' ? '%' : ''}</span>
             </div>
             <div className="flex items-center gap-0.5">
               <Flame className="h-3 w-3 text-orange-400" />
-              <span className="text-foreground font-semibold">{lpBurn}%</span>
+              <span className="text-foreground font-semibold">{lpBurn}{lpBurn !== '-' ? '%' : ''}</span>
             </div>
             <div className="flex items-center gap-0.5">
               <Target className="h-3 w-3 text-red-400" />
-              <span className="text-foreground font-semibold">{snipersCount}%</span>
+              <span className="text-foreground font-semibold">{snipersCount}{snipersCount !== '-' ? '%' : ''}</span>
             </div>
             <div className="flex items-center gap-0.5">
               <Package className="h-3 w-3 text-lime-400" />
-              <span className="text-foreground font-semibold">{bundlersCount}%</span>
+              <span className="text-foreground font-semibold">{bundlersCount}{bundlersCount !== '-' ? '%' : ''}</span>
             </div>
           </div>
         </div>
@@ -250,10 +254,12 @@ export default function TrenchCard({
           <div className="flex flex-col items-end gap-0.5 text-[11px]">
             <span className="text-muted-foreground">V <span className="text-foreground font-semibold">{volume24h}</span></span>
             <span className="text-muted-foreground">MC <span className="text-foreground font-semibold">{mc}</span></span>
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <span>1M</span>
-              <span className="text-foreground font-medium">{watchers}/{kingOfTheHillTotal}</span>
-            </div>
+            {watchers !== '-' && kingOfTheHillTotal !== '-' && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <span>1M</span>
+                <span className="text-foreground font-medium">{watchers}/{kingOfTheHillTotal}</span>
+              </div>
+            )}
           </div>
           <button
             onClick={(e) => e.stopPropagation()}
