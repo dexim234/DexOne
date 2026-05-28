@@ -22,6 +22,23 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.assets": "Assets",
     "nav.rewards": "Rewards",
     
+    // Rewards Page
+    "rewards.weeklyChallenge": "Weekly Challenge",
+    "rewards.challengeTooltip": "Complete the weekly challenge and get 50% cashback. For completing each day - up to 0.05 SOL and/or 25% cashback for 24h",
+    "rewards.today": "Today",
+    "rewards.toGift": "SOL to gift",
+    "rewards.rewardReady": "Reward ready to claim",
+    "rewards.cashback": "Cashback",
+    "rewards.available": "Available",
+    "rewards.claim": "Claim",
+    "rewards.referrals": "Referrals",
+    "rewards.invite": "Invite",
+    "rewards.allTasks": "All Tasks",
+    "rewards.statistics": "Statistics",
+    "rewards.calls": "Calls",
+    "rewards.alerts": "Alerts",
+    "rewards.byTier": "By Tier",
+    
     // Connect Menu
     "connect.wallet": "Connect",
     "connect.settings": "Settings",
@@ -104,6 +121,23 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.predictHub": "Рынок предсказаний",
     "nav.assets": "Активы",
     "nav.rewards": "Награды",
+    
+    // Rewards Page
+    "rewards.weeklyChallenge": "Недельный челлендж",
+    "rewards.challengeTooltip": "Выполните недельный челлендж и получите 50% кэшбэк. За выполнение каждого дня - до 0.05 SOL и/или кэшбэк 25% на сутки",
+    "rewards.today": "Сегодня",
+    "rewards.toGift": "SOL до подарка",
+    "rewards.rewardReady": "Награда готова к получению",
+    "rewards.cashback": "Кэшбэк",
+    "rewards.available": "Доступно",
+    "rewards.claim": "Забрать",
+    "rewards.referrals": "Рефералы",
+    "rewards.invite": "Пригласить",
+    "rewards.allTasks": "Все задания",
+    "rewards.statistics": "Статистика",
+    "rewards.calls": "Коллы",
+    "rewards.alerts": "Алерты",
+    "rewards.byTier": "По уровням",
     
     // Connect Menu
     "connect.wallet": "Connect",
