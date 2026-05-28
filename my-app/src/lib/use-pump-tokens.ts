@@ -61,24 +61,82 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
-          // Сортируем по createdTimestamp (новые первыми), затем перемешиваем для разнообразия
+          // Сортируем по createdTimestamp (новые первыми)
           newTokens = allTokens
             .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
             .slice(0, 20);
           break;
         }
-        case 'soon':
-          // Get trending tokens but filter out those already in 'new'
-          const trending = await pumpFunApi.getTrendingCoins(30);
-          const newTokensSet = new Set((await pumpFunApi.getNewTokens(20)).map(t => t.mint));
-          newTokens = trending
-            .filter(t => !newTokensSet.has(t.mint))
-            .slice(0, 20)
-            .map((token, index) => pumpFunApi.convertToMarketData(token, index + 1));
+        case 'soon': {
+          // Загружаем трендовые токены из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getSoonTokens(10),
+            getPumpSwapTokens(5),
+            getLetsBonkTokens(5),
+            getMeteoraTokens(5),
+          ]);
+
+          const allTokens = [
+            ...pumpFunTokens,
+            ...pumpSwapTokens,
+            ...letsBonkTokens,
+            ...meteoraTokens,
+          ];
+
+          // Убираем дубликаты по mint
+          const seen = new Set<string>();
+          newTokens = allTokens
+            .filter(t => {
+              if (seen.has(t.mint)) return false;
+              seen.add(t.mint);
+              return true;
+            })
+            // Сортируем по объему (трендовые первыми)
+            .sort((a, b) => {
+              const parseVol = (v: string) => {
+                const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
+                return isNaN(num) ? 0 : num;
+              };
+              return parseVol(b.volume24h) - parseVol(a.volume24h);
+            })
+            .slice(0, 20);
           break;
-        case 'migration':
-          newTokens = await pumpFunApi.getMigrationTokens(20);
+        }
+        case 'migration': {
+          // Загружаем токены близкие к миграции из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getMigrationTokens(10),
+            getPumpSwapTokens(5),
+            getLetsBonkTokens(5),
+            getMeteoraTokens(5),
+          ]);
+
+          const allTokens = [
+            ...pumpFunTokens,
+            ...pumpSwapTokens,
+            ...letsBonkTokens,
+            ...meteoraTokens,
+          ];
+
+          // Убираем дубликаты по mint
+          const seen = new Set<string>();
+          newTokens = allTokens
+            .filter(t => {
+              if (seen.has(t.mint)) return false;
+              seen.add(t.mint);
+              return true;
+            })
+            // Сортируем по капитализации (высокие первыми — ближе к миграции)
+            .sort((a, b) => {
+              const parseMC = (v: string) => {
+                const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
+                return isNaN(num) ? 0 : num;
+              };
+              return parseMC(b.mc) - parseMC(a.mc);
+            })
+            .slice(0, 20);
           break;
+        }
         default:
           newTokens = [];
       }
