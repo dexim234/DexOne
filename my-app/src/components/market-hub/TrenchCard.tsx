@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Copy, Zap, Crown, Users, MessageSquare, Ship, Flame, Target, Package } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { LaunchpadSource } from "@/lib/pump-fun-api";
 
 interface TrenchCardProps {
@@ -71,11 +72,18 @@ export default function TrenchCard({
   snipersCount = "0",
   bundlersCount = "0",
 }: TrenchCardProps) {
+  const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     setImageLoaded(false);
   }, [logo]);
+
+  const handleCardClick = () => {
+    if (mint) {
+      router.push(`/market-hub/${mint}`);
+    }
+  };
 
   const copyToClipboard = async () => {
     if (!mint) return;
@@ -104,7 +112,10 @@ export default function TrenchCard({
   const timeAgo = formatTimeAgo(createdTimestamp);
 
   return (
-    <div className="relative rounded-xl border border-border/40 bg-card p-3 hover:bg-accent/20 transition-colors cursor-pointer group">
+    <div
+      onClick={handleCardClick}
+      className="relative rounded-xl border border-border/40 bg-card p-3 hover:bg-accent/20 transition-colors cursor-pointer group"
+    >
       <div className="flex gap-3">
         {/* Left: Avatar + Address */}
         <div className="flex flex-col items-center gap-1 shrink-0 w-16">
