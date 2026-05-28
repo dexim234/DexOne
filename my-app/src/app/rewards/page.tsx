@@ -22,9 +22,8 @@ function Tooltip({ content, children }: { content: string; children: React.React
         {children}
       </div>
       {show && (
-        <div className="absolute top-1/2 -translate-y-1/2 left-full ml-3 px-4 py-3 bg-popover border border-border rounded-lg shadow-lg text-xs max-w-[450px] z-[100]">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-4 bg-popover border border-border rounded-lg shadow-xl text-xs max-w-[500px] z-[200]">
           {content}
-          <div className="absolute top-1/2 -left-2 -translate-y-1/2 border-4 border-transparent border-r-popover" />
         </div>
       )}
     </div>
@@ -216,7 +215,7 @@ export default function RewardsPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">CashBack Coins</p>
-                  <p className="text-lg font-bold">{cashbackCoins} SOL</p>
+                  <p className="text-lg font-bold">{cashbackCoins.toFixed(2)} SOL</p>
                 </CardContent>
               </Card>
             </div>
@@ -299,7 +298,7 @@ export default function RewardsPage() {
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Zap className="h-3.5 w-3.5 text-teal-500" />
-                      <span className="text-xs">{t("rewards.calls")}</span>
+                      <span className="text-xs">{t("rewards.calls-reftrade")}</span>
                     </div>
                     <span className="font-semibold text-sm">{referralStats.callRewards.toFixed(2)} SOL</span>
                   </div>
@@ -307,7 +306,7 @@ export default function RewardsPage() {
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Award className="h-3.5 w-3.5 text-teal-500" />
-                      <span className="text-xs">{t("rewards.alerts")}</span>
+                      <span className="text-xs">{t("rewards.alerts-sales")}</span>
                     </div>
                     <span className="font-semibold text-sm">{referralStats.salesAlerts.toFixed(2)} SOL</span>
                   </div>
@@ -335,8 +334,8 @@ export default function RewardsPage() {
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-purple-500">2</span>
+                      <div className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-teal-500">2</span>
                       </div>
                       <span className="text-sm font-medium">Tier 2</span>
                     </div>
@@ -345,8 +344,8 @@ export default function RewardsPage() {
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-blue-500">3</span>
+                      <div className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-teal-500">3</span>
                       </div>
                       <span className="text-sm font-medium">Tier 3</span>
                     </div>
