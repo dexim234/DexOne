@@ -13,6 +13,7 @@ import { validateSolanaAddress } from "@/lib/solana-api";
 import { useToast } from "@/components/ui/toast";
 import { QRCodeSVG } from "qrcode.react";
 import { sendSolTransaction, getSolBalance } from "@/lib/solana-transaction";
+import { useUser } from "@/contexts/UserContext";
 
 interface WalletBalance {
   [walletId: string]: {
@@ -53,7 +54,7 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function AssetsPage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
-  const [wallets, setWallets] = useState<WalletData[]>([]);
+  const { userId, wallets: firebaseWallets, loadWallets, createWallet, importWallet, deleteWalletLocal, setActiveWallet: setUserWallet } = useUser();
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [newWalletName, setNewWalletName] = useState("");
@@ -97,8 +98,10 @@ export default function AssetsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [profitPeriod, setProfitPeriod] = useState("7D");
 
+  // Use wallets from UserContext (synced with Firebase)
+  const wallets = firebaseWallets;
+
   useEffect(() => {
-    loadWallets();
     const savedActive = localStorage.getItem('active-wallet-id');
     if (savedActive) {
       setActiveWalletId(savedActive);
@@ -130,24 +133,12 @@ export default function AssetsPage() {
     }
   }, [activeWalletId]);
 
+  // Sync active wallet with UserContext
   useEffect(() => {
-    if (activeWalletId) {
-      fetchBalance(activeWalletId);
-      loadCalendarData();
-      loadSendPresets();
+    if (activeWalletId && userId) {
+      setUserWallet(activeWalletId);
     }
-  }, [activeWalletId, currentMonth, currentYear]);
-
-  const loadSendPresets = () => {
-    try {
-      const stored = localStorage.getItem('send-presets');
-      if (stored) {
-        setSendPresets(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.error('Failed to load presets:', e);
-    }
-  };
+  }, [activeWalletId, userId]);
 
   const saveSendPresets = (presets: SendPreset[]) => {
     try {
@@ -163,11 +154,6 @@ export default function AssetsPage() {
     const data = await fetchWalletPnLData(activeWalletId, currentMonth, currentYear);
     setCalendarData(data);
     setLoadingCalendar(false);
-  };
-
-  const loadWallets = () => {
-    const savedWallets = getWalletsFromStorage();
-    setWallets(savedWallets);
   };
 
   const fetchBalance = async (walletId: string) => {
@@ -330,11 +316,7 @@ export default function AssetsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const newWallet = await generateSolanaWallet(newWalletName || undefined);
-      const updated = [newWallet, ...wallets];
-      saveWalletsToStorage(updated);
-      setWallets(updated);
-      setActiveWalletId(newWallet.id);
+      const newWallet = await createWallet(newWalletName || undefined);
       setNewWalletName("");
       setShowCreateModal(false);
       addToast("success", "Wallet Created", `${newWallet.name} has been created successfully`);
@@ -356,11 +338,7 @@ export default function AssetsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const importedWallet = await importSolanaWallet(importPrivateKey.trim(), importWalletName || undefined);
-      const updated = [importedWallet, ...wallets];
-      saveWalletsToStorage(updated);
-      setWallets(updated);
-      setActiveWalletId(importedWallet.id);
+      const importedWallet = await importWallet(importPrivateKey.trim(), importWalletName || undefined);
       setImportPrivateKey("");
       setImportWalletName("");
       setShowImportModal(false);
@@ -379,21 +357,16 @@ export default function AssetsPage() {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteWallet = () => {
+  const confirmDeleteWallet = async () => {
     if (walletToDelete) {
-      removeWalletFromStorage(walletToDelete.id);
-      setWallets(prev => {
-        const filtered = prev.filter(w => w.id !== walletToDelete.id);
-        if (activeWalletId === walletToDelete.id && filtered.length > 0) {
-          setActiveWalletId(filtered[0].id);
-        } else if (filtered.length === 0) {
-          setActiveWalletId(null);
-        }
-        return filtered;
-      });
-      addToast("info", "Wallet Deleted", `${walletToDelete.name} has been removed`);
-      setShowDeleteConfirm(false);
-      setWalletToDelete(null);
+      try {
+        await deleteWalletLocal(walletToDelete.id);
+        setShowDeleteConfirm(false);
+        setWalletToDelete(null);
+      } catch (err) {
+        console.error("Failed to delete wallet:", err);
+        addToast("error", "Delete Failed", "Failed to delete wallet");
+      }
     }
   };
 
@@ -418,6 +391,18 @@ export default function AssetsPage() {
     } catch (err) {
       console.error("Failed to copy:", err);
       addToast("error", "Copy Failed", "Failed to copy to clipboard");
+    }
+  };
+
+  const copyPrivateKey = async (walletId: string, privateKey: string) => {
+    try {
+      await navigator.clipboard.writeText(privateKey);
+      setCopiedField(`pk-${walletId}`);
+      setTimeout(() => setCopiedField(null), 2000);
+      addToast("success", "Private Key Copied", "Keep it secure!");
+    } catch (err) {
+      console.error("Failed to copy private key:", err);
+      addToast("error", "Copy Failed", "Failed to copy private key");
     }
   };
 
@@ -587,7 +572,14 @@ export default function AssetsPage() {
   const activeBalance = activeWalletId ? balances[activeWalletId] : null;
   const periodData = calculatePeriodPnL(profitPeriod, activeWalletId);
   
-  const visibleWallets = wallets.slice(0, showMoreWallets ? wallets.length : 1);
+  // Sort wallets: active wallet first, then all others
+  const sortedWallets = [...wallets].sort((a, b) => {
+    if (a.id === activeWalletId) return -1;
+    if (b.id === activeWalletId) return 1;
+    return 0;
+  });
+  
+  const visibleWallets = sortedWallets.slice(0, showMoreWallets ? sortedWallets.length : 1);
   const hiddenCount = Math.max(0, wallets.length - 1);
 
   return (
@@ -649,7 +641,7 @@ export default function AssetsPage() {
                             }`}
                             onClick={() => {
                               setActiveWalletId(wallet.id);
-                              window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: wallet.id }));
+                              setUserWallet(wallet.id);
                             }}
                           >
                             {/* Active indicator glow */}
@@ -781,11 +773,28 @@ export default function AssetsPage() {
                                     <p className="font-semibold text-xs text-yellow-600 dark:text-yellow-400">
                                       Private Key Visible
                                     </p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyPrivateKey(wallet.id, wallet.privateKeyBase58);
+                                      }}
+                                      className="ml-auto text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-500 font-medium flex items-center gap-1"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                      {copiedField === `pk-${wallet.id}` ? "Copied!" : "Copy"}
+                                    </button>
                                   </div>
                                   <p className="text-[10px] text-muted-foreground mb-1.5">
                                     Never share this key! Anyone with it controls your wallet.
                                   </p>
-                                  <div className="font-mono bg-background/50 p-1.5 rounded text-[9px] break-all border border-border/30">
+                                  <div 
+                                    className="font-mono bg-background/50 p-1.5 rounded text-[9px] break-all border border-border/30 cursor-pointer hover:border-yellow-500/30 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyPrivateKey(wallet.id, wallet.privateKeyBase58);
+                                    }}
+                                    title="Click to copy private key"
+                                  >
                                     {wallet.privateKeyBase58}
                                   </div>
                                 </div>

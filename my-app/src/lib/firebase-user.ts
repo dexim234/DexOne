@@ -86,14 +86,20 @@ export const addWalletToFirestore = async (walletData: Omit<EncryptedWalletData,
     const encryptedPrivateKey = await encryptPrivateKey(walletData.privateKey);
     
     const walletRef = doc(walletsCollection);
-    await setDoc(walletRef, {
+    const walletDataToSave: any = {
       name: walletData.name,
       publicKey: walletData.publicKey,
       encryptedPrivateKey,
       userId: walletData.userId,
-      nickname: walletData.nickname,
       createdAt: serverTimestamp()
-    } as Partial<EncryptedWalletData>);
+    };
+    
+    // Only add nickname if it exists
+    if (walletData.nickname) {
+      walletDataToSave.nickname = walletData.nickname;
+    }
+    
+    await setDoc(walletRef, walletDataToSave);
     
     return walletRef.id;
   } catch (error) {

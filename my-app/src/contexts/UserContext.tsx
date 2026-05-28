@@ -201,7 +201,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         publicKey: newWallet.publicKey,
         privateKey: newWallet.privateKeyBase58,
         userId,
-        nickname: profile?.nickname || undefined
+        nickname: profile?.nickname
       });
       
       const walletData: WalletData = {
@@ -211,6 +211,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         privateKeyBase58: newWallet.privateKeyBase58,
         createdAt: newWallet.createdAt
       };
+      
+      // Also save to localStorage for fallback
+      const localWallets = getWalletsFromStorage();
+      saveWalletsToStorage([walletData, ...localWallets]);
       
       setWallets(prev => [walletData, ...prev]);
       addToast("success", "Wallet Created", `${newWallet.name} has been created`);
@@ -234,7 +238,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         publicKey: importedWallet.publicKey,
         privateKey: importedWallet.privateKeyBase58,
         userId,
-        nickname: profile?.nickname || undefined
+        nickname: profile?.nickname
       });
       
       const walletData: WalletData = {
@@ -244,6 +248,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         privateKeyBase58: importedWallet.privateKeyBase58,
         createdAt: importedWallet.createdAt
       };
+      
+      // Also save to localStorage for fallback
+      const localWallets = getWalletsFromStorage();
+      saveWalletsToStorage([walletData, ...localWallets]);
       
       setWallets(prev => [walletData, ...prev]);
       addToast("success", "Wallet Imported", `${importedWallet.name} has been imported`);
