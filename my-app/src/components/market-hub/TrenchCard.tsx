@@ -74,11 +74,9 @@ export default function TrenchCard({
 }: TrenchCardProps) {
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     setImageLoaded(false);
-    setImageError(false);
   }, [logo]);
 
   const handleCardClick = () => {
@@ -121,32 +119,24 @@ export default function TrenchCard({
       <div className="flex gap-3">
         {/* Left: Avatar + Address */}
         <div className="flex flex-col items-center gap-1 shrink-0 w-16">
-          <div className={`relative h-16 w-16 rounded-lg border-2 overflow-hidden ${LAUNCHPAD_BORDER[source]} bg-muted`}>
-            {!imageLoaded && !imageError && (
+          <div className={`relative h-16 w-16 rounded-lg border-2 overflow-hidden ${LAUNCHPAD_BORDER[source]}`}>
+            {!imageLoaded && (
               <div className="absolute inset-0 bg-muted animate-pulse" />
             )}
-            {imageError ? (
-              <div className="absolute inset-0 flex items-center justify-center p-1">
-                <span className="text-[9px] font-bold text-foreground text-center leading-tight break-words line-clamp-3">
-                  {name}
-                </span>
-              </div>
-            ) : (
-              <Image
-                src={logo}
-                alt={name}
-                width={64}
-                height={64}
-                className={`object-cover w-full h-full transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                onLoad={() => setImageLoaded(true)}
-                onError={() => {
-                  setImageError(true);
-                  setImageLoaded(true);
-                }}
-                loading="eager"
-                priority
-              />
-            )}
+            <Image
+              src={logo}
+              alt={name}
+              width={64}
+              height={64}
+              className={`object-cover w-full h-full transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.png";
+                setImageLoaded(true);
+              }}
+              loading="eager"
+              priority
+            />
           </div>
           <button
             onClick={(e) => {
