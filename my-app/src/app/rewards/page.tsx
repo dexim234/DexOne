@@ -22,7 +22,7 @@ function Tooltip({ content, children }: { content: string; children: React.React
         {children}
       </div>
       {show && (
-        <div className="absolute top-0 left-full ml-2 px-3 py-2 bg-popover border border-border rounded-lg shadow-lg text-xs max-w-[300px] z-[100] whitespace-normal">
+        <div className="absolute top-0 left-full ml-2 px-4 py-3 bg-popover border border-border rounded-lg shadow-lg text-xs max-w-[400px] z-[100] whitespace-normal">
           {content}
           <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-transparent border-r-popover" />
         </div>
