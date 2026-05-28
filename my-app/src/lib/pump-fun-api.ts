@@ -39,6 +39,40 @@ export interface PumpToken {
   twitter?: string;
   creator?: string;
   complete?: boolean;
+  // Дополнительные метрики, которые может возвращать API
+  kingOfTheHillRank?: number;
+  king_of_the_hill_rank?: number;
+  kingOfTheHillTotal?: number;
+  king_of_the_hill_total?: number;
+  replyCount?: number;
+  reply_count?: number;
+  replyRate?: number;
+  reply_rate?: number;
+  buySellRatio?: number;
+  buy_sell_ratio?: number;
+  fomoScore?: number;
+  fomo_score?: number;
+  devHold?: number;
+  dev_hold?: number;
+  top10Hold?: number;
+  top_10_hold?: number;
+  lpBurn?: number;
+  lp_burn?: number;
+  snipersCount?: number;
+  snipers_count?: number;
+  bundlersCount?: number;
+  bundlers_count?: number;
+  freshWallets?: number;
+  fresh_wallets?: number;
+  botTraders?: number;
+  bot_traders?: number;
+  dexTaxBuy?: number;
+  dex_tax_buy?: number;
+  dexTaxSell?: number;
+  dex_tax_sell?: number;
+  watchers?: number;
+  watcher_count?: number;
+  watch_count?: number;
 }
 
 // Интерфейс для ответа API
@@ -264,10 +298,27 @@ export class PumpFunApiService {
     const anyToken = token as any;
     const marketCap = anyToken.usd_market_cap || token.marketCap || token.virtualSolReserves || 0;
     
-    // Генерация псевдо-метрик на основе данных токена для демо
-    const seed = token.mint ? token.mint.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : rank;
-    const pseudoRand = (min: number, max: number) => min + (seed % 1000) / 1000 * (max - min);
-    const pseudoRandInt = (min: number, max: number) => Math.floor(pseudoRand(min, max));
+    // Хелпер для получения значения из нескольких возможных полей
+    const getField = (...fields: string[]): string => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null) {
+          return String(val);
+        }
+      }
+      return '-';
+    };
+
+    // Хелпер для получения числового значения
+    const getNumField = (...fields: string[]): number | undefined => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null && !isNaN(Number(val))) {
+          return Number(val);
+        }
+      }
+      return undefined;
+    };
 
     return {
       rank: rank.toString(),
@@ -292,23 +343,23 @@ export class PumpFunApiService {
       telegram: anyToken.telegram,
       website: anyToken.website,
       source: 'pumpfun' as LaunchpadSource,
-      // Дополнительные метрики
-      kingOfTheHillRank: pseudoRandInt(1, 600).toString(),
-      kingOfTheHillTotal: '595',
-      watchers: pseudoRandInt(50, 500).toString(),
-      replies: pseudoRandInt(50, 300).toString(),
-      replyRate: pseudoRandInt(20, 80).toString(),
-      buySellRatio: pseudoRand(0.5, 5).toFixed(2),
-      fomoScore: pseudoRand(0.5, 5).toFixed(2),
-      devHold: pseudoRandInt(0, 30).toString(),
-      top10Hold: pseudoRandInt(0, 15).toString(),
-      lpBurn: pseudoRandInt(0, 10).toString(),
-      snipersCount: pseudoRandInt(0, 10).toString(),
-      bundlersCount: pseudoRandInt(0, 5).toString(),
-      freshWallets: pseudoRandInt(5, 40).toString(),
-      botTraders: pseudoRandInt(10, 100).toString(),
-      dexTaxBuy: pseudoRandInt(0, 5).toString(),
-      dexTaxSell: pseudoRandInt(0, 5).toString(),
+      // Дополнительные метрики — реальные данные из API или "-"
+      kingOfTheHillRank: getField('kingOfTheHillRank', 'king_of_the_hill_rank'),
+      kingOfTheHillTotal: getField('kingOfTheHillTotal', 'king_of_the_hill_total') !== '-' ? getField('kingOfTheHillTotal', 'king_of_the_hill_total') : '595',
+      watchers: getField('watchers', 'watch_count', 'watcher_count'),
+      replies: getField('replyCount', 'reply_count', 'replies'),
+      replyRate: getField('replyRate', 'reply_rate'),
+      buySellRatio: getField('buySellRatio', 'buy_sell_ratio'),
+      fomoScore: getField('fomoScore', 'fomo_score'),
+      devHold: getField('devHold', 'dev_hold'),
+      top10Hold: getField('top10Hold', 'top_10_hold'),
+      lpBurn: getField('lpBurn', 'lp_burn'),
+      snipersCount: getField('snipersCount', 'snipers_count'),
+      bundlersCount: getField('bundlersCount', 'bundlers_count'),
+      freshWallets: getField('freshWallets', 'fresh_wallets'),
+      botTraders: getField('botTraders', 'bot_traders'),
+      dexTaxBuy: getField('dexTaxBuy', 'dex_tax_buy'),
+      dexTaxSell: getField('dexTaxSell', 'dex_tax_sell'),
     };
   }
 
