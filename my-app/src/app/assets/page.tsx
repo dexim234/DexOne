@@ -99,6 +99,10 @@ export default function AssetsPage() {
 
   useEffect(() => {
     loadWallets();
+    const savedActive = localStorage.getItem('active-wallet-id');
+    if (savedActive) {
+      setActiveWalletId(savedActive);
+    }
   }, []);
 
   useEffect(() => {
@@ -106,6 +110,12 @@ export default function AssetsPage() {
       setActiveWalletId(wallets[0].id);
     }
   }, [wallets]);
+
+  useEffect(() => {
+    if (activeWalletId) {
+      localStorage.setItem('active-wallet-id', activeWalletId);
+    }
+  }, [activeWalletId]);
 
   useEffect(() => {
     if (activeWalletId) {
@@ -610,9 +620,8 @@ export default function AssetsPage() {
                     <p className="text-xs text-muted-foreground">Create or import a wallet to get started</p>
                   </div>
                 ) : (
-                  <>
-                    <div className="space-y-2">
-                      {visibleWallets.map((wallet) => {
+                  <div className="space-y-2">
+                    {visibleWallets.map((wallet) => {
                         const balance = balances[wallet.id];
                         const isActive = activeWalletId === wallet.id;
                         const isPrivateVisible = showPrivateKeys[wallet.id];
@@ -766,42 +775,42 @@ export default function AssetsPage() {
                                 </div>
                               )}
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-3 gap-3 mt-4">
-                      <Button
-                        onClick={() => setShowCreateModal(true)}
-                        variant="outline"
-                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
-                      >
-                        <Plus className="h-4 w-4 mr-2 text-teal-500" />
-                        New
-                      </Button>
-                      <Button
-                        onClick={() => setShowImportModal(true)}
-                        variant="outline"
-                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
-                      >
-                        <Key className="h-4 w-4 mr-2 text-teal-500" />
-                        Import
-                      </Button>
-                      <Button
-                        onClick={() => activeWalletId && handleSendClick(activeWalletId)}
-                        variant="outline"
-                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
-                      >
-                        <Send className="h-4 w-4 mr-2 text-teal-500" />
-                        Send
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  variant="outline"
+                  className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
+                >
+                  <Plus className="h-4 w-4 mr-2 text-teal-500" />
+                  New
+                </Button>
+                <Button
+                  onClick={() => setShowImportModal(true)}
+                  variant="outline"
+                  className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
+                >
+                  <Key className="h-4 w-4 mr-2 text-teal-500" />
+                  Import
+                </Button>
+                <Button
+                  onClick={() => activeWalletId && handleSendClick(activeWalletId)}
+                  disabled={!activeWalletId}
+                  variant="outline"
+                  className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="h-4 w-4 mr-2 text-teal-500" />
+                  Send
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
             {/* Holdings / Orders / Realised Buttons */}
             <div className="grid grid-cols-3 gap-2">
