@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, Calendar, ArrowLeft, ArrowRight, Info, TrendingUp, ShoppingBag, FileText } from "lucide-react";
+import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, Calendar, ArrowLeft, ArrowRight, Info, TrendingUp, ShoppingBag, FileText, DollarSign, QrCode, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { generateSolanaWallet, getWalletsFromStorage, removeWalletFromStorage, s
 import { useTranslation } from "@/contexts/TranslationContext";
 import { validateSolanaAddress } from "@/lib/solana-api";
 import { useToast } from "@/components/ui/toast";
+import { QRCodeSVG } from "qrcode.react";
 
 interface WalletBalance {
   [walletId: string]: {
@@ -24,6 +25,12 @@ interface DailyPnL {
   day: number;
   pnl: number;
   isProfitable: boolean;
+}
+
+interface SendPreset {
+  id: number;
+  label: string;
+  amount: number;
 }
 
 const HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8";
@@ -71,6 +78,13 @@ export default function AssetsPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [pinnedWallets, setPinnedWallets] = useState<Set<string>>(new Set());
+  const [sendPresets, setSendPresets] = useState<SendPreset[]>([]);
+  const [showPresetInput, setShowPresetInput] = useState(false);
+  const [presetLabel, setPresetLabel] = useState("");
+
+  // QR Code modal state
+  const [showQrDialog, setShowQrDialog] = useState(false);
+  const [qrWalletId, setQrWalletId] = useState<string | null>(null);
 
   // Create/Import modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -91,8 +105,28 @@ export default function AssetsPage() {
     if (activeWalletId) {
       fetchBalance(activeWalletId);
       loadCalendarData();
+      loadSendPresets();
     }
   }, [activeWalletId, currentMonth, currentYear]);
+
+  const loadSendPresets = () => {
+    try {
+      const stored = localStorage.getItem('send-presets');
+      if (stored) {
+        setSendPresets(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to load presets:', e);
+    }
+  };
+
+  const saveSendPresets = (presets: SendPreset[]) => {
+    try {
+      localStorage.setItem('send-presets', JSON.stringify(presets));
+    } catch (e) {
+      console.error('Failed to save presets:', e);
+    }
+  };
 
   const loadCalendarData = async () => {
     if (!activeWalletId) return;
@@ -385,14 +419,29 @@ export default function AssetsPage() {
       return;
     }
 
+    // Check if recipient is different from sender
+    if (wallet && sendToAddress === wallet.publicKey) {
+      setSendError("Cannot send to the same wallet");
+      addToast("error", "Validation Error", "Cannot send to the same wallet");
+      return;
+    }
+
     setIsSending(true);
     setSendError(null);
 
     try {
-      addToast("info", "Transaction Processing", "Sending transaction...");
+      addToast("info", "Transaction Processing", "Preparing transaction...");
+      
+      // NOTE: Real SOL transfer requires:
+      // 1. Connection to Solana RPC
+      // 2. Access to private key for signing
+      // 3. Building and sending transaction
+      // This is a placeholder - implement with @solana/web3.js Transaction
+      
+      // For now, simulate the transaction
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      addToast("success", "Transaction Sent", `Successfully sent ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}`);
+      addToast("success", "Transaction Simulated", `Would send ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}`);
       setShowSendDialog(false);
       setSendToAddress("");
       setSendAmount("");
@@ -418,6 +467,46 @@ export default function AssetsPage() {
     });
   };
 
+  const handleSavePreset = () => {
+    const amount = parseFloat(sendAmount);
+    if (isNaN(amount) || amount <= 0) {
+      addToast("error", "Invalid Amount", "Please enter a valid amount");
+      return;
+    }
+
+    const newPreset: SendPreset = {
+      id: Date.now(),
+      label: presetLabel || `Preset ${sendPresets.length + 1}`,
+      amount,
+    };
+
+    const updatedPresets = [...sendPresets, newPreset].slice(0, 3);
+    setSendPresets(updatedPresets);
+    saveSendPresets(updatedPresets);
+    setShowPresetInput(false);
+    setPresetLabel("");
+    addToast("success", "Preset Saved", "Amount preset has been saved");
+  };
+
+  const handleDeletePreset = (presetId: number) => {
+    const updatedPresets = sendPresets.filter(p => p.id !== presetId);
+    setSendPresets(updatedPresets);
+    saveSendPresets(updatedPresets);
+  };
+
+  const handleApplyPreset = (amount: number) => {
+    setSendAmount(amount.toString());
+  };
+
+  const handleOpenQrDialog = (walletId: string) => {
+    setQrWalletId(walletId);
+    setShowQrDialog(true);
+  };
+
+  const handleAddressClick = async (publicKey: string, walletId: string) => {
+    await copyToClipboard(publicKey, `pub-${walletId}`);
+  };
+
   const getSortedWalletsForSend = () => {
     const walletsWithBalance = wallets.map(w => ({
       ...w,
@@ -431,10 +520,6 @@ export default function AssetsPage() {
     unpinned.sort((a, b) => b.balance - a.balance);
     
     return [...pinned, ...unpinned];
-  };
-
-  const handleAddressClick = async (publicKey: string, walletId: string) => {
-    await copyToClipboard(publicKey, `pub-${walletId}`);
   };
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
@@ -494,81 +579,105 @@ export default function AssetsPage() {
                         return (
                           <div
                             key={wallet.id}
-                            className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                            className={`p-4 rounded-xl border transition-all cursor-pointer ${
                               isActive
-                                ? "border-teal-500 bg-teal-500/5"
-                                : "border-border/30 hover:border-teal-500/30 hover:bg-teal-500/5"
+                                ? "border-teal-500 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 shadow-lg shadow-teal-500/10"
+                                : "border-border/30 hover:border-teal-500/50 hover:bg-teal-500/5 hover:shadow-md"
                             }`}
                             onClick={() => setActiveWalletId(wallet.id)}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-sm">{wallet.name}</span>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-semibold text-base">{wallet.name}</span>
                                   {isActive && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge variant="secondary" className="text-xs bg-teal-500/20 text-teal-600 dark:text-teal-400">
                                       Active
                                     </Badge>
                                   )}
                                 </div>
-                                <code
-                                  className="text-xs text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddressClick(wallet.publicKey, wallet.id);
-                                  }}
-                                >
-                                  {wallet.publicKey}
-                                </code>
+                                <div className="flex items-center gap-2">
+                                  <code
+                                    className="text-sm text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors font-mono"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAddressClick(wallet.publicKey, wallet.id);
+                                    }}
+                                  >
+                                    {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-6)}
+                                  </code>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenQrDialog(wallet.id);
+                                    }}
+                                    className="h-7 w-7 p-0 hover:bg-teal-500/10"
+                                    title="Show QR Code"
+                                  >
+                                    <QrCode className="h-3.5 w-3.5 text-teal-500" />
+                                  </Button>
+                                </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="text-right">
                                   {balance?.loading ? (
-                                    <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
+                                    <span className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full" />
                                   ) : (
-                                    <div className="font-semibold text-sm">
-                                      {(balance?.solBalance || 0).toFixed(4)} SOL
-                                    </div>
+                                    <>
+                                      <div className="font-bold text-base text-teal-600 dark:text-teal-400">
+                                        {(balance?.solBalance || 0).toFixed(4)} SOL
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        ${(balance?.usdValue || 0).toFixed(2)}
+                                      </div>
+                                    </>
                                   )}
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePrivateKeyVisibility(wallet.id);
-                                  }}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  {isPrivateVisible ? (
-                                    <EyeOff className="h-3 w-3 text-yellow-500" />
-                                  ) : (
-                                    <Eye className="h-3 w-3" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteWallet(wallet.id);
-                                  }}
-                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      togglePrivateKeyVisibility(wallet.id);
+                                    }}
+                                    className="h-8 w-8 p-0 hover:bg-yellow-500/10"
+                                    title="Private Key"
+                                  >
+                                    {isPrivateVisible ? (
+                                      <EyeOff className="h-4 w-4 text-yellow-500" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteWallet(wallet.id);
+                                    }}
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                    title="Delete Wallet"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
 
                             {isPrivateVisible && (
-                              <div className="mt-2 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded text-xs">
-                                <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1">
+                              <div className="mt-3 p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg text-xs">
+                                <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1 flex items-center gap-1">
+                                  <Shield className="h-3 w-3" />
                                   Private Key Warning
                                 </p>
-                                <p className="text-muted-foreground mb-1">
-                                  Full control over wallet. Never share.
+                                <p className="text-muted-foreground mb-2">
+                                  Full control over wallet. Never share with anyone.
                                 </p>
-                                <div className="font-mono bg-background/50 p-1 rounded break-all">
+                                <div className="font-mono bg-background/50 p-2 rounded break-all text-xs">
                                   {wallet.privateKeyBase58}
                                 </div>
                               </div>
@@ -579,11 +688,11 @@ export default function AssetsPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="grid grid-cols-3 gap-2 mt-4">
+                    <div className="grid grid-cols-3 gap-3 mt-4">
                       <Button
                         onClick={() => setShowCreateModal(true)}
                         variant="outline"
-                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
                       >
                         <Plus className="h-4 w-4 mr-2 text-teal-500" />
                         New
@@ -591,7 +700,7 @@ export default function AssetsPage() {
                       <Button
                         onClick={() => setShowImportModal(true)}
                         variant="outline"
-                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
                       >
                         <Key className="h-4 w-4 mr-2 text-teal-500" />
                         Import
@@ -599,7 +708,7 @@ export default function AssetsPage() {
                       <Button
                         onClick={() => activeWalletId && handleSendClick(activeWalletId)}
                         variant="outline"
-                        className="h-10 border-teal-500/30 hover:bg-teal-500/10 text-sm"
+                        className="h-11 border-teal-500/30 hover:bg-teal-500/10 hover:border-teal-500/50 text-sm font-medium transition-all"
                       >
                         <Send className="h-4 w-4 mr-2 text-teal-500" />
                         Send
@@ -609,6 +718,32 @@ export default function AssetsPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Quick Actions - Deposit */}
+            {activeWalletId && (
+              <Card className="border-border/50 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 backdrop-blur">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-teal-500/20 rounded-lg">
+                        <DollarSign className="h-5 w-5 text-teal-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">Quick Deposit</p>
+                        <p className="text-xs text-muted-foreground">Get your deposit QR code</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleOpenQrDialog(activeWalletId)}
+                      className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white h-10 px-4 text-sm font-medium"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Show QR
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Holdings / Orders / Realised Buttons */}
             <div className="grid grid-cols-3 gap-2">
@@ -893,24 +1028,24 @@ export default function AssetsPage() {
 
       {/* Send Dialog */}
       <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-teal-500" />
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Send className="h-6 w-6 text-teal-500" />
               Send SOL
             </DialogTitle>
-            <DialogDescription>
-              Transfer SOL to another Solana address
+            <DialogDescription className="text-sm">
+              Transfer SOL to another Solana address securely
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* From Wallet */}
             <div>
-              <label className="text-sm font-medium mb-2 block">From Wallet</label>
+              <label className="text-sm font-semibold mb-2 block text-muted-foreground">From Wallet</label>
               <select
                 value={sendWalletId || ""}
                 onChange={(e) => setSendWalletId(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                className="w-full px-4 py-3 bg-gradient-to-r from-teal-500/5 to-cyan-500/5 border border-teal-500/20 rounded-lg text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
               >
                 {wallets.map((wallet) => {
                   const balance = balances[wallet.id];
@@ -925,72 +1060,174 @@ export default function AssetsPage() {
 
             {/* Recipient Wallet Selector */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Recipient (Select or Enter Address)</label>
+              <label className="text-sm font-semibold mb-2 block text-muted-foreground">Recipient</label>
               <select
                 value={sendToAddress}
                 onChange={(e) => setSendToAddress(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm mb-2"
+                className="w-full px-4 py-3 bg-background border border-input rounded-lg text-sm mb-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
               >
-                <option value="">-- Select a wallet --</option>
+                <option value="">-- Select from your wallets --</option>
                 {getSortedWalletsForSend().map((wallet) => (
                   <option key={wallet.id} value={wallet.publicKey}>
                     {pinnedWallets.has(wallet.id) ? "📌 " : ""}{wallet.name} - {wallet.balance.toFixed(4)} SOL
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <Input
-                  placeholder="Or enter Solana address..."
+                  placeholder="Or paste Solana address..."
                   value={sendToAddress}
                   onChange={(e) => setSendToAddress(e.target.value)}
-                  className="font-mono text-sm flex-1"
+                  className="font-mono text-sm bg-background border-input focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Select from your wallets or paste an address
-              </p>
             </div>
 
-            {/* Amount */}
+            {/* Amount with Presets */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Amount (SOL)</label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={sendAmount}
-                onChange={(e) => setSendAmount(e.target.value)}
-              />
-              {sendWalletId && balances[sendWalletId] && (
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-muted-foreground">
-                    Available: {balances[sendWalletId].solBalance.toFixed(4)} SOL
-                  </p>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-muted-foreground">Amount (SOL)</label>
+                {sendAmount && sendPresets.length < 3 && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSendAmount(balances[sendWalletId].solBalance.toString())}
-                    className="h-auto p-0 text-xs text-teal-500 hover:text-teal-400"
+                    onClick={() => setShowPresetInput(!showPresetInput)}
+                    className="h-6 text-xs text-teal-500 hover:text-teal-400 hover:bg-teal-500/10"
                   >
-                    Max
+                    <Plus className="h-3 w-3 mr-1" />
+                    Save as Preset
                   </Button>
+                )}
+              </div>
+              
+              {/* Preset Save Input */}
+              {showPresetInput && (
+                <div className="mb-3 p-3 bg-gradient-to-r from-teal-500/5 to-cyan-500/5 border border-teal-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Input
+                      placeholder="Preset name (e.g., 'Quick Transfer')"
+                      value={presetLabel}
+                      onChange={(e) => setPresetLabel(e.target.value)}
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSavePreset}
+                      className="h-8 bg-teal-500 hover:bg-teal-600 text-white text-xs"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowPresetInput(false);
+                        setPresetLabel("");
+                      }}
+                      className="h-8 text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Preset Buttons */}
+              {sendPresets.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {sendPresets.map((preset) => (
+                    <div key={preset.id} className="flex items-center gap-1 bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-lg px-2 py-1">
+                      <button
+                        onClick={() => handleApplyPreset(preset.amount)}
+                        className="text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-500"
+                      >
+                        {preset.label}: {preset.amount.toFixed(2)} SOL
+                      </button>
+                      <button
+                        onClick={() => handleDeletePreset(preset.id)}
+                        className="text-red-500 hover:text-red-600 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={sendAmount}
+                  onChange={(e) => setSendAmount(e.target.value)}
+                  className="font-mono text-lg bg-background border-input focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 pr-20"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                  {sendWalletId && balances[sendWalletId] && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSendAmount((balances[sendWalletId].solBalance * 0.25).toString())}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-teal-500"
+                      >
+                        25%
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSendAmount((balances[sendWalletId].solBalance * 0.5).toString())}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-teal-500"
+                      >
+                        50%
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSendAmount((balances[sendWalletId].solBalance * 0.75).toString())}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-teal-500"
+                      >
+                        75%
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSendAmount(balances[sendWalletId].solBalance.toString())}
+                        className="h-7 px-2 text-xs text-teal-500 hover:text-teal-400 font-semibold"
+                      >
+                        Max
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {sendWalletId && balances[sendWalletId] && (
+                <div className="flex items-center justify-between mt-2 text-xs">
+                  <p className="text-muted-foreground">
+                    Available: <span className="font-semibold text-teal-600 dark:text-teal-400">{balances[sendWalletId].solBalance.toFixed(4)} SOL</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    ≈ ${(balances[sendWalletId].usdValue).toFixed(2)}
+                  </p>
                 </div>
               )}
             </div>
 
             {sendError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 flex-shrink-0" />
                 {sendError}
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSendDialog(false)} className="border-border hover:bg-muted">
               Cancel
             </Button>
             <Button
               onClick={handleSend}
               disabled={isSending}
-              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700"
+              className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-semibold"
             >
               {isSending ? (
                 <span className="flex items-center gap-2">
@@ -1003,6 +1240,59 @@ export default function AssetsPage() {
                   Send SOL
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <DollarSign className="h-6 w-6 text-teal-500" />
+              Deposit SOL
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Scan QR code to deposit SOL to this wallet
+            </DialogDescription>
+          </DialogHeader>
+          {qrWalletId && (() => {
+            const wallet = wallets.find(w => w.id === qrWalletId);
+            if (!wallet) return null;
+            return (
+              <div className="space-y-4">
+                <div className="flex justify-center p-6 bg-white rounded-2xl">
+                  <QRCodeSVG
+                    value={wallet.publicKey}
+                    size={200}
+                    level="H"
+                    includeMargin={true}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold mb-2">{wallet.name}</p>
+                  <div 
+                    className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-teal-500/5 to-cyan-500/5 border border-teal-500/20 rounded-lg cursor-pointer hover:border-teal-500/40 transition-all"
+                    onClick={async () => {
+                      await copyToClipboard(wallet.publicKey, `qr-${wallet.id}`);
+                    }}
+                  >
+                    <code className="text-sm font-mono text-muted-foreground break-all">
+                      {wallet.publicKey}
+                    </code>
+                    <Copy className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Click to copy address
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQrDialog(false)} className="w-full">
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
