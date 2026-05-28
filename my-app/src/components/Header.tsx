@@ -6,7 +6,7 @@ import { validateSolanaAddress } from "@/lib/solana-api";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  Search,ф
+  Search,
   Bell,
   ChevronDown,
   Wallet,
