@@ -121,3 +121,5 @@ export function removeWalletFromStorage(walletId: string): void {
   const filtered = wallets.filter(w => w.id !== walletId);
   saveWalletsToStorage(filtered);
 }
+
+export { base58ToUint8Array };
