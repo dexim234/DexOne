@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { validateSolanaAddress } from "@/lib/solana-api";
+import { getSolBalance } from "@/lib/solana-transaction";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
@@ -28,6 +29,7 @@ import {
   Gift,
   Plus,
   DollarSign,
+  Check,
 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -82,6 +84,8 @@ export default function Header() {
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+  const [isLoadingAllBalances, setIsLoadingAllBalances] = useState(false);
   const [clipboardToken, setClipboardToken] = useState<{ address: string; name?: string } | null>(null);
 
   // Load wallets from localStorage
@@ -89,12 +93,18 @@ export default function Header() {
     const loadWallets = () => {
       try {
         const savedWallets = localStorage.getItem('solana-wallets');
+        const savedActive = localStorage.getItem('active-wallet-id');
         if (savedWallets) {
           const parsed = JSON.parse(savedWallets);
           setWallets(parsed);
-          if (parsed.length > 0 && !activeWalletId) {
+          if (savedActive && parsed.find((w: any) => w.id === savedActive)) {
+            setActiveWalletId(savedActive);
+          } else if (parsed.length > 0 && !activeWalletId) {
             setActiveWalletId(parsed[0].id);
           }
+        } else {
+          setWallets([]);
+          setActiveWalletId(null);
         }
       } catch (e) {
         console.error('Failed to load wallets:', e);
@@ -103,10 +113,49 @@ export default function Header() {
     loadWallets();
     
     // Listen for storage changes
-    const handleStorageChange = () => loadWallets();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'solana-wallets' || e.key === 'active-wallet-id') {
+        loadWallets();
+      }
+    };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Save active wallet ID to localStorage when it changes
+  React.useEffect(() => {
+    if (activeWalletId) {
+      localStorage.setItem('active-wallet-id', activeWalletId);
+    }
+  }, [activeWalletId]);
+
+  // Fetch balance for all wallets
+  React.useEffect(() => {
+    if (wallets.length === 0) {
+      setWalletBalances({});
+      setIsLoadingAllBalances(false);
+      return;
+    }
+    
+    const fetchAllBalances = async () => {
+      setIsLoadingAllBalances(true);
+      const balances: Record<string, number> = {};
+      await Promise.all(
+        wallets.map(async (wallet) => {
+          try {
+            const bal = await getSolBalance(wallet.publicKey);
+            balances[wallet.id] = bal;
+          } catch (err) {
+            balances[wallet.id] = 0;
+          }
+        })
+      );
+      setWalletBalances(balances);
+      setIsLoadingAllBalances(false);
+    };
+    
+    fetchAllBalances();
+  }, [wallets]);
 
   // Fetch balance when active wallet changes
   React.useEffect(() => {
@@ -121,19 +170,8 @@ export default function Header() {
       
       setIsLoadingBalance(true);
       try {
-        const response = await fetch("https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: "get-balance",
-            method: "getBalance",
-            params: [wallet.publicKey],
-          }),
-        });
-        const data = await response.json();
-        const lamports = data.result?.value || 0;
-        setBalance(lamports / 1_000_000_000);
+        const solBalance = await getSolBalance(wallet.publicKey);
+        setBalance(solBalance);
       } catch (err) {
         console.error("Failed to fetch balance:", err);
         setBalance(0);
@@ -296,16 +334,15 @@ export default function Header() {
             >
               <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-teal-500 to-purple-600 group-hover:scale-110 transition-transform">
                 {wallets.length > 0 && activeWalletId ? (
-                  <>
-                    <DollarSign className="h-3.5 w-3.5 text-white" />
-                    <span className="ml-1">{isLoadingBalance ? "..." : balance.toFixed(2)}</span>
-                  </>
+                  <DollarSign className="h-3.5 w-3.5 text-white" />
                 ) : (
                   <Wallet className="h-3.5 w-3.5 text-white" />
                 )}
               </div>
-              <span className="max-w-[80px] truncate">
-                {wallets.length > 0 && activeWalletId ? "SOL" : "Connect"}
+              <span className="max-w-[100px] truncate">
+                {wallets.length > 0 && activeWalletId
+                  ? (isLoadingBalance ? "..." : `${balance.toFixed(3)} SOL`)
+                  : "Connect"}
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
             </DropdownMenuTrigger>
@@ -366,6 +403,72 @@ export default function Header() {
                   </div>
                 </div>
               </div>
+
+              {/* Your Wallets */}
+              {wallets.length > 0 && (
+                <div className="mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                    Your Wallets
+                  </span>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                    {wallets.map((wallet) => {
+                      const isActive = activeWalletId === wallet.id;
+                      const bal = walletBalances[wallet.id];
+                      return (
+                        <DropdownMenuItem
+                          key={wallet.id}
+                          className={`gap-3 cursor-pointer px-3 py-2 rounded-lg transition-all ${
+                            isActive
+                              ? "bg-teal-500/10 border border-teal-500/20"
+                              : "hover:bg-accent/50"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveWalletId(wallet.id);
+                            localStorage.setItem('active-wallet-id', wallet.id);
+                          }}
+                        >
+                          <div
+                            className={`flex items-center justify-center h-8 w-8 rounded-lg ${
+                              isActive ? 'bg-gradient-to-br from-teal-500 to-purple-600' : 'bg-muted/50'
+                            }`}
+                          >
+                            <Wallet
+                              className={`h-4 w-4 ${
+                                isActive ? 'text-white' : 'text-muted-foreground'
+                              }`}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`font-semibold text-sm truncate ${
+                                  isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
+                                }`}
+                              >
+                                {wallet.name}
+                              </span>
+                              {isActive && (
+                                <Check className="h-3.5 w-3.5 text-teal-500" />
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-4)}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-foreground">
+                              {isLoadingAllBalances
+                                ? "..."
+                                : `${(bal || 0).toFixed(3)} SOL`}
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Wallet connections */}
               <div className="mb-4">
