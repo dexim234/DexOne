@@ -155,7 +155,16 @@ export default function AssetsPage() {
 
     try {
       const solBalance = await getSolBalance(wallet.publicKey);
-      const solPrice = 140;
+      
+      // Fetch real SOL price from CoinGecko
+      let solPrice = 140;
+      try {
+        const priceResponse = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+        const priceData = await priceResponse.json();
+        solPrice = priceData.solana?.usd || 140;
+      } catch (err) {
+        console.error("Failed to fetch SOL price:", err);
+      }
 
       setBalances(prev => ({
         ...prev,
