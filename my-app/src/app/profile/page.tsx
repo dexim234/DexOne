@@ -74,14 +74,18 @@ export default function ProfilePage() {
   const activeWallet = wallets.find((w) => w.id === activeWalletId);
 
   const handleSaveProfile = async () => {
+    console.log("💾 Saving profile...");
     try {
       await updateProfile({ 
         nickname, 
         socialLinks 
       });
       addToast("success", "Profile Saved", "Your profile has been updated");
-    } catch (err) {
-      addToast("error", "Save Failed", "Failed to save profile");
+    } catch (err: any) {
+      console.error("Failed to save profile:", err);
+      console.error("Error code:", err.code);
+      console.error("Error message:", err.message);
+      addToast("error", "Save Failed", "Failed to save profile: " + (err.message || ""));
     }
   };
 
