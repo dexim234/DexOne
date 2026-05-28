@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, Timestamp } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -11,13 +11,14 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase - check if already initialized
-let app;
+let app: FirebaseApp | null = null;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
 } else {
   app = getApps()[0];
 }
 export const db = getFirestore(app);
+export { app };
 
 // Firestore operations
 export interface WalletData {

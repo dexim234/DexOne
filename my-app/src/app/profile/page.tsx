@@ -17,22 +17,19 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Upload,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useToast } from "@/components/ui/toast";
-
-interface WalletData {
-  id: string;
-  name: string;
-  publicKey: string;
-  privateKeyBase58: string;
-  createdAt: number;
-}
+import { useUser } from "@/contexts/UserContext";
+import { validateImageFile } from "@/lib/firebase-storage";
 
 interface SocialLink {
   id: string;
@@ -44,59 +41,80 @@ interface SocialLink {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { addToast } = useToast();
+  const { userId, isLoading, profile, wallets, activeWalletId, setActiveWallet, updateProfile, uploadAvatar } = useUser();
 
-  const [wallets, setWallets] = useState<WalletData[]>([]);
-  const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const loadData = () => {
-      try {
-        const savedWallets = localStorage.getItem("solana-wallets");
-        const savedActive = localStorage.getItem("active-wallet-id");
-        const savedProfile = localStorage.getItem("profile-data");
-
-        if (savedWallets) {
-          const parsed = JSON.parse(savedWallets);
-          setWallets(parsed);
-          if (savedActive && parsed.find((w: WalletData) => w.id === savedActive)) {
-            setActiveWalletId(savedActive);
-          } else if (parsed.length > 0) {
-            setActiveWalletId(parsed[0].id);
-          }
-        }
-
-        if (savedProfile) {
-          const profile = JSON.parse(savedProfile);
-          if (profile.nickname) setNickname(profile.nickname);
-          if (profile.socialLinks) setSocialLinks(profile.socialLinks);
-        }
-      } catch (e) {
-        console.error("Failed to load profile data:", e);
-      }
-    };
-    loadData();
-
-    const handleWalletChange = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        setActiveWalletId(customEvent.detail);
-      }
-    };
-    window.addEventListener("activeWalletChanged", handleWalletChange);
-    return () => window.removeEventListener("activeWalletChanged", handleWalletChange);
-  }, []);
+    if (profile) {
+      setNickname(profile.nickname || "");
+      // Ensure social links have ids
+      const links = profile.socialLinks?.map((link: any) => ({
+        ...link,
+        id: link.id || crypto.randomUUID()
+      })) || [];
+      setSocialLinks(links);
+    }
+  }, [profile]);
 
   const activeWallet = wallets.find((w) => w.id === activeWalletId);
 
-  const saveProfile = () => {
+  const handleSaveProfile = async () => {
     try {
-      localStorage.setItem("profile-data", JSON.stringify({ nickname, socialLinks }));
+      await updateProfile({ 
+        nickname, 
+        socialLinks 
+      });
       addToast("success", "Profile Saved", "Your profile has been updated");
-    } catch (e) {
-      console.error("Failed to save profile:", e);
+    } catch (err) {
+      addToast("error", "Save Failed", "Failed to save profile");
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      addToast("error", "Invalid File", validation.error || "Invalid file");
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    try {
+      await uploadAvatar(selectedFile);
+      addToast("success", "Avatar Uploaded", "Your avatar has been updated");
+      setShowUploadDialog(false);
+      setSelectedFile(null);
+    } catch (err) {
+      addToast("error", "Upload Failed", "Failed to upload avatar");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      if (profile?.avatarUrl) {
+        const { deleteUserImage } = await import("@/lib/firebase-storage");
+        await deleteUserImage(profile.avatarUrl);
+        await updateProfile({ avatarUrl: undefined });
+        addToast("success", "Avatar Removed", "Your avatar has been removed");
+      }
+    } catch (err) {
+      addToast("error", "Remove Failed", "Failed to remove avatar");
     }
   };
 
@@ -157,6 +175,17 @@ export default function ProfilePage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin h-8 w-8 border-4 border-teal-500 border-t-transparent rounded-full mx-auto" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (wallets.length === 0) {
     return (
       <div className="min-h-screen bg-background">
@@ -209,14 +238,31 @@ export default function ProfilePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-teal/5 via-transparent to-purple/5" />
           <CardContent className="p-6 relative">
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="relative shrink-0">
-                <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-teal via-teal-light to-teal-dark flex items-center justify-center shadow-xl">
-                  <User className="h-12 w-12 text-white" />
-                </div>
+              <div className="relative shrink-0 group">
+                {profile?.avatarUrl ? (
+                  <div className="relative">
+                    <img 
+                      src={profile.avatarUrl} 
+                      alt="Avatar" 
+                      className="h-24 w-24 rounded-3xl object-cover shadow-xl"
+                    />
+                    <button
+                      onClick={() => handleRemoveAvatar()}
+                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-red-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      title="Remove avatar"
+                    >
+                      <X className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-teal via-teal-light to-teal-dark flex items-center justify-center shadow-xl">
+                    <User className="h-12 w-12 text-white" />
+                  </div>
+                )}
                 <button
+                  onClick={() => setShowUploadDialog(true)}
                   className="absolute -bottom-1 -right-1 h-8 w-8 rounded-xl bg-background border border-border/50 flex items-center justify-center shadow-sm hover:bg-accent transition-colors"
-                  title="Upload avatar (coming soon)"
-                  onClick={() => addToast("info", "Coming Soon", "Avatar upload will be available soon")}
+                  title="Upload avatar"
                 >
                   <Camera className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -254,7 +300,6 @@ export default function ProfilePage() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Caller Profile */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -307,7 +352,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Setups Placeholder */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
@@ -340,7 +384,7 @@ export default function ProfilePage() {
                       <button
                         key={wallet.id}
                         onClick={() => {
-                          setActiveWalletId(wallet.id);
+                          setActiveWallet(wallet.id);
                           localStorage.setItem("active-wallet-id", wallet.id);
                           window.dispatchEvent(new CustomEvent("activeWalletChanged", { detail: wallet.id }));
                         }}
@@ -369,12 +413,81 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            <Button onClick={saveProfile} className="w-full h-11 bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all">
+            <Button onClick={handleSaveProfile} className="w-full h-11 bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all">
               Save Profile
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Upload Avatar Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-teal-500" />
+              Upload Avatar
+            </DialogTitle>
+            <DialogDescription>
+              Select an image file (JPEG, PNG, GIF, WebP, max 5MB)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-teal-500/50 transition-colors">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="avatar-upload"
+              />
+              <label htmlFor="avatar-upload" className="cursor-pointer">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
+                    {selectedFile ? (
+                      <img 
+                        src={URL.createObjectURL(selectedFile)} 
+                        alt="Preview" 
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Camera className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    {selectedFile ? selectedFile.name : "Click to select image"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : "or drag and drop"}
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUploadAvatar} 
+              disabled={!selectedFile || isUploading}
+              className="bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
+            >
+              {isUploading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Uploading...
+                </span>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

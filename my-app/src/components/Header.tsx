@@ -433,8 +433,7 @@ export default function Header() {
                               ? "bg-teal-500/10 border border-teal-500/20"
                               : "hover:bg-accent/50"
                           }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() => {
                             setActiveWalletId(wallet.id);
                             localStorage.setItem('active-wallet-id', wallet.id);
                             window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: wallet.id }));
