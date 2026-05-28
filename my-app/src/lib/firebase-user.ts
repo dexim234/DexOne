@@ -106,8 +106,7 @@ export const getWalletsForUser = async (userId: string): Promise<EncryptedWallet
   try {
     const q = query(
       walletsCollection,
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
+      where("userId", "==", userId)
     );
     
     const querySnapshot = await getDocs(q);
