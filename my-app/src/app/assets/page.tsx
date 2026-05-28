@@ -12,6 +12,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { validateSolanaAddress } from "@/lib/solana-api";
 import { useToast } from "@/components/ui/toast";
 import { QRCodeSVG } from "qrcode.react";
+import { sendSolTransaction, getSolBalance } from "@/lib/solana-transaction";
 
 interface WalletBalance {
   [walletId: string]: {
@@ -148,26 +149,14 @@ export default function AssetsPage() {
     setBalances(prev => ({ ...prev, [walletId]: { solBalance: 0, usdValue: 0, loading: true } }));
 
     try {
-      const response = await fetch(HELIUS_RPC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "get-balance",
-          method: "getBalance",
-          params: [wallet.publicKey],
-        }),
-      });
-
-      const data = await response.json();
-      const solBalance = data.result?.value || 0;
+      const solBalance = await getSolBalance(wallet.publicKey);
       const solPrice = 140;
 
       setBalances(prev => ({
         ...prev,
         [walletId]: {
-          solBalance: solBalance / 1e9,
-          usdValue: (solBalance / 1e9) * solPrice,
+          solBalance: solBalance,
+          usdValue: solBalance * solPrice,
           loading: false,
         },
       }));
@@ -244,8 +233,8 @@ export default function AssetsPage() {
 
       return Array.from({ length: daysInMonth }, (_, i) => ({
         day: i + 1,
-        pnl: 0, // Reset all to 0
-        isProfitable: true,
+        pnl: dailyPnL[i + 1] || 0,
+        isProfitable: (dailyPnL[i + 1] || 0) >= 0,
       }));
     } catch (err) {
       console.error("Failed to fetch PnL data:", err);
@@ -432,20 +421,34 @@ export default function AssetsPage() {
     try {
       addToast("info", "Transaction Processing", "Preparing transaction...");
       
-      // NOTE: Real SOL transfer requires:
-      // 1. Connection to Solana RPC
-      // 2. Access to private key for signing
-      // 3. Building and sending transaction
-      // This is a placeholder - implement with @solana/web3.js Transaction
+      if (!wallet) {
+        throw new Error("Wallet not found");
+      }
+
+      // REAL SOL TRANSFER - using the wallet's private key
+      addToast("info", "Signing Transaction", "Please wait...");
       
-      // For now, simulate the transaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const signature = await sendSolTransaction(wallet, sendToAddress.trim(), amount);
       
-      addToast("success", "Transaction Simulated", `Would send ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}`);
+      addToast(
+        "success", 
+        "Transaction Successful", 
+        `Sent ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}\nSignature: ${signature.slice(0, 20)}...`
+      );
+      
+      // Refresh balance
+      await fetchBalance(sendWalletId);
+      
+      // Reset form
       setShowSendDialog(false);
       setSendToAddress("");
       setSendAmount("");
-      if (sendWalletId) fetchBalance(sendWalletId);
+      
+      // Open transaction in explorer
+      const explorerUrl = `https://solscan.io/tx/${signature}`;
+      if (confirm(`Transaction sent! View on Solscan?`)) {
+        window.open(explorerUrl, '_blank');
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to send transaction";
       setSendError(errorMsg);
@@ -564,13 +567,16 @@ export default function AssetsPage() {
                 </div>
 
                 {wallets.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No wallets</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Wallet className="h-8 w-8 text-teal-500" />
+                    </div>
+                    <p className="text-base font-medium mb-1">No wallets yet</p>
+                    <p className="text-sm text-muted-foreground">Create or import a wallet to get started</p>
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {visibleWallets.map((wallet) => {
                         const balance = balances[wallet.id];
                         const isActive = activeWalletId === wallet.id;
@@ -579,63 +585,34 @@ export default function AssetsPage() {
                         return (
                           <div
                             key={wallet.id}
-                            className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                            className={`relative rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden ${
                               isActive
-                                ? "border-teal-500 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 shadow-lg shadow-teal-500/10"
-                                : "border-border/30 hover:border-teal-500/50 hover:bg-teal-500/5 hover:shadow-md"
+                                ? "border-teal-500 bg-gradient-to-br from-teal-500/15 via-teal-500/5 to-transparent shadow-xl shadow-teal-500/20"
+                                : "border-transparent bg-card/60 hover:border-teal-500/30 hover:bg-card/80 hover:shadow-lg"
                             }`}
                             onClick={() => setActiveWalletId(wallet.id)}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="font-semibold text-base">{wallet.name}</span>
-                                  {isActive && (
-                                    <Badge variant="secondary" className="text-xs bg-teal-500/20 text-teal-600 dark:text-teal-400">
-                                      Active
-                                    </Badge>
-                                  )}
+                            {/* Active indicator glow */}
+                            {isActive && (
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                            )}
+                            
+                            <div className="relative p-5">
+                              {/* Header: Name + Badge + Actions */}
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`font-bold text-lg ${isActive ? "text-teal-600 dark:text-teal-400" : "text-foreground"}`}>
+                                      {wallet.name}
+                                    </span>
+                                    {isActive && (
+                                      <Badge className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold border-0 shadow-sm">
+                                        Active
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <code
-                                    className="text-sm text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors font-mono"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAddressClick(wallet.publicKey, wallet.id);
-                                    }}
-                                  >
-                                    {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-6)}
-                                  </code>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenQrDialog(wallet.id);
-                                    }}
-                                    className="h-7 w-7 p-0 hover:bg-teal-500/10"
-                                    title="Show QR Code"
-                                  >
-                                    <QrCode className="h-3.5 w-3.5 text-teal-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="text-right">
-                                  {balance?.loading ? (
-                                    <span className="animate-spin h-4 w-4 border-2 border-teal-500 border-t-transparent rounded-full" />
-                                  ) : (
-                                    <>
-                                      <div className="font-bold text-base text-teal-600 dark:text-teal-400">
-                                        {(balance?.solBalance || 0).toFixed(4)} SOL
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        ${(balance?.usdValue || 0).toFixed(2)}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                                <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -643,11 +620,15 @@ export default function AssetsPage() {
                                       e.stopPropagation();
                                       togglePrivateKeyVisibility(wallet.id);
                                     }}
-                                    className="h-8 w-8 p-0 hover:bg-yellow-500/10"
+                                    className={`h-9 w-9 p-0 rounded-lg transition-all ${
+                                      isPrivateVisible 
+                                        ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400" 
+                                        : "hover:bg-muted"
+                                    }`}
                                     title="Private Key"
                                   >
                                     {isPrivateVisible ? (
-                                      <EyeOff className="h-4 w-4 text-yellow-500" />
+                                      <EyeOff className="h-4 w-4" />
                                     ) : (
                                       <Eye className="h-4 w-4" />
                                     )}
@@ -659,29 +640,94 @@ export default function AssetsPage() {
                                       e.stopPropagation();
                                       handleDeleteWallet(wallet.id);
                                     }}
-                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                    className="h-9 w-9 p-0 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
                                     title="Delete Wallet"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </div>
-                            </div>
 
-                            {isPrivateVisible && (
-                              <div className="mt-3 p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg text-xs">
-                                <p className="font-semibold text-yellow-600 dark:text-yellow-400 mb-1 flex items-center gap-1">
-                                  <Shield className="h-3 w-3" />
-                                  Private Key Warning
-                                </p>
-                                <p className="text-muted-foreground mb-2">
-                                  Full control over wallet. Never share with anyone.
-                                </p>
-                                <div className="font-mono bg-background/50 p-2 rounded break-all text-xs">
-                                  {wallet.privateKeyBase58}
+                              {/* Balance Section */}
+                              <div className="mb-4">
+                                <div className="flex items-end gap-2">
+                                  {balance?.loading ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="animate-spin h-5 w-5 border-2 border-teal-500 border-t-transparent rounded-full" />
+                                      <span className="text-muted-foreground text-sm">Loading...</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span className="text-3xl font-bold tracking-tight">
+                                        {(balance?.solBalance || 0).toFixed(4)}
+                                      </span>
+                                      <span className="text-lg font-semibold text-muted-foreground mb-1">SOL</span>
+                                    </>
+                                  )}
                                 </div>
+                                {balance && !balance.loading && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    ≈ ${(balance?.usdValue || 0).toFixed(2)} USD
+                                  </p>
+                                )}
                               </div>
-                            )}
+
+                              {/* Address Section */}
+                              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border/30">
+                                <code
+                                  className="text-sm font-mono text-muted-foreground flex-1 truncate cursor-pointer hover:text-teal-500 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddressClick(wallet.publicKey, wallet.id);
+                                  }}
+                                  title={wallet.publicKey}
+                                >
+                                  {wallet.publicKey.slice(0, 8)}...{wallet.publicKey.slice(-8)}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenQrDialog(wallet.id);
+                                  }}
+                                  className="h-8 w-8 p-0 rounded-lg hover:bg-teal-500/10 hover:text-teal-500 transition-all flex-shrink-0"
+                                  title="Show QR Code"
+                                >
+                                  <QrCode className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddressClick(wallet.publicKey, wallet.id);
+                                  }}
+                                  className="h-8 w-8 p-0 rounded-lg hover:bg-teal-500/10 hover:text-teal-500 transition-all flex-shrink-0"
+                                  title="Copy Address"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              {/* Private Key Warning */}
+                              {isPrivateVisible && (
+                                <div className="mt-4 p-4 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-transparent border border-yellow-500/20 rounded-xl">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Shield className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                    <p className="font-semibold text-sm text-yellow-600 dark:text-yellow-400">
+                                      Private Key Visible
+                                    </p>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mb-3">
+                                    Anyone with this key has full control of your wallet. Never share it!
+                                  </p>
+                                  <div className="font-mono bg-background/50 p-3 rounded-lg text-xs break-all border border-border/30">
+                                    {wallet.privateKeyBase58}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -718,32 +764,6 @@ export default function AssetsPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Quick Actions - Deposit */}
-            {activeWalletId && (
-              <Card className="border-border/50 bg-gradient-to-r from-teal-500/10 to-cyan-500/5 backdrop-blur">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-teal-500/20 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-teal-500" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">Quick Deposit</p>
-                        <p className="text-xs text-muted-foreground">Get your deposit QR code</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleOpenQrDialog(activeWalletId)}
-                      className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white h-10 px-4 text-sm font-medium"
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Show QR
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Holdings / Orders / Realised Buttons */}
             <div className="grid grid-cols-3 gap-2">
