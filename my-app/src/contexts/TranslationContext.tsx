@@ -20,6 +20,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.smart": "Smart",
     "nav.predictHub": "Predict HUB",
     "nav.assets": "Assets",
+    "nav.rewards": "Rewards",
     
     // Connect Menu
     "connect.wallet": "Connect",
@@ -102,6 +103,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.smart": "Смарты",
     "nav.predictHub": "Рынок предсказаний",
     "nav.assets": "Активы",
+    "nav.rewards": "Награды",
     
     // Connect Menu
     "connect.wallet": "Connect",
