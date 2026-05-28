@@ -123,3 +123,4 @@ export function removeWalletFromStorage(walletId: string): void {
 }
 
 export { base58ToUint8Array };
+export { MIN_SOL_FOR_RENT, TRANSACTION_FEE } from './solana-transaction';

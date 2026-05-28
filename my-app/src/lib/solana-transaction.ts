@@ -3,6 +3,11 @@ import { WalletData, base58ToUint8Array } from './solana-wallet-creator';
 
 export const HELIUS_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8";
 
+// Минимальный баланс для rent exemption (примерно 0.00203928 SOL)
+export const MIN_SOL_FOR_RENT = 0.00203928;
+// Комиссия за транзакцию (~5000 lamports = 0.000005 SOL)
+export const TRANSACTION_FEE = 0.000005;
+
 /**
  * Отправляет SOL с одного кошелька на другой
  * @param senderWallet - Кошелек отправителя (из localStorage)
@@ -29,23 +34,26 @@ export async function sendSolTransaction(
       throw new Error('Invalid private key for this wallet');
     }
 
-    // Создаем PublicKey адресата
-    const recipientPubKey = new PublicKey(recipientAddress);
-
     // Проверяем баланс
     const balance = await connection.getBalance(senderKeypair.publicKey);
-    const amountInLamports = amountSol * LAMPORTS_PER_SOL;
+    const balanceInSol = balance / LAMPORTS_PER_SOL;
+    const totalRequired = amountSol + MIN_SOL_FOR_RENT + TRANSACTION_FEE;
     
-    if (balance < amountInLamports) {
-      throw new Error(`Insufficient balance. Available: ${balance / LAMPORTS_PER_SOL} SOL`);
+    if (balanceInSol < totalRequired) {
+      throw new Error(
+        `Insufficient balance!\n\nRequired: ${totalRequired.toFixed(6)} SOL\n  - Send: ${amountSol.toFixed(4)} SOL\n  - Rent reserve: ${MIN_SOL_FOR_RENT.toFixed(6)} SOL\n  - Fee: ${TRANSACTION_FEE.toFixed(6)} SOL\n\nAvailable: ${balanceInSol.toFixed(6)} SOL`
+      );
     }
+
+    // Создаем PublicKey адресата
+    const recipientPubKey = new PublicKey(recipientAddress);
 
     // Создаем транзакцию
     const transaction = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: senderKeypair.publicKey,
         toPubkey: recipientPubKey,
-        lamports: amountInLamports,
+        lamports: amountSol * LAMPORTS_PER_SOL,
       })
     );
 
@@ -90,3 +98,4 @@ export async function getSolBalance(publicKey: string): Promise<number> {
     return 0;
   }
 }
+

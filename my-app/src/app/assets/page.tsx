@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { generateSolanaWallet, getWalletsFromStorage, removeWalletFromStorage, saveWalletsToStorage, WalletData, importSolanaWallet } from "@/lib/solana-wallet-creator";
+import { generateSolanaWallet, getWalletsFromStorage, removeWalletFromStorage, saveWalletsToStorage, WalletData, importSolanaWallet, MIN_SOL_FOR_RENT, TRANSACTION_FEE } from "@/lib/solana-wallet-creator";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { validateSolanaAddress } from "@/lib/solana-api";
 import { useToast } from "@/components/ui/toast";
@@ -82,10 +82,15 @@ export default function AssetsPage() {
   const [sendPresets, setSendPresets] = useState<SendPreset[]>([]);
   const [showPresetInput, setShowPresetInput] = useState(false);
   const [presetLabel, setPresetLabel] = useState("");
+  const [lastTransactionSignature, setLastTransactionSignature] = useState<string | null>(null);
 
   // QR Code modal state
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [qrWalletId, setQrWalletId] = useState<string | null>(null);
+
+  // Delete confirmation modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [walletToDelete, setWalletToDelete] = useState<WalletData | null>(null);
 
   // Create/Import modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -337,20 +342,32 @@ export default function AssetsPage() {
     }
   };
 
-  const handleDeleteWallet = (walletId: string) => {
-    if (confirm("Are you sure you want to delete this wallet? This action cannot be undone.")) {
-      removeWalletFromStorage(walletId);
+  const handleDeleteWallet = (wallet: WalletData) => {
+    setWalletToDelete(wallet);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteWallet = () => {
+    if (walletToDelete) {
+      removeWalletFromStorage(walletToDelete.id);
       setWallets(prev => {
-        const filtered = prev.filter(w => w.id !== walletId);
-        if (activeWalletId === walletId && filtered.length > 0) {
+        const filtered = prev.filter(w => w.id !== walletToDelete.id);
+        if (activeWalletId === walletToDelete.id && filtered.length > 0) {
           setActiveWalletId(filtered[0].id);
         } else if (filtered.length === 0) {
           setActiveWalletId(null);
         }
         return filtered;
       });
-      addToast("info", "Wallet Deleted", "The wallet has been removed");
+      addToast("info", "Wallet Deleted", `${walletToDelete.name} has been removed`);
+      setShowDeleteConfirm(false);
+      setWalletToDelete(null);
     }
+  };
+
+  const cancelDeleteWallet = () => {
+    setShowDeleteConfirm(false);
+    setWalletToDelete(null);
   };
 
   const togglePrivateKeyVisibility = (walletId: string) => {
@@ -402,16 +419,27 @@ export default function AssetsPage() {
 
     const wallet = wallets.find(w => w.id === sendWalletId);
     const balance = balances[sendWalletId];
-    if (balance && amount > balance.solBalance) {
-      setSendError("Insufficient balance");
-      addToast("error", "Transaction Failed", "Insufficient balance");
-      return;
-    }
-
+    
     // Check if recipient is different from sender
     if (wallet && sendToAddress === wallet.publicKey) {
       setSendError("Cannot send to the same wallet");
       addToast("error", "Validation Error", "Cannot send to the same wallet");
+      return;
+    }
+
+    // Check balance with rent and fee
+    const totalRequired = amount + MIN_SOL_FOR_RENT + TRANSACTION_FEE;
+    if (balance && balance.solBalance < totalRequired) {
+      setSendError(
+        `Insufficient balance!\n\nRequired: ${totalRequired.toFixed(6)} SOL\n  - Send: ${amount.toFixed(4)} SOL\n  - Rent reserve: ${MIN_SOL_FOR_RENT.toFixed(6)} SOL\n  - Fee: ${TRANSACTION_FEE.toFixed(6)} SOL\n\nAvailable: ${balance.solBalance.toFixed(6)} SOL`
+      );
+      addToast("error", "Insufficient Balance", `You need at least ${totalRequired.toFixed(6)} SOL`);
+      return;
+    }
+
+    if (!wallet) {
+      setSendError("Wallet not found");
+      addToast("error", "Error", "Wallet not found");
       return;
     }
 
@@ -421,10 +449,6 @@ export default function AssetsPage() {
     try {
       addToast("info", "Transaction Processing", "Preparing transaction...");
       
-      if (!wallet) {
-        throw new Error("Wallet not found");
-      }
-
       // REAL SOL TRANSFER - using the wallet's private key
       addToast("info", "Signing Transaction", "Please wait...");
       
@@ -433,8 +457,11 @@ export default function AssetsPage() {
       addToast(
         "success", 
         "Transaction Successful", 
-        `Sent ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}\nSignature: ${signature.slice(0, 20)}...`
+        `Sent ${amount} SOL to ${sendToAddress.slice(0, 4)}...${sendToAddress.slice(-4)}`
       );
+      
+      // Store signature for view on explorer dialog
+      setLastTransactionSignature(signature);
       
       // Refresh balance
       await fetchBalance(sendWalletId);
@@ -444,11 +471,10 @@ export default function AssetsPage() {
       setSendToAddress("");
       setSendAmount("");
       
-      // Open transaction in explorer
-      const explorerUrl = `https://solscan.io/tx/${signature}`;
-      if (confirm(`Transaction sent! View on Solscan?`)) {
-        window.open(explorerUrl, '_blank');
-      }
+      // Show explorer dialog
+      setTimeout(() => {
+        // Dialog will be shown after modal closes
+      }, 100);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to send transaction";
       setSendError(errorMsg);
@@ -567,16 +593,16 @@ export default function AssetsPage() {
                 </div>
 
                 {wallets.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Wallet className="h-8 w-8 text-teal-500" />
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Wallet className="h-6 w-6 text-teal-500" />
                     </div>
-                    <p className="text-base font-medium mb-1">No wallets yet</p>
-                    <p className="text-sm text-muted-foreground">Create or import a wallet to get started</p>
+                    <p className="text-sm font-medium mb-1">No wallets yet</p>
+                    <p className="text-xs text-muted-foreground">Create or import a wallet to get started</p>
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {visibleWallets.map((wallet) => {
                         const balance = balances[wallet.id];
                         const isActive = activeWalletId === wallet.id;
@@ -585,34 +611,34 @@ export default function AssetsPage() {
                         return (
                           <div
                             key={wallet.id}
-                            className={`relative rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden ${
+                            className={`relative rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden ${
                               isActive
-                                ? "border-teal-500 bg-gradient-to-br from-teal-500/15 via-teal-500/5 to-transparent shadow-xl shadow-teal-500/20"
-                                : "border-transparent bg-card/60 hover:border-teal-500/30 hover:bg-card/80 hover:shadow-lg"
+                                ? "border-teal-500 bg-gradient-to-br from-teal-500/10 via-teal-500/3 to-transparent shadow-lg shadow-teal-500/15"
+                                : "border-transparent bg-card/60 hover:border-teal-500/20 hover:bg-card/80 hover:shadow-md"
                             }`}
                             onClick={() => setActiveWalletId(wallet.id)}
                           >
                             {/* Active indicator glow */}
                             {isActive && (
-                              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 blur-3xl rounded-full -mr-16 -mt-16" />
+                              <div className="absolute top-0 right-0 w-20 h-20 bg-teal-500/10 blur-2xl rounded-full -mr-10 -mt-10" />
                             )}
                             
-                            <div className="relative p-5">
+                            <div className="relative p-3">
                               {/* Header: Name + Badge + Actions */}
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`font-bold text-lg ${isActive ? "text-teal-600 dark:text-teal-400" : "text-foreground"}`}>
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-semibold text-sm truncate ${isActive ? "text-teal-600 dark:text-teal-400" : "text-foreground"}`}>
                                       {wallet.name}
                                     </span>
                                     {isActive && (
-                                      <Badge className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold border-0 shadow-sm">
+                                      <Badge className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-[10px] font-semibold border-0 shadow-xs px-1.5 py-0.5">
                                         Active
                                       </Badge>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -620,7 +646,7 @@ export default function AssetsPage() {
                                       e.stopPropagation();
                                       togglePrivateKeyVisibility(wallet.id);
                                     }}
-                                    className={`h-9 w-9 p-0 rounded-lg transition-all ${
+                                    className={`h-7 w-7 p-0 rounded-md transition-all ${
                                       isPrivateVisible 
                                         ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400" 
                                         : "hover:bg-muted"
@@ -628,9 +654,9 @@ export default function AssetsPage() {
                                     title="Private Key"
                                   >
                                     {isPrivateVisible ? (
-                                      <EyeOff className="h-4 w-4" />
+                                      <EyeOff className="h-3.5 w-3.5" />
                                     ) : (
-                                      <Eye className="h-4 w-4" />
+                                      <Eye className="h-3.5 w-3.5" />
                                     )}
                                   </Button>
                                   <Button
@@ -638,91 +664,94 @@ export default function AssetsPage() {
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleDeleteWallet(wallet.id);
+                                      handleDeleteWallet(wallet);
                                     }}
-                                    className="h-9 w-9 p-0 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                    className="h-7 w-7 p-0 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
                                     title="Delete Wallet"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </div>
 
-                              {/* Balance Section */}
-                              <div className="mb-4">
-                                <div className="flex items-end gap-2">
+                              {/* Balance + Address Row */}
+                              <div className="flex items-center justify-between">
+                                <div>
                                   {balance?.loading ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="animate-spin h-5 w-5 border-2 border-teal-500 border-t-transparent rounded-full" />
-                                      <span className="text-muted-foreground text-sm">Loading...</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="animate-spin h-3 w-3 border-2 border-teal-500 border-t-transparent rounded-full" />
                                     </div>
                                   ) : (
                                     <>
-                                      <span className="text-3xl font-bold tracking-tight">
-                                        {(balance?.solBalance || 0).toFixed(4)}
-                                      </span>
-                                      <span className="text-lg font-semibold text-muted-foreground mb-1">SOL</span>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-xl font-bold text-foreground">
+                                          {(balance?.solBalance || 0).toFixed(4)}
+                                        </span>
+                                        <span className="text-xs font-medium text-muted-foreground">SOL</span>
+                                      </div>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        ≈ ${(balance?.usdValue || 0).toFixed(2)}
+                                      </p>
                                     </>
                                   )}
                                 </div>
-                                {balance && !balance.loading && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    ≈ ${(balance?.usdValue || 0).toFixed(2)} USD
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Address Section */}
-                              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border/30">
-                                <code
-                                  className="text-sm font-mono text-muted-foreground flex-1 truncate cursor-pointer hover:text-teal-500 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddressClick(wallet.publicKey, wallet.id);
-                                  }}
-                                  title={wallet.publicKey}
-                                >
-                                  {wallet.publicKey.slice(0, 8)}...{wallet.publicKey.slice(-8)}
-                                </code>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenQrDialog(wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0 rounded-lg hover:bg-teal-500/10 hover:text-teal-500 transition-all flex-shrink-0"
-                                  title="Show QR Code"
-                                >
-                                  <QrCode className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddressClick(wallet.publicKey, wallet.id);
-                                  }}
-                                  className="h-8 w-8 p-0 rounded-lg hover:bg-teal-500/10 hover:text-teal-500 transition-all flex-shrink-0"
-                                  title="Copy Address"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
+                                
+                                {/* Address + Actions */}
+                                <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded-lg border border-border/30">
+                                    <code
+                                      className="text-[10px] font-mono text-muted-foreground cursor-pointer hover:text-teal-500 transition-colors"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddressClick(wallet.publicKey, wallet.id);
+                                      }}
+                                      title={wallet.publicKey}
+                                    >
+                                      {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-6)}
+                                    </code>
+                                    <div className="flex items-center gap-0.5">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenQrDialog(wallet.id);
+                                        }}
+                                        className="h-5 w-5 p-0 rounded hover:bg-teal-500/10 hover:text-teal-500 transition-all"
+                                        title="Show QR Code"
+                                      >
+                                        <QrCode className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAddressClick(wallet.publicKey, wallet.id);
+                                        }}
+                                        className="h-5 w-5 p-0 rounded hover:bg-teal-500/10 hover:text-teal-500 transition-all"
+                                        title="Copy Address"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Private Key Warning */}
                               {isPrivateVisible && (
-                                <div className="mt-4 p-4 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-transparent border border-yellow-500/20 rounded-xl">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <Shield className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                                    <p className="font-semibold text-sm text-yellow-600 dark:text-yellow-400">
+                                <div className="mt-2 p-2.5 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-transparent border border-yellow-500/20 rounded-lg">
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <Shield className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+                                    <p className="font-semibold text-xs text-yellow-600 dark:text-yellow-400">
                                       Private Key Visible
                                     </p>
                                   </div>
-                                  <p className="text-xs text-muted-foreground mb-3">
-                                    Anyone with this key has full control of your wallet. Never share it!
+                                  <p className="text-[10px] text-muted-foreground mb-1.5">
+                                    Never share this key! Anyone with it controls your wallet.
                                   </p>
-                                  <div className="font-mono bg-background/50 p-3 rounded-lg text-xs break-all border border-border/30">
+                                  <div className="font-mono bg-background/50 p-1.5 rounded text-[9px] break-all border border-border/30">
                                     {wallet.privateKeyBase58}
                                   </div>
                                 </div>
@@ -1212,8 +1241,9 @@ export default function AssetsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSendAmount(balances[sendWalletId].solBalance.toString())}
+                        onClick={() => setSendAmount((balances[sendWalletId].solBalance - MIN_SOL_FOR_RENT - TRANSACTION_FEE).toString())}
                         className="h-7 px-2 text-xs text-teal-500 hover:text-teal-400 font-semibold"
+                        title="Max (minus rent & fees)"
                       >
                         Max
                       </Button>
@@ -1229,6 +1259,13 @@ export default function AssetsPage() {
                   <p className="text-muted-foreground">
                     ≈ ${(balances[sendWalletId].usdValue).toFixed(2)}
                   </p>
+                </div>
+              )}
+              {sendWalletId && balances[sendWalletId] && (
+                <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[10px] text-blue-600 dark:text-blue-400">
+                  <p className="font-semibold mb-1">ℹ️ Minimum Balance Required</p>
+                  <p>Keep at least {(MIN_SOL_FOR_RENT + TRANSACTION_FEE).toFixed(6)} SOL in wallet for rent & fees</p>
+                  <p className="mt-1 font-medium">Max sendable: {(balances[sendWalletId].solBalance - MIN_SOL_FOR_RENT - TRANSACTION_FEE).toFixed(6)} SOL</p>
                 </div>
               )}
             </div>
@@ -1313,6 +1350,119 @@ export default function AssetsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowQrDialog(false)} className="w-full">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction Success Dialog */}
+      <Dialog open={!!lastTransactionSignature} onOpenChange={(open) => {
+        if (!open) setLastTransactionSignature(null);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center">
+                <Check className="h-8 w-8 text-green-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-xl font-bold">
+              Transaction Successful!
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Your SOL has been sent successfully
+            </DialogDescription>
+          </DialogHeader>
+          {lastTransactionSignature && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-r from-teal-500/5 to-cyan-500/5 border border-teal-500/20 rounded-xl">
+                <p className="text-xs text-muted-foreground mb-2">Transaction Signature</p>
+                <code className="text-xs font-mono break-all text-foreground">
+                  {lastTransactionSignature}
+                </code>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Status</span>
+                <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-0">
+                  Confirmed
+                </Badge>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setLastTransactionSignature(null)}
+              className="flex-1"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (lastTransactionSignature) {
+                  window.open(`https://solscan.io/tx/${lastTransactionSignature}`, '_blank');
+                }
+              }}
+              className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600"
+            >
+              View on Solscan
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full flex items-center justify-center">
+                <Trash2 className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-xl font-bold">
+              Delete Wallet?
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              This action cannot be undone
+            </DialogDescription>
+          </DialogHeader>
+          {walletToDelete && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl">
+                <p className="text-sm font-semibold mb-1 text-foreground">
+                  {walletToDelete.name}
+                </p>
+                <code className="text-xs font-mono text-muted-foreground break-all">
+                  {walletToDelete.publicKey}
+                </code>
+              </div>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold mb-1">
+                  ⚠️ Warning
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Make sure you have saved your private key before deleting. 
+                  Without it, you cannot recover this wallet.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={cancelDeleteWallet}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeleteWallet}
+              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Wallet
             </Button>
           </DialogFooter>
         </DialogContent>
