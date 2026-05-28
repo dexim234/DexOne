@@ -192,13 +192,13 @@ export default function RewardsPage() {
                       onClick={handleClaim}
                       disabled={claimAmount === 0}
                       variant="outline"
-                      className="h-6 px-2 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
+                      className="h-6 px-2 text-xs border-teal-500/50 hover:bg-teal-500/10 dark:text-white text-black dark:hover:text-white hover:text-black"
                     >
-                      {t("rewards.claim")}
+                      {language === 'en' ? "Claim" : "Забрать"}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">{t("rewards.available")}</p>
-                  <p className="text-lg font-bold">{claimAmount.toFixed(4)} SOL</p>
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? "To Claim" : "Клейм"}</p>
+                  <p className="text-lg font-bold">{claimAmount.toFixed(2)} SOL</p>
                 </CardContent>
               </Card>
 
@@ -210,13 +210,13 @@ export default function RewardsPage() {
                       onClick={handleClaim}
                       disabled={cashbackCoins === 0}
                       variant="outline"
-                      className="h-6 px-2 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
+                      className="h-6 px-2 text-xs border-teal-500/50 hover:bg-teal-500/10 dark:text-white text-black dark:hover:text-white hover:text-black"
                     >
-                      {t("rewards.claim")}
+                      {language === 'en' ? "Claim" : "Забрать"}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">CashBack Coins</p>
-                  <p className="text-lg font-bold">{cashbackCoins}</p>
+                  <p className="text-lg font-bold">{cashbackCoins} SOL</p>
                 </CardContent>
               </Card>
             </div>
@@ -232,9 +232,9 @@ export default function RewardsPage() {
                   <Button
                     onClick={handleCopyLink}
                     variant="outline"
-                    className="h-7 px-3 text-xs border-teal-500/50 text-teal-500 hover:bg-teal-500/10"
+                    className="h-7 px-3 text-xs border-teal-500/50 hover:bg-teal-500/10 dark:text-white text-black dark:hover:text-white hover:text-black"
                   >
-                    {t("rewards.invite")}
+                    {language === 'en' ? "Invite" : "Пригласить"}
                     <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
@@ -285,7 +285,7 @@ export default function RewardsPage() {
                       <Crown className="h-3.5 w-3.5 text-teal-500" />
                       <span className="text-xs">{t("rewards.cashback")}</span>
                     </div>
-                    <span className="font-semibold text-sm">{totalCashback.toFixed(4)} SOL</span>
+                    <span className="font-semibold text-sm">{totalCashback.toFixed(2)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
@@ -293,7 +293,7 @@ export default function RewardsPage() {
                       <Users className="h-3.5 w-3.5 text-teal-500" />
                       <span className="text-xs">{t("rewards.referrals")}</span>
                     </div>
-                    <span className="font-semibold text-sm">{referralStats.totalEarned.toFixed(4)} SOL</span>
+                    <span className="font-semibold text-sm">{referralStats.totalEarned.toFixed(2)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
@@ -301,7 +301,7 @@ export default function RewardsPage() {
                       <Zap className="h-3.5 w-3.5 text-teal-500" />
                       <span className="text-xs">{t("rewards.calls")}</span>
                     </div>
-                    <span className="font-semibold text-sm">{referralStats.callRewards.toFixed(4)} SOL</span>
+                    <span className="font-semibold text-sm">{referralStats.callRewards.toFixed(2)} SOL</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
@@ -309,7 +309,7 @@ export default function RewardsPage() {
                       <Award className="h-3.5 w-3.5 text-teal-500" />
                       <span className="text-xs">{t("rewards.alerts")}</span>
                     </div>
-                    <span className="font-semibold text-sm">{referralStats.salesAlerts.toFixed(4)} SOL</span>
+                    <span className="font-semibold text-sm">{referralStats.salesAlerts.toFixed(2)} SOL</span>
                   </div>
                 </div>
               </CardContent>
