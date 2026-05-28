@@ -6,7 +6,7 @@ import { validateSolanaAddress } from "@/lib/solana-api";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  Search,
+  Search,ф
   Bell,
   ChevronDown,
   Wallet,
@@ -26,6 +26,8 @@ import {
   MessageCircle,
   BarChart2,
   Gift,
+  Plus,
+  DollarSign,
 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -64,22 +66,120 @@ const solflareIcon = (
   </svg>
 );
 
+const telegramIcon = (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.48-1.05-2.4-1.66-.69-.46-.24-1.12.14-1.51.1-.1 2.83-2.64 2.89-2.82.01-.02.03-.1.01-.14-.02-.04-.12-.02-.19-.01-.09.01-1.5.95-4.23 2.83-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
+  </svg>
+);
+
 export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
   const [search, setSearch] = React.useState("");
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [clipboardToken, setClipboardToken] = useState<{ address: string; name?: string } | null>(null);
+
+  // Load wallets from localStorage
+  React.useEffect(() => {
+    const loadWallets = () => {
+      try {
+        const savedWallets = localStorage.getItem('solana-wallets');
+        if (savedWallets) {
+          const parsed = JSON.parse(savedWallets);
+          setWallets(parsed);
+          if (parsed.length > 0 && !activeWalletId) {
+            setActiveWalletId(parsed[0].id);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load wallets:', e);
+      }
+    };
+    loadWallets();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => loadWallets();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Fetch balance when active wallet changes
+  React.useEffect(() => {
+    if (!activeWalletId || wallets.length === 0) {
+      setBalance(0);
+      return;
+    }
+    
+    const fetchBalance = async () => {
+      const wallet = wallets.find(w => w.id === activeWalletId);
+      if (!wallet) return;
+      
+      setIsLoadingBalance(true);
+      try {
+        const response = await fetch("https://mainnet.helius-rpc.com/?api-key=e1c6a036-1d29-4dd6-b47d-78b438efb6f8", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "get-balance",
+            method: "getBalance",
+            params: [wallet.publicKey],
+          }),
+        });
+        const data = await response.json();
+        const lamports = data.result?.value || 0;
+        setBalance(lamports / 1_000_000_000);
+      } catch (err) {
+        console.error("Failed to fetch balance:", err);
+        setBalance(0);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+    
+    fetchBalance();
+  }, [activeWalletId, wallets]);
+
+  // Check clipboard for token address
+  React.useEffect(() => {
+    const checkClipboard = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (validateSolanaAddress(text.trim())) {
+          // It's a valid Solana address - could be a token CA
+          setClipboardToken({ address: text.trim() });
+        }
+      } catch (err) {
+        // Clipboard access denied or not supported
+        console.log('Clipboard access not available');
+      }
+    };
+    
+    checkClipboard();
+    
+    // Check periodically
+    const interval = setInterval(checkClipboard, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearch = () => {
     if (!search.trim()) return;
     
-    // Check if it's a Solana address
-    if (validateSolanaAddress(search.trim())) {
-      window.open(`/tracker/${search.trim()}`, '_blank');
+    const trimmedSearch = search.trim();
+    
+    // Check if it's a Solana address (could be wallet or token CA)
+    if (validateSolanaAddress(trimmedSearch)) {
+      // Check if it looks like a token CA (44+ character base58 address)
+      // Navigate to token page for token CA
+      window.open(`/market-hub/${trimmedSearch}`, '_blank');
     } else {
       // Search for token by CA
-      window.open(`/market-hub?search=${encodeURIComponent(search.trim())}`, '_blank');
+      window.open(`/market-hub?search=${encodeURIComponent(trimmedSearch)}`, '_blank');
     }
     setSearch("");
   };
@@ -134,6 +234,32 @@ export default function Header() {
         <div className="flex items-center gap-3 ml-auto">
           {/* Search */}
           <div className="hidden sm:flex relative w-64">
+            {/* Clipboard token suggestion */}
+            {clipboardToken && (
+              <div className="absolute -top-12 left-0 right-0 z-10">
+                <div className="flex items-center gap-2 bg-gradient-to-r from-teal-500/90 to-purple-600/90 backdrop-blur-sm text-white px-3 py-2 rounded-lg shadow-lg border border-white/20">
+                  <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-xs font-medium truncate">
+                    {clipboardToken.address.slice(0, 6)}...{clipboardToken.address.slice(-4)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      window.open(`/market-hub/${clipboardToken.address}`, '_blank');
+                      setClipboardToken(null);
+                    }}
+                    className="ml-auto text-xs font-bold hover:underline"
+                  >
+                    Go
+                  </button>
+                  <button
+                    onClick={() => setClipboardToken(null)}
+                    className="text-white/70 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors focus-within:text-teal-500" />
             <Input
               type="text"
@@ -169,9 +295,18 @@ export default function Header() {
               className="hidden sm:flex items-center gap-2.5 text-sm font-bold text-foreground bg-gradient-to-r from-muted/50 to-muted/30 border-border/50 cursor-pointer px-4 py-2.5 rounded-xl hover:from-teal-500/20 hover:to-purple-600/20 transition-all duration-300 group"
             >
               <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-teal-500 to-purple-600 group-hover:scale-110 transition-transform">
-                <Wallet className="h-3.5 w-3.5 text-white" />
+                {wallets.length > 0 && activeWalletId ? (
+                  <>
+                    <DollarSign className="h-3.5 w-3.5 text-white" />
+                    <span className="ml-1">{isLoadingBalance ? "..." : balance.toFixed(2)}</span>
+                  </>
+                ) : (
+                  <Wallet className="h-3.5 w-3.5 text-white" />
+                )}
               </div>
-              <span className="max-w-[80px] truncate">Connect</span>
+              <span className="max-w-[80px] truncate">
+                {wallets.length > 0 && activeWalletId ? "SOL" : "Connect"}
+              </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-4 rounded-2xl shadow-xl">
@@ -235,7 +370,7 @@ export default function Header() {
               {/* Wallet connections */}
               <div className="mb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
-                  Connect Wallet
+                  Authentication
                 </span>
                 <div className="space-y-2">
                   <DropdownMenuItem 
@@ -277,6 +412,36 @@ export default function Header() {
                     </div>
                     <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
+
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#24A1DE]">
+                      {telegramIcon}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Telegram</div>
+                      <div className="text-xs text-muted-foreground">Auth via Telegram</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+
+                  {/* Add wallet button */}
+                  <Link href="/assets" onClick={() => {}} className="block">
+                    <DropdownMenuItem 
+                      className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-gradient-to-br from-teal-500 to-purple-600">
+                        <Plus className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-foreground">Add wallet</div>
+                        <div className="text-xs text-muted-foreground">Create or import a wallet</div>
+                      </div>
+                    </DropdownMenuItem>
+                  </Link>
                 </div>
               </div>
 
