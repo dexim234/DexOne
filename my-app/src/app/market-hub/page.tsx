@@ -74,9 +74,9 @@ export default function MarketHubPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 pt-4 pb-0 h-[calc(100dvh-4rem)] flex flex-col overflow-hidden">
       {/* Top Bar with Selectors */}
-      <div className="mb-8">
+      <div className="shrink-0 pb-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           {/* Left: Trending/Trenches Selector */}
           <div className="flex items-center gap-3">
@@ -175,7 +175,7 @@ export default function MarketHubPage() {
       </div>
 
       {/* Three Columns of Trenches */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-0 flex-1">
         {/* New Column - получает новые токены в реальном времени */}
         <TrenchColumn
           title="New"
