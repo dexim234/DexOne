@@ -184,6 +184,7 @@ export default function MarketHubPage() {
           refreshInterval={5000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
+          timeFrame={timeframe}
         />
 
         {/* Soon Column - получает трендовые токены */}
@@ -194,6 +195,7 @@ export default function MarketHubPage() {
           refreshInterval={10000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
+          timeFrame={timeframe}
         />
 
         {/* Migration Column - получает токены близкие к миграции */}
@@ -204,6 +206,7 @@ export default function MarketHubPage() {
           refreshInterval={15000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
+          timeFrame={timeframe}
         />
       </div>
     </div>
