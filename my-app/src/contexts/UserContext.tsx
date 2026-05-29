@@ -61,6 +61,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setActiveWallet = (walletId: string) => {
     setActiveWalletId(walletId);
     localStorage.setItem('active-wallet-id', walletId);
+    
+    // Move wallet to front of list
+    setWallets(prev => {
+      const wallet = prev.find(w => w.id === walletId);
+      if (!wallet) return prev;
+      const others = prev.filter(w => w.id !== walletId);
+      return [wallet, ...others];
+    });
+    
     window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: walletId }));
   };
 

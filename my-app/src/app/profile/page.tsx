@@ -255,6 +255,18 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* User ID Badge - Top Right */}
+        {userId && (
+          <div className="absolute top-8 right-8 z-10">
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">User ID</span>
+              <code className="text-xs font-mono bg-muted/50 px-2 py-1 rounded border border-border/30">
+                {userId.slice(0, 8)}...{userId.slice(-6)}
+              </code>
+            </div>
+          </div>
+        )}
+
         {/* Profile Header */}
         <Card className="mb-6 bg-gradient-to-br from-muted/80 via-muted/50 to-muted/30 backdrop-blur-sm border-border/50 overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-r from-teal/5 via-transparent to-purple/5" />
@@ -289,7 +301,7 @@ export default function ProfilePage() {
                     <Camera className="h-4 w-4 text-muted-foreground" />
                   </button>
                 </div>
-                <div className="flex-1 text-center sm:text-left space-y-3 w-full">
+                <div className="flex-1 text-center sm:text-left space-y-3 w-full max-w-md">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Nickname</label>
                     <Input
@@ -315,18 +327,16 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  {activeWallet && (
-                    <p className="text-xs text-muted-foreground">
-                      {wallets.length} wallet{wallets.length !== 1 ? 's' : ''} • {wallets.length > 0 ? 'Ready to trade' : 'Add wallets in Assets'}
-                    </p>
-                  )}
+                  <Button onClick={handleSaveProfile} className="w-full h-10 bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all mt-2">
+                    Save Profile
+                  </Button>
                 </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -400,11 +410,11 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="border-border/50 bg-card/50 backdrop-blur">
-              <CardContent className="p-5">
+          <div className="lg:col-span-1">
+            <Card className="border-border/50 bg-card/50 backdrop-blur h-full">
+              <CardContent className="p-5 h-full flex flex-col">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Your Wallets</h2>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1">
                   {wallets.map((wallet) => {
                     const isActive = activeWalletId === wallet.id;
                     return (
@@ -439,10 +449,6 @@ export default function ProfilePage() {
                 </Link>
               </CardContent>
             </Card>
-
-            <Button onClick={handleSaveProfile} className="w-full h-11 bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all">
-              Save Profile
-            </Button>
           </div>
         </div>
       </div>

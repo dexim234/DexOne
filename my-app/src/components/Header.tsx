@@ -132,32 +132,36 @@ export default function Header() {
     });
   };
 
-  // Fetch balance for all wallets (with debounce to prevent flashing)
+  // Fetch balance for all wallets (debounced to prevent flashing)
   React.useEffect(() => {
-    if (wallets?.length === 0 || !userId) {
+    if (!wallets?.length || !userId) {
       setWalletBalances({});
       return;
     }
     
     const timer = setTimeout(async () => {
       const balances: Record<string, number> = {};
-      await Promise.all(
-        wallets.map(async (wallet) => {
-          try {
-            const bal = await getSolBalance(wallet.publicKey);
-            balances[wallet.id] = bal;
-          } catch (err) {
-            balances[wallet.id] = 0;
-          }
-        })
-      );
-      setWalletBalances(balances);
-    }, 100); // Small delay to prevent flashing
+      try {
+        await Promise.all(
+          wallets.map(async (wallet) => {
+            try {
+              const bal = await getSolBalance(wallet.publicKey);
+              balances[wallet.id] = bal;
+            } catch (err) {
+              balances[wallet.id] = 0;
+            }
+          })
+        );
+        setWalletBalances(prev => ({ ...prev, ...balances }));
+      } catch (err) {
+        console.error("Failed to fetch balances:", err);
+      }
+    }, 500); // Longer delay to prevent flashing
     
     return () => clearTimeout(timer);
-  }, [wallets, userId]);
+  }, [wallets?.length, userId]);
 
-  // Fetch balance when active wallet changes (with debounce)
+  // Fetch balance when active wallet changes (debounced to prevent flashing)
   React.useEffect(() => {
     if (!activeWalletId || !wallets?.length || !userId) {
       setBalance(0);
@@ -175,10 +179,10 @@ export default function Header() {
         console.error("Failed to fetch balance:", err);
         setBalance(0);
       }
-    }, 100); // Small delay to prevent flashing
+    }, 500); // Longer delay to prevent flashing
     
     return () => clearTimeout(timer);
-  }, [activeWalletId, wallets, userId]);
+  }, [activeWalletId, wallets?.length, userId]);
 
   // Check clipboard for token address
   React.useEffect(() => {
@@ -321,7 +325,6 @@ export default function Header() {
             className="relative text-foreground hover:bg-accent/50 rounded-xl transition-all h-10 w-10 group"
           >
             <Bell className="h-5 w-5 transition-transform group-hover:scale-110" />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
           </Button>
 
           {/* Wallet dropdown with theme and language */}

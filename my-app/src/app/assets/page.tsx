@@ -138,7 +138,19 @@ export default function AssetsPage() {
     if (activeWalletId && userId) {
       setUserWallet(activeWalletId);
     }
-  }, [activeWalletId, userId]);
+  }, [activeWalletId, userId, setUserWallet]);
+
+  // Update activeWalletId when wallets from UserContext change
+  useEffect(() => {
+    if (wallets.length > 0 && !activeWalletId) {
+      const savedActive = localStorage.getItem('active-wallet-id');
+      if (savedActive && wallets.find(w => w.id === savedActive)) {
+        setActiveWalletId(savedActive);
+      } else {
+        setActiveWalletId(wallets[0].id);
+      }
+    }
+  }, [wallets]);
 
   // Listen for wallet changes from other components (e.g. Header dropdown)
   useEffect(() => {
@@ -149,7 +161,7 @@ export default function AssetsPage() {
       }
     };
     window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
     };
