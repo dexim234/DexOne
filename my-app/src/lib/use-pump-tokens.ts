@@ -44,10 +44,10 @@ export function usePumpTokens({
       switch (columnType) {
         case 'new': {
           const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getNewTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
+            pumpFunApi.getNewTokens(30),
+            getPumpSwapTokens(10),
+            getLetsBonkTokens(10),
+            getMeteoraTokens(10),
           ]);
 
           const allTokens = [
@@ -57,17 +57,21 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
+          // Сортировка по createdTimestamp (новые первыми)
           newTokens = allTokens
+            .filter(t => t.createdTimestamp)
             .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
             .slice(0, 20);
+          
+          console.log(`[New] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         case 'soon': {
           const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getSoonTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
+            pumpFunApi.getSoonTokens(30),
+            getPumpSwapTokens(10),
+            getLetsBonkTokens(10),
+            getMeteoraTokens(10),
           ]);
 
           const allTokens = [
@@ -92,14 +96,16 @@ export function usePumpTokens({
               return parseVol(b.volume24h) - parseVol(a.volume24h);
             })
             .slice(0, 20);
+          
+          console.log(`[Soon] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         case 'migration': {
           const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getMigrationTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
+            pumpFunApi.getMigrationTokens(30),
+            getPumpSwapTokens(10),
+            getLetsBonkTokens(10),
+            getMeteoraTokens(10),
           ]);
 
           const allTokens = [
@@ -124,6 +130,8 @@ export function usePumpTokens({
               return parseMC(b.mc) - parseMC(a.mc);
             })
             .slice(0, 20);
+          
+          console.log(`[Migration] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         default:
