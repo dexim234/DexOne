@@ -48,6 +48,7 @@ export default function ProfilePage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [callerLevel, setCallerLevel] = useState("Новичок");
 
   // Convert file to Base64
   const fileToBase64 = (file: File): Promise<string> => {
@@ -298,23 +299,28 @@ export default function ProfilePage() {
                       className="max-w-sm border-teal-500/20 focus:border-teal-500 bg-background/50"
                     />
                   </div>
-                {activeWallet && (
-                  <div className="flex items-center gap-2 justify-center sm:justify-start">
-                    <Badge className="bg-gradient-to-r from-teal-500 to-purple-600 text-white border-0">
-                      <Wallet className="h-3 w-3 mr-1" /> Active
+                  <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-sm">
+                      <TrendingUp className="h-3 w-3 mr-1" /> {callerLevel}
                     </Badge>
-                    <div
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-lg border border-border/30 cursor-pointer hover:border-teal-500/30 transition-colors"
-                      onClick={() => copyToClipboard(activeWallet.publicKey, "profile-pk")}
-                    >
-                      <code className="text-xs font-mono text-muted-foreground">
-                        {activeWallet.publicKey.slice(0, 8)}...{activeWallet.publicKey.slice(-6)}
-                      </code>
-                      {copiedField === "profile-pk" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
-                    </div>
+                    {activeWallet && (
+                      <div
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-lg border border-border/30 cursor-pointer hover:border-teal-500/30 transition-colors"
+                        onClick={() => copyToClipboard(activeWallet.publicKey, "profile-pk")}
+                      >
+                        <code className="text-xs font-mono text-muted-foreground">
+                          {activeWallet.publicKey.slice(0, 8)}...{activeWallet.publicKey.slice(-6)}
+                        </code>
+                        {copiedField === "profile-pk" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                  {activeWallet && (
+                    <p className="text-xs text-muted-foreground">
+                      {wallets.length} wallet{wallets.length !== 1 ? 's' : ''} • {wallets.length > 0 ? 'Ready to trade' : 'Add wallets in Assets'}
+                    </p>
+                  )}
+                </div>
             </div>
           </CardContent>
         </Card>
