@@ -176,10 +176,21 @@ export default function MarketHubPage() {
 
       {/* Three Columns of Trenches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-0 flex-1">
-        {/* New Column - получает новые токены в реальном времени */}
+        {/* New Column */}
         <TrenchColumn
           title="New"
           columnType="new"
+          enableAutoRefresh={true}
+          refreshInterval={3000}
+          selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
+          timeFrame={timeframe}
+        />
+
+        {/* Soon Column */}
+        <TrenchColumn
+          title="Soon"
+          columnType="soon"
           enableAutoRefresh={true}
           refreshInterval={5000}
           selectedMetrics={selectedMetrics}
@@ -187,23 +198,12 @@ export default function MarketHubPage() {
           timeFrame={timeframe}
         />
 
-        {/* Soon Column - получает трендовые токены */}
-        <TrenchColumn
-          title="Soon"
-          columnType="soon"
-          enableAutoRefresh={true}
-          refreshInterval={10000}
-          selectedMetrics={selectedMetrics}
-          appliedFilters={appliedFilters}
-          timeFrame={timeframe}
-        />
-
-        {/* Migration Column - получает токены близкие к миграции */}
+        {/* Migration Column */}
         <TrenchColumn
           title="Migration"
           columnType="migration"
           enableAutoRefresh={true}
-          refreshInterval={15000}
+          refreshInterval={8000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
           timeFrame={timeframe}
