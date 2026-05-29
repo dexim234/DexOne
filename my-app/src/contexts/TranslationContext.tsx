@@ -58,6 +58,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.alerts": "Alerts",
     "footer.calls": "Calls",
     "footer.marketView": "MarketView",
+    "XTracker": "XTracker",
     
     // Coming Soon
     "comingSoon.title": "Under Development",
@@ -158,6 +159,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.alerts": "Алерты",
     "footer.calls": "Коллы",
     "footer.marketView": "Обзор рынка",
+    "XTracker": "XTracker",
     
     // Coming Soon
     "comingSoon.title": "В разработке",
