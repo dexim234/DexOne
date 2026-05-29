@@ -902,11 +902,12 @@ export default function Header() {
                     </div>
                     <button
                       onClick={() => {
-                        if (headerMenuVisible.includes(item.href)) {
-                          setHeaderMenuVisible(headerMenuVisible.filter(href => href !== item.href));
-                        } else {
-                          setHeaderMenuVisible([...headerMenuVisible, item.href]);
-                        }
+                        const next = headerMenuVisible.includes(item.href)
+                          ? headerMenuVisible.filter(href => href !== item.href)
+                          : [...headerMenuVisible, item.href];
+                        setHeaderMenuVisible(next);
+                        localStorage.setItem('header-menu-visible', JSON.stringify(next));
+                        window.dispatchEvent(new CustomEvent('menuSettingsUpdated'));
                       }}
                       className={`relative w-8 h-4 rounded-full transition-colors ${
                         headerMenuVisible.includes(item.href) ? 'bg-teal-500' : 'bg-muted'
@@ -942,11 +943,12 @@ export default function Header() {
                     </div>
                     <button
                       onClick={() => {
-                        if (footerMenuVisible.includes(label)) {
-                          setFooterMenuVisible(footerMenuVisible.filter(l => l !== label));
-                        } else {
-                          setFooterMenuVisible([...footerMenuVisible, label]);
-                        }
+                        const next = footerMenuVisible.includes(label)
+                          ? footerMenuVisible.filter(l => l !== label)
+                          : [...footerMenuVisible, label];
+                        setFooterMenuVisible(next);
+                        localStorage.setItem('footer-menu-visible', JSON.stringify(next));
+                        window.dispatchEvent(new CustomEvent('menuSettingsUpdated'));
                       }}
                       className={`relative w-8 h-4 rounded-full transition-colors ${
                         footerMenuVisible.includes(label) ? 'bg-teal-500' : 'bg-muted'
@@ -983,11 +985,12 @@ export default function Header() {
                     </div>
                     <button
                       onClick={() => {
-                        if (assetCardsVisible.includes(coin)) {
-                          setAssetCardsVisible(assetCardsVisible.filter(c => c !== coin));
-                        } else {
-                          setAssetCardsVisible([...assetCardsVisible, coin]);
-                        }
+                        const next = assetCardsVisible.includes(coin)
+                          ? assetCardsVisible.filter(c => c !== coin)
+                          : [...assetCardsVisible, coin];
+                        setAssetCardsVisible(next);
+                        localStorage.setItem('asset-cards-visible', JSON.stringify(next));
+                        window.dispatchEvent(new CustomEvent('menuSettingsUpdated'));
                       }}
                       className={`relative w-8 h-4 rounded-full transition-colors ${
                         assetCardsVisible.includes(coin) ? 'bg-teal-500' : 'bg-muted'
@@ -1003,19 +1006,6 @@ export default function Header() {
                 ))}
               </div>
             </div>
-
-            <Button
-              onClick={() => {
-                localStorage.setItem('header-menu-visible', JSON.stringify(headerMenuVisible));
-                localStorage.setItem('footer-menu-visible', JSON.stringify(footerMenuVisible));
-                localStorage.setItem('asset-cards-visible', JSON.stringify(assetCardsVisible));
-                window.dispatchEvent(new Event('menuSettingsUpdated'));
-                setShowMenuSettings(false);
-              }}
-              className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
-            >
-              Save Changes
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

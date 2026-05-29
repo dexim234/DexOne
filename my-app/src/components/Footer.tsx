@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { Activity, Brain, Bell, Megaphone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import {
@@ -13,6 +13,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useWidgets } from "@/contexts/WidgetContext";
+
+// Hook to subscribe to localStorage changes via custom event
+function useLocalStorageJSON<T>(key: string, defaultValue: T): T {
+  const subscribe = (callback: () => void) => {
+    const handler = () => callback();
+    window.addEventListener('menuSettingsUpdated', handler);
+    return () => window.removeEventListener('menuSettingsUpdated', handler);
+  };
+  const getSnapshot = () => {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  };
+  const getServerSnapshot = () => defaultValue;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
 
 interface FooterItem {
   label: string;
@@ -61,25 +76,10 @@ export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { openWidget, closeWidget, isWidgetOpen, widgets } = useWidgets();
-  const [tick, setTick] = useState(0);
 
-  // Force re-render when settings change
-  useEffect(() => {
-    const handler = () => setTick(t => t + 1);
-    window.addEventListener('menuSettingsUpdated', handler);
-    return () => window.removeEventListener('menuSettingsUpdated', handler);
-  }, []);
-
-  // Read settings directly from localStorage on every render
-  const footerMenuVisible = (() => {
-    const saved = localStorage.getItem('footer-menu-visible');
-    return saved ? JSON.parse(saved) : widgetItems.map(item => item.label);
-  })();
-
-  const assetCardsVisible = (() => {
-    const saved = localStorage.getItem('asset-cards-visible');
-    return saved ? JSON.parse(saved) : ['SOL', 'BTC', 'ETH', 'BNB'];
-  })();
+  // Subscribe to settings changes from Menu Settings modal
+  const footerMenuVisible = useLocalStorageJSON<string[]>('footer-menu-visible', widgetItems.map(item => item.label));
+  const assetCardsVisible = useLocalStorageJSON<string[]>('asset-cards-visible', ['SOL', 'BTC', 'ETH', 'BNB']);
 
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
