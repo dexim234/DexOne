@@ -70,16 +70,16 @@ export default function Footer() {
     return saved ? JSON.parse(saved) : ['SOL', 'BTC', 'ETH', 'BNB'];
   });
 
-  // Listen for localStorage changes from Menu Settings
+  // Listen for settings changes from Menu Settings modal
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handleSettingsUpdate = () => {
       const savedFooter = localStorage.getItem('footer-menu-visible');
       const savedAssets = localStorage.getItem('asset-cards-visible');
       if (savedFooter) setFooterMenuVisible(JSON.parse(savedFooter));
       if (savedAssets) setAssetCardsVisible(JSON.parse(savedAssets));
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('menuSettingsUpdated', handleSettingsUpdate);
+    return () => window.removeEventListener('menuSettingsUpdated', handleSettingsUpdate);
   }, []);
 
   const [cryptoPrices, setCryptoPrices] = useState<{
