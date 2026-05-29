@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
+import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent, BarChart3 } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 import { FilterDialog } from "@/components/market-hub/FilterDialog";
 import {
@@ -176,21 +176,10 @@ export default function MarketHubPage() {
 
       {/* Three Columns of Trenches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-0 flex-1">
-        {/* New Column */}
+        {/* New Column - получает новые токены в реальном времени */}
         <TrenchColumn
           title="New"
           columnType="new"
-          enableAutoRefresh={true}
-          refreshInterval={3000}
-          selectedMetrics={selectedMetrics}
-          appliedFilters={appliedFilters}
-          timeFrame={timeframe}
-        />
-
-        {/* Soon Column */}
-        <TrenchColumn
-          title="Soon"
-          columnType="soon"
           enableAutoRefresh={true}
           refreshInterval={5000}
           selectedMetrics={selectedMetrics}
@@ -198,12 +187,23 @@ export default function MarketHubPage() {
           timeFrame={timeframe}
         />
 
-        {/* Migration Column */}
+        {/* Soon Column - получает трендовые токены */}
+        <TrenchColumn
+          title="Soon"
+          columnType="soon"
+          enableAutoRefresh={true}
+          refreshInterval={10000}
+          selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
+          timeFrame={timeframe}
+        />
+
+        {/* Migration Column - получает токены близкие к миграции */}
         <TrenchColumn
           title="Migration"
           columnType="migration"
           enableAutoRefresh={true}
-          refreshInterval={8000}
+          refreshInterval={15000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
           timeFrame={timeframe}
@@ -212,4 +212,3 @@ export default function MarketHubPage() {
     </div>
   );
 }
-
