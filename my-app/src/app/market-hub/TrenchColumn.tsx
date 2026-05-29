@@ -12,6 +12,7 @@ interface TrenchColumnProps {
   columnType: "new" | "soon" | "migration";
   enableAutoRefresh?: boolean;
   refreshInterval?: number;
+  appliedFilters?: any;
 }
 
 export default function TrenchColumn({ 
