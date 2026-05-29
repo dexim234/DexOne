@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex';
 const DEXSCREENER_PROFILES_BASE = 'https://api.dexscreener.com';
 
@@ -29,8 +32,9 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
-      next: { revalidate: 10 },
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -50,7 +54,7 @@ export async function GET(request: NextRequest) {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
   } catch (error) {
