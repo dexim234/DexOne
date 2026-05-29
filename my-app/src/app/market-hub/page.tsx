@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 import { FilterDialog } from "@/components/market-hub/FilterDialog";
+import { SearchDialog } from "@/components/market-hub/SearchDialog";
 import {
   Popover,
   PopoverContent,
@@ -100,6 +101,9 @@ export default function MarketHubPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Filter Button */}
             <FilterDialog onApplyFilters={handleApplyFilters} />
+
+            {/* Search Token Button */}
+            <SearchDialog />
 
             {/* Quick Buy Button */}
             <Button 
