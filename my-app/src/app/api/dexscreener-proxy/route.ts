@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex';
 const DEXSCREENER_PROFILES_BASE = 'https://api.dexscreener.com';
 
