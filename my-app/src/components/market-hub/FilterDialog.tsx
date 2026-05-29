@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Filter, RefreshCw } from "lucide-react";
 
 interface FilterDialogProps {
-  onApplyFilters: (filters: Record<string, unknown>) => void;
+  onApplyFilters: (filters: any) => void;
 }
 
 export function FilterDialog({ onApplyFilters }: FilterDialogProps) {
