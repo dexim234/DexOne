@@ -150,24 +150,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         );
         
         setWallets(decryptedWallets);
+        
+        // Sync to localStorage for fallback
+        saveWalletsToStorage(decryptedWallets);
       } else {
+        // No wallets in Firebase - load from localStorage but don't auto-sync
         const localWallets = getWalletsFromStorage();
         setWallets(localWallets);
-        
-        for (const wallet of localWallets) {
-          try {
-            await addWalletToFirestore({
-              name: wallet.name,
-              publicKey: wallet.publicKey,
-              privateKey: wallet.privateKeyBase58,
-              userId
-            });
-          } catch (err) {
-            console.error("Failed to sync wallet to Firebase:", err);
-          }
-        }
       }
-      
+        
+      // Set active wallet
       if (wallets.length > 0 && !activeWalletId) {
         const savedActive = localStorage.getItem('active-wallet-id');
         if (savedActive && wallets.find(w => w.id === savedActive)) {
@@ -196,6 +188,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { generateSolanaWallet } = await import("@/lib/solana-wallet-creator");
       const newWallet = await generateSolanaWallet(name);
       
+      // Save to Firebase
       await addWalletToFirestore({
         name: newWallet.name,
         publicKey: newWallet.publicKey,
@@ -212,11 +205,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         createdAt: newWallet.createdAt
       };
       
-      // Also save to localStorage for fallback
+      // Also save to localStorage
       const localWallets = getWalletsFromStorage();
       saveWalletsToStorage([walletData, ...localWallets]);
       
+      // Update local state
       setWallets(prev => [walletData, ...prev]);
+      setActiveWallet(walletData.id);
+      
       addToast("success", "Wallet Created", `${newWallet.name} has been created`);
       
       return walletData;
@@ -233,6 +229,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { importSolanaWallet } = await import("@/lib/solana-wallet-creator");
       const importedWallet = await importSolanaWallet(privateKey, name);
       
+      // Save to Firebase
       await addWalletToFirestore({
         name: importedWallet.name,
         publicKey: importedWallet.publicKey,
@@ -249,11 +246,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         createdAt: importedWallet.createdAt
       };
       
-      // Also save to localStorage for fallback
+      // Also save to localStorage
       const localWallets = getWalletsFromStorage();
       saveWalletsToStorage([walletData, ...localWallets]);
       
+      // Update local state
       setWallets(prev => [walletData, ...prev]);
+      setActiveWallet(walletData.id);
+      
       addToast("success", "Wallet Imported", `${importedWallet.name} has been imported`);
       
       return walletData;
@@ -280,25 +280,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       await deleteWallet(walletId);
       
-      // Update local state immediately
-      setWallets(prev => {
-        const filtered = prev.filter(w => w.id !== walletId);
-        // Update active wallet if needed
-        if (activeWalletId === walletId && filtered.length > 0) {
-          setActiveWalletId(filtered[0].id);
-        } else if (activeWalletId === walletId && filtered.length === 0) {
-          setActiveWalletId(null);
-        }
-        return filtered;
-      });
+      // Update both localStorage and state
+      const remainingWallets = wallets.filter(w => w.id !== walletId);
+      saveWalletsToStorage(remainingWallets);
       
-      // Reload wallets from Firebase to ensure sync
-      await loadWallets();
+      setWallets(remainingWallets);
+      
+      if (activeWalletId === walletId) {
+        if (remainingWallets.length > 0) {
+          setActiveWallet(remainingWallets[0].id);
+        } else {
+          setActiveWalletId(null);
+          localStorage.removeItem('active-wallet-id');
+        }
+      }
       
       addToast("info", "Wallet Deleted", "Wallet has been removed");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete wallet:", err);
-      addToast("error", "Delete Failed", "Failed to delete wallet");
+      addToast("error", "Delete Failed", err.message || "Failed to delete wallet");
       throw err;
     }
   };

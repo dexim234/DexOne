@@ -140,6 +140,21 @@ export default function AssetsPage() {
     }
   }, [activeWalletId, userId]);
 
+  // Listen for wallet changes from other components (e.g. Header dropdown)
+  useEffect(() => {
+    const handleWalletChange = (e: CustomEvent) => {
+      const newId = e.detail as string;
+      if (newId && newId !== activeWalletId) {
+        setActiveWalletId(newId);
+      }
+    };
+    window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
+    };
+  }, [activeWalletId]);
+
   const saveSendPresets = (presets: SendPreset[]) => {
     try {
       localStorage.setItem('send-presets', JSON.stringify(presets));
@@ -579,6 +594,7 @@ export default function AssetsPage() {
     return 0;
   });
   
+  // Always show active wallet first, regardless of showMoreWallets state
   const visibleWallets = sortedWallets.slice(0, showMoreWallets ? sortedWallets.length : 1);
   const hiddenCount = Math.max(0, wallets.length - 1);
 

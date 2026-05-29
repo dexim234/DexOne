@@ -44,6 +44,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useUser } from "@/contexts/UserContext";
 
 const navItems = [
   { label: "Market HUB", href: "/market-hub", icon: TrendingUp, transKey: "nav.marketHub" },
@@ -78,8 +79,9 @@ export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
+  const { userId, loadWallets } = useUser();
   const [search, setSearch] = React.useState("");
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [wallets, setWallets] = useState<any[]>([]);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
@@ -88,51 +90,31 @@ export default function Header() {
   const [isLoadingAllBalances, setIsLoadingAllBalances] = useState(false);
   const [clipboardToken, setClipboardToken] = useState<{ address: string; name?: string } | null>(null);
 
-  // Load wallets from localStorage
+  // Load wallets from UserContext
   React.useEffect(() => {
-    const loadWallets = () => {
-      try {
-        const savedWallets = localStorage.getItem('solana-wallets');
-        const savedActive = localStorage.getItem('active-wallet-id');
-        if (savedWallets) {
-          const parsed = JSON.parse(savedWallets);
-          setWallets(parsed);
-          if (savedActive && parsed.find((w: any) => w.id === savedActive)) {
-            setActiveWalletId(savedActive);
-          } else if (parsed.length > 0 && !activeWalletId) {
-            setActiveWalletId(parsed[0].id);
-          }
-        } else {
-          setWallets([]);
-          setActiveWalletId(null);
-        }
-      } catch (e) {
-        console.error('Failed to load wallets:', e);
-      }
-    };
-    loadWallets();
-    
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'solana-wallets' || e.key === 'active-wallet-id') {
-        loadWallets();
-      }
-    };
-    // Listen for custom wallet change events from other components
-    const handleCustomWalletChange = (e: CustomEvent) => {
+    if (userId) {
+      loadWallets();
+    } else {
+      setWallets([]);
+      setActiveWalletId(null);
+    }
+  }, [userId, loadWallets]);
+
+  // Listen for active wallet changes from other components
+  React.useEffect(() => {
+    const handleWalletChange = (e: CustomEvent) => {
       const newId = e.detail as string;
       if (newId && newId !== activeWalletId) {
         setActiveWalletId(newId);
       }
     };
-    window.addEventListener('activeWalletChanged', handleCustomWalletChange as EventListener);
+    window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('activeWalletChanged', handleCustomWalletChange as EventListener);
+      window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
     };
-  }, []);
-
+  }, [activeWalletId]);
+    
   // Save active wallet ID to localStorage when it changes
   React.useEffect(() => {
     if (activeWalletId) {
@@ -140,9 +122,32 @@ export default function Header() {
     }
   }, [activeWalletId]);
 
+  // Handle logout
+  const handleLogout = () => {
+    // Clear Firebase auth session
+    const { getAuth, signOut } = require("firebase/auth");
+    const auth = getAuth();
+    signOut(auth).then(() => {
+      // Clear local state
+      setWallets([]);
+      setActiveWalletId(null);
+      setBalance(0);
+      setWalletBalances({});
+      
+      // Clear localStorage
+      localStorage.removeItem('active-wallet-id');
+      localStorage.removeItem('solana-wallets');
+      
+      // Reload page to reset everything
+      window.location.href = "/";
+    }).catch((err: any) => {
+      console.error("Logout failed:", err);
+    });
+  };
+
   // Fetch balance for all wallets
   React.useEffect(() => {
-    if (wallets.length === 0) {
+    if (wallets.length === 0 || !userId) {
       setWalletBalances({});
       setIsLoadingAllBalances(false);
       return;
@@ -166,11 +171,11 @@ export default function Header() {
     };
     
     fetchAllBalances();
-  }, [wallets]);
+  }, [wallets, userId]);
 
   // Fetch balance when active wallet changes
   React.useEffect(() => {
-    if (!activeWalletId || wallets.length === 0) {
+    if (!activeWalletId || wallets.length === 0 || !userId) {
       setBalance(0);
       return;
     }
@@ -192,7 +197,7 @@ export default function Header() {
     };
     
     fetchBalance();
-  }, [activeWalletId, wallets]);
+  }, [activeWalletId, wallets, userId]);
 
   // Check clipboard for token address
   React.useEffect(() => {
@@ -568,7 +573,10 @@ export default function Header() {
                     <span className="font-medium text-sm">Profile</span>
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem className="gap-2 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="gap-2 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                >
                   <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
