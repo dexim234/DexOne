@@ -891,14 +891,14 @@ export default function Header() {
             {/* Header Navigation */}
             <div>
               <Label className="text-sm font-semibold mb-3 block">Header Navigation</Label>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-2">
                 {navItems.map((item) => (
                   <div key={item.href} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-muted/50">
-                        <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-muted/50">
+                        <item.icon className="h-3 w-3 text-muted-foreground" />
                       </div>
-                      <span className="text-sm font-medium">{t(item.transKey)}</span>
+                      <span className="text-xs font-medium">{t(item.transKey)}</span>
                     </div>
                     <button
                       onClick={() => {
@@ -908,13 +908,13 @@ export default function Header() {
                           setHeaderMenuVisible([...headerMenuVisible, item.href]);
                         }
                       }}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                      className={`relative w-8 h-4 rounded-full transition-colors ${
                         headerMenuVisible.includes(item.href) ? 'bg-teal-500' : 'bg-muted'
                       }`}
                     >
                       <span
-                        className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                          headerMenuVisible.includes(item.href) ? 'translate-x-4.5' : 'translate-x-0'
+                        className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                          headerMenuVisible.includes(item.href) ? 'translate-x-4' : 'translate-x-0'
                         }`}
                       />
                     </button>
@@ -922,7 +922,7 @@ export default function Header() {
                 ))}
               </div>
             </div>
-            
+
             {/* Footer Widgets */}
             <div className="pt-4 border-t border-border/30">
               <Label className="text-sm font-semibold mb-3 block">Footer Widgets</Label>
@@ -1009,6 +1009,7 @@ export default function Header() {
                 localStorage.setItem('header-menu-visible', JSON.stringify(headerMenuVisible));
                 localStorage.setItem('footer-menu-visible', JSON.stringify(footerMenuVisible));
                 localStorage.setItem('asset-cards-visible', JSON.stringify(assetCardsVisible));
+                window.dispatchEvent(new Event('menuSettingsUpdated'));
                 setShowMenuSettings(false);
               }}
               className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
