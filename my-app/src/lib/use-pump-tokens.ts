@@ -43,8 +43,10 @@ export function usePumpTokens({
 
       switch (columnType) {
         case 'new': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getNewTokens(30),
+          // Pump.fun API теперь автоматически использует DexScreener fallback
+          const pumpFunTokens = await pumpFunApi.getNewTokens(20);
+          
+          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
             getPumpSwapTokens(10),
             getLetsBonkTokens(10),
             getMeteoraTokens(10),
@@ -67,8 +69,9 @@ export function usePumpTokens({
           break;
         }
         case 'soon': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getSoonTokens(30),
+          const pumpFunTokens = await pumpFunApi.getSoonTokens(20);
+          
+          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
             getPumpSwapTokens(10),
             getLetsBonkTokens(10),
             getMeteoraTokens(10),
@@ -101,8 +104,9 @@ export function usePumpTokens({
           break;
         }
         case 'migration': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getMigrationTokens(30),
+          const pumpFunTokens = await pumpFunApi.getMigrationTokens(20);
+          
+          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
             getPumpSwapTokens(10),
             getLetsBonkTokens(10),
             getMeteoraTokens(10),
