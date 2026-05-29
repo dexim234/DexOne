@@ -76,7 +76,7 @@ export default function MarketHubPage() {
     );
   };
 
-  const handleApplyFilters = (filters: any) => {
+  const handleApplyFilters = (filters: Record<string, unknown>) => {
     setAppliedFilters(filters);
     console.log("Applied filters:", filters);
     // Здесь будет логика применения фильтров к токенам
