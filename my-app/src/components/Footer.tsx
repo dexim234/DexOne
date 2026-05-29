@@ -62,24 +62,26 @@ export default function Footer() {
   const { t } = useTranslation();
   const { openWidget, closeWidget, isWidgetOpen, widgets } = useWidgets();
   const [footerMenuVisible, setFooterMenuVisible] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return widgetItems.map(item => item.label);
     const saved = localStorage.getItem('footer-menu-visible');
     return saved ? JSON.parse(saved) : widgetItems.map(item => item.label);
   });
   const [assetCardsVisible, setAssetCardsVisible] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['SOL', 'BTC', 'ETH', 'BNB'];
     const saved = localStorage.getItem('asset-cards-visible');
     return saved ? JSON.parse(saved) : ['SOL', 'BTC', 'ETH', 'BNB'];
   });
 
-  // Listen for localStorage changes from Menu Settings
+  // Sync with localStorage when settings change
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handler = () => {
       const savedFooter = localStorage.getItem('footer-menu-visible');
       const savedAssets = localStorage.getItem('asset-cards-visible');
-      if (savedFooter) setFooterMenuVisible(JSON.parse(savedFooter));
-      if (savedAssets) setAssetCardsVisible(JSON.parse(savedAssets));
+      setFooterMenuVisible(savedFooter ? JSON.parse(savedFooter) : widgetItems.map(item => item.label));
+      setAssetCardsVisible(savedAssets ? JSON.parse(savedAssets) : ['SOL', 'BTC', 'ETH', 'BNB']);
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('menuSettingsUpdated', handler);
+    return () => window.removeEventListener('menuSettingsUpdated', handler);
   }, []);
 
   const [cryptoPrices, setCryptoPrices] = useState<{
