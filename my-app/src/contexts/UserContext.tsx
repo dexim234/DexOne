@@ -289,20 +289,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       await deleteWallet(walletId);
       
-      // Update both localStorage and state
-      const remainingWallets = wallets.filter(w => w.id !== walletId);
-      saveWalletsToStorage(remainingWallets);
-      
-      setWallets(remainingWallets);
-      
-      if (activeWalletId === walletId) {
-        if (remainingWallets.length > 0) {
-          setActiveWallet(remainingWallets[0].id);
-        } else {
-          setActiveWalletId(null);
-          localStorage.removeItem('active-wallet-id');
+      // Update both localStorage and state using functional update
+      setWallets(prev => {
+        const remainingWallets = prev.filter(w => w.id !== walletId);
+        saveWalletsToStorage(remainingWallets);
+        
+        if (activeWalletId === walletId) {
+          if (remainingWallets.length > 0) {
+            setActiveWallet(remainingWallets[0].id);
+          } else {
+            setActiveWalletId(null);
+            localStorage.removeItem('active-wallet-id');
+          }
         }
-      }
+        
+        return remainingWallets;
+      });
       
       addToast("info", "Wallet Deleted", "Wallet has been removed");
     } catch (err: any) {
