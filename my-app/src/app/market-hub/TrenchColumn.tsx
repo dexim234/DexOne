@@ -12,7 +12,6 @@ interface TrenchColumnProps {
   columnType: "new" | "soon" | "migration";
   enableAutoRefresh?: boolean;
   refreshInterval?: number;
-  appliedFilters?: any;
 }
 
 export default function TrenchColumn({ 
@@ -20,7 +19,6 @@ export default function TrenchColumn({
   columnType,
   enableAutoRefresh = true,
   refreshInterval = 5000,
-  appliedFilters = {},
 }: TrenchColumnProps) {
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
@@ -29,7 +27,6 @@ export default function TrenchColumn({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
     enableWebSocket: true,
-    filters: appliedFilters,
   });
 
   const handleManualRefresh = async () => {
