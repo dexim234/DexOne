@@ -21,7 +21,7 @@ interface FooterItem {
 }
 
 interface WidgetItem extends FooterItem {
-  widgetType: "tracker" | "smart" | "alerts" | "calls";
+  widgetType: "tracker" | "xtracker" | "smart" | "alerts" | "calls" | "marketview";
 }
 
 interface LinkItem extends FooterItem {
@@ -33,13 +33,11 @@ const widgetItems: WidgetItem[] = [
   { label: "Smart", widgetType: "smart", icon: Brain, transKey: "footer.smart" },
   { label: "Alerts", widgetType: "alerts", icon: Bell, transKey: "footer.alerts" },
   { label: "Calls", widgetType: "calls", icon: Megaphone, transKey: "footer.calls" },
-  { label: "MarketView", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView" },
-  { label: "XTracker", widgetType: "tracker", icon: TrendingUp, transKey: "footer.xtracker" },
+  { label: "MarketView", widgetType: "marketview", icon: BarChart3, transKey: "footer.marketView" },
+  { label: "XTracker", widgetType: "xtracker", icon: TrendingUp, transKey: "XTracker" },
 ];
 
-const linkItems: LinkItem[] = [
-  { label: "MarketView", href: "/market-view", icon: BarChart3, transKey: "footer.marketView" },
-];
+const linkItems: LinkItem[] = [];
 
 const aboutMenuItems = [
   { label: "Twitter", href: "#", icon: TwitterIcon },
