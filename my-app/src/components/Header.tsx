@@ -512,6 +512,123 @@ export default function Header() {
                   <div className="text-xs text-muted-foreground">Customize navigation</div>
                 </div>
               </DropdownMenuItem>
+
+              {/* Authentication */}
+              <DropdownMenuSeparator className="my-3" />
+              <div className="mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                  Authentication
+                </span>
+                <div className="space-y-2">
+                  {/* Phantom */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
+                      <Image 
+                        src="/phantom.webp" 
+                        alt="Phantom" 
+                        width={28} 
+                        height={28}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Phantom</div>
+                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+                  
+                  {/* Solflare */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
+                      <Image 
+                        src="/Solflare.svg" 
+                        alt="Solflare" 
+                        width={32} 
+                        height={32}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Solflare</div>
+                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+
+                  {/* Log In */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('login');
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                      <LogIn className="h-5 w-5 text-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Log In</div>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* Sign Up */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('signup');
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                      <UserPlus className="h-5 w-5 text-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Sign Up</div>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* Profile */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.location.href = '/profile';
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                      <User className="h-5 w-5 text-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Profile</div>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* Logout */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-red-500/10 transition-all text-red-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLogout();
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-red-500/10">
+                      <LogIn className="h-5 w-5 rotate-180 text-red-500" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-red-500">Logout</div>
+                    </div>
+                  </DropdownMenuItem>
+                </div>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
