@@ -439,10 +439,9 @@ export default function Header() {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Wallets</span>
                   </div>
-                  <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-                    {wallets.map((wallet) => {
+                  <div className="space-y-1.5">
+                    {wallets.slice(0, 2).map((wallet) => {
                       const isActive = activeWalletId === wallet.id;
-                      const bal = walletBalances[wallet.id];
                       return (
                         <DropdownMenuItem
                           key={wallet.id}
@@ -456,7 +455,7 @@ export default function Header() {
                           }}
                         >
                           <div
-                            className={`flex items-center justify-center h-8 w-8 rounded-lg ${
+                            className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${
                               isActive ? 'bg-gradient-to-br from-teal-500 to-purple-600' : 'bg-muted/50'
                             }`}
                           >
@@ -467,7 +466,7 @@ export default function Header() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between">
                               <span
                                 className={`font-semibold text-sm truncate ${
                                   isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
@@ -476,21 +475,75 @@ export default function Header() {
                                 {wallet.name}
                               </span>
                               {isActive && (
-                                <Check className="h-3.5 w-3.5 text-teal-500" />
+                                <Check className="h-3.5 w-3.5 text-teal-500 shrink-0 ml-2" />
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground font-mono">
+                            <div className="text-xs text-muted-foreground font-mono truncate">
                               {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-4)}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <div className="text-sm font-semibold text-foreground">
-                              ${(walletBalances[wallet.id] || 0).toFixed(3)} SOL
+                              {((walletBalances[wallet.id] || 0)).toFixed(3)} SOL
                             </div>
                           </div>
                         </DropdownMenuItem>
                       );
                     })}
+                    {wallets.length > 2 && (
+                      <div className="max-h-[200px] overflow-y-auto space-y-1.5 pt-1.5 border-t border-border/30 mt-1.5">
+                        {wallets.slice(2).map((wallet) => {
+                          const isActive = activeWalletId === wallet.id;
+                          return (
+                            <DropdownMenuItem
+                              key={wallet.id}
+                              className={`gap-3 cursor-pointer px-3 py-2 rounded-lg transition-all ${
+                                isActive
+                                  ? "bg-teal-500/10 border border-teal-500/20"
+                                  : "hover:bg-accent/50"
+                              }`}
+                              onClick={() => {
+                                setActiveWallet(wallet.id);
+                              }}
+                            >
+                              <div
+                                className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${
+                                  isActive ? 'bg-gradient-to-br from-teal-500 to-purple-600' : 'bg-muted/50'
+                                }`}
+                              >
+                                <Wallet
+                                  className={`h-4 w-4 ${
+                                    isActive ? 'text-white' : 'text-muted-foreground'
+                                  }`}
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span
+                                    className={`font-semibold text-sm truncate ${
+                                      isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
+                                    }`}
+                                  >
+                                    {wallet.name}
+                                  </span>
+                                  {isActive && (
+                                    <Check className="h-3.5 w-3.5 text-teal-500 shrink-0 ml-2" />
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground font-mono truncate">
+                                  {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-4)}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="text-sm font-semibold text-foreground">
+                                  {((walletBalances[wallet.id] || 0)).toFixed(3)} SOL
+                                </div>
+                              </div>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -515,11 +568,44 @@ export default function Header() {
 
               {/* Authentication */}
               <DropdownMenuSeparator className="my-3" />
-              <div className="mb-4">
+              <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
                   Authentication
                 </span>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {/* Log In */}
+                  <DropdownMenuItem 
+                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all flex flex-col items-center justify-center text-center h-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('login');
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50 mb-1">
+                      <LogIn className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div className="font-semibold text-xs text-foreground">Log In</div>
+                  </DropdownMenuItem>
+
+                  {/* Sign Up */}
+                  <DropdownMenuItem 
+                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all flex flex-col items-center justify-center text-center h-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('signup');
+                    }}
+                  >
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50 mb-1">
+                      <UserPlus className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div className="font-semibold text-xs text-foreground">Sign Up</div>
+                  </DropdownMenuItem>
+                </div>
+
+                {/* Wallet Connect Buttons */}
+                <div className="space-y-2 mb-4">
                   {/* Phantom */}
                   <DropdownMenuItem 
                     className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
@@ -561,71 +647,39 @@ export default function Header() {
                     </div>
                     <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
+                </div>
+              </div>
 
-                  {/* Log In */}
-                  <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('login');
-                    }}
-                  >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
-                      <LogIn className="h-5 w-5 text-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Log In</div>
-                    </div>
-                  </DropdownMenuItem>
-
-                  {/* Sign Up */}
-                  <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('signup');
-                    }}
-                  >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
-                      <UserPlus className="h-5 w-5 text-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Sign Up</div>
-                    </div>
-                  </DropdownMenuItem>
-
+              {/* Profile & Logout */}
+              <DropdownMenuSeparator className="my-3" />
+              <div>
+                <div className="grid grid-cols-2 gap-2">
                   {/* Profile */}
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all flex flex-col items-center justify-center text-center h-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.location.href = '/profile';
                     }}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-gradient-to-br from-teal-500/20 to-purple-600/20 mb-1">
                       <User className="h-5 w-5 text-foreground" />
                     </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Profile</div>
-                    </div>
+                    <div className="font-semibold text-xs text-foreground">Profile</div>
                   </DropdownMenuItem>
 
                   {/* Logout */}
                   <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-red-500/10 transition-all text-red-500"
+                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-red-500/10 transition-all flex flex-col items-center justify-center text-center h-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleLogout();
                     }}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-red-500/10">
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-red-500/10 mb-1">
                       <LogIn className="h-5 w-5 rotate-180 text-red-500" />
                     </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-red-500">Logout</div>
-                    </div>
+                    <div className="font-semibold text-xs text-red-500">Logout</div>
                   </DropdownMenuItem>
                 </div>
               </div>
@@ -821,7 +875,7 @@ export default function Header() {
 
       {/* Menu Settings Modal */}
       <Dialog open={showMenuSettings} onOpenChange={setShowMenuSettings}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-teal-500" />
@@ -831,16 +885,16 @@ export default function Header() {
               Show or hide menu items in header and footer
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Header Navigation */}
             <div>
               <Label className="text-sm font-semibold mb-3 block">Header Navigation</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
                 {navItems.map((item) => (
-                  <div key={item.href} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
-                        <item.icon className="h-4 w-4 text-muted-foreground" />
+                  <div key={item.href} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-muted/50">
+                        <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                       <span className="text-sm font-medium">{t(item.transKey)}</span>
                     </div>
@@ -852,13 +906,13 @@ export default function Header() {
                           setHeaderMenuVisible([...headerMenuVisible, item.href]);
                         }
                       }}
-                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
                         headerMenuVisible.includes(item.href) ? 'bg-teal-500' : 'bg-muted'
                       }`}
                     >
                       <span
-                        className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                          headerMenuVisible.includes(item.href) ? 'translate-x-5' : 'translate-x-0'
+                        className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                          headerMenuVisible.includes(item.href) ? 'translate-x-4.5' : 'translate-x-0'
                         }`}
                       />
                     </button>
@@ -870,9 +924,9 @@ export default function Header() {
             {/* Footer Widgets */}
             <div className="pt-4 border-t border-border/30">
               <Label className="text-sm font-semibold mb-3 block">Footer Widgets</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                 {['Tracker', 'Smart', 'Alerts', 'Calls', 'MarketView', 'XTracker'].map((label) => (
-                  <div key={label} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div key={label} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
                     <span className="text-sm font-medium">{label}</span>
                     <button
                       onClick={() => {
@@ -882,13 +936,13 @@ export default function Header() {
                           setFooterMenuVisible([...footerMenuVisible, label]);
                         }
                       }}
-                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
                         footerMenuVisible.includes(label) ? 'bg-teal-500' : 'bg-muted'
                       }`}
                     >
                       <span
-                        className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                          footerMenuVisible.includes(label) ? 'translate-x-5' : 'translate-x-0'
+                        className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                          footerMenuVisible.includes(label) ? 'translate-x-4.5' : 'translate-x-0'
                         }`}
                       />
                     </button>
@@ -902,7 +956,6 @@ export default function Header() {
                 localStorage.setItem('header-menu-visible', JSON.stringify(headerMenuVisible));
                 localStorage.setItem('footer-menu-visible', JSON.stringify(footerMenuVisible));
                 setShowMenuSettings(false);
-                window.location.reload();
               }}
               className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
             >
