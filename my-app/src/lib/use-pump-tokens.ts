@@ -7,6 +7,7 @@ export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
   refreshInterval?: number;
   enableWebSocket?: boolean;
+  filters?: any;
 }
 
 export interface UsePumpTokensReturn {
@@ -25,6 +26,7 @@ export function usePumpTokens({
   columnType,
   refreshInterval = 5000, // 5 секунд по умолчанию
   enableWebSocket = true,
+  filters,
 }: UsePumpTokensOptions): UsePumpTokensReturn {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +85,15 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
+          // Если фильтры не заданы — добавляем свежие токены в начало списка
+          if (!filters || Object.keys(filters).length === 0) {
+            try {
+              const fresh = await pumpFunApi.getNewTokens(6);
+              allTokens.unshift(...fresh);
+            } catch (e) {
+              // ignore
+            }
+          }
           // Убираем дубликаты по mint
           const seen = new Set<string>();
           newTokens = allTokens
@@ -118,6 +129,18 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
+          // Если фильтры не заданы — добавляем только что мигрировавшие токены
+          if (!filters || Object.keys(filters).length === 0) {
+            try {
+              const fresh = await pumpFunApi.getNewTokens(6);
+              const migratedFresh = fresh.filter(t => Boolean((t as any).complete));
+              if (migratedFresh.length > 0) {
+                allTokens.unshift(...migratedFresh);
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
           // Убираем дубликаты по mint
           const seen = new Set<string>();
           newTokens = allTokens

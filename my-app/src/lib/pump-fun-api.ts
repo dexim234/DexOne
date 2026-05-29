@@ -118,6 +118,7 @@ export interface TokenMarketData {
   telegram?: string;
   website?: string;
   source?: LaunchpadSource;
+  complete?: boolean;
   // Дополнительные метрики для карточки
   kingOfTheHillRank?: string;
   kingOfTheHillTotal?: string;
@@ -339,6 +340,7 @@ export class PumpFunApiService {
       imageUrl: imageUrl,
       metadataUri: token.metadataUri || anyToken.metadata_uri,
       createdTimestamp: token.createdTimestamp,
+      complete: Boolean(anyToken.complete),
       twitter: anyToken.twitter,
       telegram: anyToken.telegram,
       website: anyToken.website,

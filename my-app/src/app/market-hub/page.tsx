@@ -183,6 +183,7 @@ export default function MarketHubPage() {
           enableAutoRefresh={true}
           refreshInterval={5000}
           selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
         />
 
         {/* Soon Column - получает трендовые токены */}
@@ -192,6 +193,7 @@ export default function MarketHubPage() {
           enableAutoRefresh={true}
           refreshInterval={10000}
           selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
         />
 
         {/* Migration Column - получает токены близкие к миграции */}
@@ -201,6 +203,7 @@ export default function MarketHubPage() {
           enableAutoRefresh={true}
           refreshInterval={15000}
           selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
         />
       </div>
     </div>

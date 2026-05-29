@@ -12,6 +12,7 @@ interface TrenchColumnProps {
   enableAutoRefresh?: boolean;
   refreshInterval?: number;
   selectedMetrics?: string[];
+  appliedFilters?: any;
 }
 
 export default function TrenchColumn({ 
@@ -28,6 +29,7 @@ export default function TrenchColumn({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
     enableWebSocket: true,
+    filters: appliedFilters,
   });
 
   const handleManualRefresh = async () => {
