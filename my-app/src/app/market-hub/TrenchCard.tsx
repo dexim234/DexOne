@@ -19,6 +19,8 @@ interface TrenchCardProps {
   isVerified?: boolean;
   mint?: string;
   imageUrl?: string;
+  createdTimestamp?: number;
+  source?: string;
 }
 
 export default function TrenchCard({
@@ -37,9 +39,25 @@ export default function TrenchCard({
   isVerified = false,
   mint,
   imageUrl,
+  createdTimestamp,
+  source,
 }: TrenchCardProps) {
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
   const isNegative = (val: string) => val.includes("-");
+
+  // Форматирование возраста токена
+  const formatAge = (timestamp?: number): string => {
+    if (!timestamp) return '-';
+    const ageMs = Date.now() - (timestamp * 1000);
+    const ageSeconds = Math.floor(ageMs / 1000);
+    const ageMinutes = Math.floor(ageSeconds / 60);
+    const ageHours = Math.floor(ageMinutes / 60);
+    
+    if (ageSeconds < 60) return `${ageSeconds}s`;
+    if (ageMinutes < 60) return `${ageMinutes}м`;
+    if (ageHours < 24) return `${ageHours}ч`;
+    return `${Math.floor(ageHours / 24)}д`;
+  };
 
   const handleCardClick = () => {
     if (mint) {
@@ -92,7 +110,18 @@ export default function TrenchCard({
           </span>
         </div>
         
-        {/* Row 2: 24h Volume */}
+        {/* Row 2: Age (для New колонки) */}
+        <div className="col-span-3 flex items-center gap-1 mb-1">
+          <span className="text-muted-foreground">Возраст</span>
+          <span className="font-medium">{formatAge(createdTimestamp)}</span>
+          {source && source !== 'pumpfun' && (
+            <span className="text-[10px] px-1 rounded bg-muted">
+              {source.toUpperCase().slice(0, 4)}
+            </span>
+          )}
+        </div>
+
+        {/* Row 3: 24h Volume */}
         <div className="col-span-3 flex items-center gap-1 mb-1">
           <span className="text-muted-foreground">24h</span>
           <span className="font-medium">{volume24h}</span>
@@ -101,7 +130,7 @@ export default function TrenchCard({
           </span>
         </div>
 
-        {/* Row 3: Price changes */}
+        {/* Row 4: Price changes */}
         <div className={isPositive(priceChange1h) ? "text-green-500" : isNegative(priceChange1h) ? "text-red-500" : "text-muted-foreground"}>
           {priceChange1h}
         </div>
@@ -112,7 +141,7 @@ export default function TrenchCard({
           {priceChange7d}
         </div>
 
-        {/* Row 4: Trades and Holders */}
+        {/* Row 5: Trades and Holders */}
         <div className="col-span-3 flex items-center gap-2 mt-1">
           <span className="text-muted-foreground text-xs">{trades}</span>
           <span className="text-muted-foreground text-xs">{holders}</span>
