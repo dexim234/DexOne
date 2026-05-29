@@ -13,6 +13,7 @@ interface TrenchColumnProps {
   refreshInterval?: number;
   selectedMetrics?: string[];
   appliedFilters?: any;
+  timeFrame?: string;
 }
 
 export default function TrenchColumn({ 
@@ -22,6 +23,7 @@ export default function TrenchColumn({
   refreshInterval = 5000,
   selectedMetrics = [],
   appliedFilters = {},
+  timeFrame = "3m",
 }: TrenchColumnProps) {
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
@@ -94,7 +96,7 @@ export default function TrenchColumn({
           </div>
         ) : (
           tokens.map((trench, index) => (
-            <TrenchCard key={trench.mint || index} {...trench} selectedMetrics={selectedMetrics} />
+            <TrenchCard key={trench.mint || index} {...trench} selectedMetrics={selectedMetrics} timeFrame={timeFrame} />
           ))
         )}
       </div>
