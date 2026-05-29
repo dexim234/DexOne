@@ -34,11 +34,6 @@ const widgetItems: WidgetItem[] = [
   { label: "Alerts", widgetType: "alerts", icon: Bell, transKey: "footer.alerts" },
   { label: "Calls", widgetType: "calls", icon: Megaphone, transKey: "footer.calls" },
   { label: "MarketView", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView" },
-  { label: "MarketView2", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView2" },
-  { label: "MarketView3", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView3" },
-  { label: "MarketView4", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView4" },
-  { label: "MarketView5", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView5" },
-  { label: "MarketView6", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView6" },
   { label: "XTracker", widgetType: "tracker", icon: TrendingUp, transKey: "footer.xtracker" },
 ];
 
@@ -68,6 +63,10 @@ export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { openWidget, closeWidget, isWidgetOpen, widgets } = useWidgets();
+  const [footerMenuVisible, setFooterMenuVisible] = useState<string[]>(() => {
+    const saved = localStorage.getItem('footer-menu-visible');
+    return saved ? JSON.parse(saved) : widgetItems.map(item => item.label);
+  });
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
     BTC: { price: string; change: string };
@@ -240,7 +239,7 @@ export default function Footer() {
       <div className="flex h-14 items-center justify-between px-4 lg:px-6">
         {/* Left nav - compact with icons only on mobile */}
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {widgetItems.map((item) => {
+          {widgetItems.filter(item => footerMenuVisible.includes(item.label)).map((item) => {
             const Icon = item.icon;
             const isOpen = isWidgetOpen(item.widgetType);
             const widgetId = widgets.find(w => w.type === item.widgetType)?.id;
