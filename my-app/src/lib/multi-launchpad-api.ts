@@ -1,54 +1,15 @@
 import { TokenMarketData, LaunchpadSource } from './pump-fun-api';
 
-// === DexScreener Fallback для Pump.fun ===
-// Если Pump.fun API не возвращает данные, используем DexScreener как fallback
-export async function getDexScreenerFallbackTokens(limit: number = 20): Promise<TokenMarketData[]> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    
-    // Ищем новые Solana токены на DexScreener
-    const response = await fetch(
-      `/api/dexscreener-proxy?endpoint=search&q=solana&order=createdAt&_cb=${Date.now()}`,
-      { signal: controller.signal, cache: 'no-store' }
-    );
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      throw new Error(`DexScreener fallback failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-
-    if (data.pairs && Array.isArray(data.pairs)) {
-      // Фильтруем Solana токены и сортируем по времени создания
-      const solanaPairs = data.pairs
-        .filter((p: any) => p.chainId === 'solana')
-        .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
-        .slice(0, limit);
-
-      console.log(`[DexScreener Fallback] Loaded ${solanaPairs.length} tokens from DexScreener`);
-
-      return solanaPairs.map((pair: any, index: number) => 
-        convertDexPairToMarketData(pair, index + 1, 'pumpfun')
-      );
-    }
-  } catch (e) {
-    console.warn('DexScreener fallback failed:', e);
-  }
-
-  return generateFallbackTokens('pumpfun', limit);
-}
-
 // === PumpSwap API ===
 // Токены, мигрировавшие или запущенные на PumpSwap (DEX от Pump.fun)
 export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
+    // Пробуем получить через DexScreener пулы PumpSwap
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      `/api/dexscreener-proxy?endpoint=search&q=pumpswap&_cb=${Date.now()}`,
-      { signal: controller.signal, cache: 'no-store' }
+      'https://api.dexscreener.com/latest/dex/search?q=pumpswap',
+      { signal: controller.signal }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -69,11 +30,12 @@ export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarket
 // === LetsBonk API ===
 export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
+    // Пробуем получить через DexScreener пулы с letsbonk
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      `/api/dexscreener-proxy?endpoint=search&q=letsbonk&_cb=${Date.now()}`,
-      { signal: controller.signal, cache: 'no-store' }
+      'https://api.dexscreener.com/latest/dex/search?q=letsbonk',
+      { signal: controller.signal }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -94,11 +56,12 @@ export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarket
 // === Meteora API ===
 export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
+    // Пробуем получить через DexScreener пулы Meteora
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      `/api/dexscreener-proxy?endpoint=search&q=meteora&_cb=${Date.now()}`,
-      { signal: controller.signal, cache: 'no-store' }
+      'https://api.dexscreener.com/latest/dex/search?q=meteora',
+      { signal: controller.signal }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -120,55 +83,41 @@ export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketD
 function convertDexPairToMarketData(pair: any, rank: number, source: LaunchpadSource): TokenMarketData {
   const base = pair.baseToken || {};
   const quote = pair.quoteToken || {};
-  
-  // Получаем MC разными способами
-  let mc = 0;
-  if (pair.marketCap) {
-    mc = pair.marketCap;
-  } else if (pair.fdv) {
-    mc = pair.fdv;
-  } else if (pair.priceUsd && quote.priceUsd) {
-    // Вычисляем MC через резервы
-    const solReserves = pair.baseToken.reserveInUsd || 0;
-    mc = solReserves * 2; // Упрощенная оценка
-  }
-  
-  const vol = pair.volume?.h24 || pair.volume24h || 0;
-  const priceChange1h = pair.priceChange?.h1 || 0;
-  const priceChange24h = pair.priceChange?.h24 || 0;
+  const mc = pair.marketCap || pair.fdv || pair.priceUsd * 1_000_000_000 || 0;
+  const vol = pair.volume?.h24 || 0;
 
   const formatNum = (num: number): string => {
     if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
     if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
-    if (num === 0) return '$0';
     return `$${num.toFixed(2)}`;
   };
 
   return {
     rank: rank.toString(),
-    logo: base.iconUrl || pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
+    logo: base.iconUrl || pair.imageUrl || '/placeholder.png',
     name: base.name || 'Unknown',
     symbol: base.symbol || '',
     mint: base.address || '',
     mc: formatNum(mc),
-    mcChange: `${priceChange24h >= 0 ? '+' : ''}${priceChange24h.toFixed(2)}%`,
+    mcChange: `${pair.priceChange?.h24 >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
     volume24h: formatNum(vol),
     volumeChange: '0.00%',
-    priceChange1h: `${priceChange1h >= 0 ? '+' : ''}${priceChange1h.toFixed(2)}%`,
-    priceChange24h: `${priceChange24h >= 0 ? '+' : ''}${priceChange24h.toFixed(2)}%`,
+    priceChange1h: `${pair.priceChange?.h1 >= 0 ? '+' : ''}${(pair.priceChange?.h1 || 0).toFixed(2)}%`,
+    priceChange24h: `${pair.priceChange?.h24 >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
     priceChange7d: '0.00%',
-    trades: (pair.txns?.h24?.buys || 0 + pair.txns?.h24?.sells || 0).toString(),
+    trades: (pair.txns?.h24?.buys + pair.txns?.h24?.sells || 0).toString(),
     holders: '-',
-    isVerified: pair.info?.verified || false,
-    imageUrl: base.iconUrl || pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
+    isVerified: false,
+    imageUrl: base.iconUrl || pair.imageUrl || '/placeholder.png',
     createdTimestamp: pair.pairCreatedAt ? Math.floor(pair.pairCreatedAt / 1000) : undefined,
-    twitter: pair.info?.socials?.find((s: any) => s.type === 'twitter')?.url,
-    telegram: pair.info?.socials?.find((s: any) => s.type === 'telegram')?.url,
-    website: pair.info?.socials?.find((s: any) => s.type === 'website')?.url,
+    twitter: undefined,
+    telegram: undefined,
+    website: undefined,
     source,
+    // Аналитические метрики недоступны в DexScreener — показываем "-"
     kingOfTheHillRank: '-',
     kingOfTheHillTotal: '-',
-    watchers: pair.fdw?.toString() || '-',
+    watchers: '-',
     replies: '-',
     replyRate: '-',
     buySellRatio: '-',
