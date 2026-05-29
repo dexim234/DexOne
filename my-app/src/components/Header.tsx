@@ -338,14 +338,14 @@ export default function Header() {
               className="hidden sm:flex items-center gap-2.5 text-sm font-bold text-foreground bg-gradient-to-r from-muted/50 to-muted/30 border-border/50 cursor-pointer px-4 py-2.5 rounded-xl hover:from-teal-500/20 hover:to-purple-600/20 transition-all duration-300 group"
             >
               <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-teal-500 to-purple-600 group-hover:scale-110 transition-transform">
-                {wallets.length > 0 && activeWalletId ? (
+                {wallets?.length > 0 && activeWalletId ? (
                   <DollarSign className="h-3.5 w-3.5 text-white" />
                 ) : (
                   <Wallet className="h-3.5 w-3.5 text-white" />
                 )}
               </div>
               <span className="max-w-[100px] truncate">
-                {wallets.length > 0 && activeWalletId
+                {wallets?.length > 0 && activeWalletId
                   ? (isLoadingBalance ? "..." : `${balance.toFixed(3)} SOL`)
                   : "Connect"}
               </span>
@@ -410,7 +410,7 @@ export default function Header() {
               </div>
 
               {/* Your Wallets */}
-              {wallets.length > 0 && (
+              {wallets?.length > 0 && (
                 <div className="mb-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
                     Your Wallets
