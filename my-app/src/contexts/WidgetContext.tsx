@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 
-export type WidgetType = "tracker" | "smart" | "alerts" | "calls";
+export type WidgetType = "tracker" | "xtracker" | "smart" | "alerts" | "calls" | "marketview";
 export type WidgetPosition = "left" | "right";
 
 export interface Widget {
