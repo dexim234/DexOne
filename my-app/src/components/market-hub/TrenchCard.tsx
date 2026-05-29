@@ -289,17 +289,12 @@ export default function TrenchCard({
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-0.5 mt-1">
-            <span className="text-[10px] text-muted-foreground">
-              {timeFrame} minute Makers/Volume
-            </span>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-7 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
-            >
-              <Zap className="h-3.5 w-3.5 text-green-400" />
-            </button>
-          </div>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 w-7 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors mt-1"
+          >
+            <Zap className="h-3.5 w-3.5 text-green-400" />
+          </button>
         </div>
       </div>
     </div>
