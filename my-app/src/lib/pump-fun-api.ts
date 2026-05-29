@@ -202,17 +202,19 @@ export class PumpFunApiService {
    * Получить URL для запроса (с прокси или напрямую)
    */
   private getApiUrl(path: string, params?: URLSearchParams): string {
+    const cb = `_cb=${Date.now()}`;
     if (this.useProxy) {
       const proxyUrl = '/api/pump-proxy';
       const fullParams = new URLSearchParams(params?.toString() || '');
       fullParams.set('endpoint', path);
-      return `${proxyUrl}?${fullParams.toString()}`;
+      return `${proxyUrl}?${fullParams.toString()}&${cb}`;
     }
     
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {
       url.search = params.toString();
     }
+    url.searchParams.set('_cb', Date.now().toString());
     return url.toString();
   }
 
