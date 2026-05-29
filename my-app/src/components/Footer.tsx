@@ -37,9 +37,6 @@ const widgetItems: WidgetItem[] = [
   { label: "XTracker", widgetType: "tracker", icon: TrendingUp, transKey: "footer.xtracker" },
 ];
 
-const linkItems: LinkItem[] = [
-  { label: "MarketView", href: "/market-view", icon: BarChart3, transKey: "footer.marketView" },
-];
 
 const aboutMenuItems = [
   { label: "Twitter", href: "#", icon: TwitterIcon },
