@@ -44,6 +44,7 @@ interface TrenchCardProps {
   volume3m?: string;
   makers5m?: string;
   volume5m?: string;
+  timeFrame?: string;
 }
 
 const LAUNCHPAD_BORDER: Record<LaunchpadSource, string> = {
@@ -85,10 +86,10 @@ export default function TrenchCard({
   volume3m = "-",
   makers5m = "-",
   volume5m = "-",
+  timeFrame = "3m",
 }: TrenchCardProps) {
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [timeFrame, setTimeFrame] = useState<'1m' | '3m' | '5m'>('3m');
 
   useEffect(() => {
     setImageLoaded(false);
@@ -264,29 +265,9 @@ export default function TrenchCard({
           </div>
         </div>
 
-        {/* Right: TimeFrame switcher + V/MC + Makers/Volume + Action button */}
+        {/* Right: V/MC + Makers/Volume + Action button */}
         <div className="shrink-0 flex flex-col justify-between items-end">
-          <div className="flex flex-col items-end gap-1 text-[11px]">
-            {/* TimeFrame switcher */}
-            <div
-              className="flex items-center rounded-lg bg-muted/60 p-0.5 gap-0.5"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {(['1m', '3m', '5m'] as const).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeFrame(tf)}
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium transition-colors ${
-                    timeFrame === tf
-                      ? 'bg-accent text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tf}
-                </button>
-              ))}
-            </div>
-
+          <div className="flex flex-col items-end gap-0.5 text-[11px]">
             {/* V / MC */}
             <span className="text-muted-foreground">
               V <span className="text-foreground font-semibold">
