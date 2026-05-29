@@ -24,6 +24,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'arweave.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.dexscreener.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.dexscreener.com',
+      },
     ],
   },
   webpack: (config, { isServer }) => {
