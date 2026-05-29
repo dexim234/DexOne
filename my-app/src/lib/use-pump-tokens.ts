@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
+import { pumpWebSocket, PumpEventType } from './pump-websocket';
 import { getPumpSwapTokens, getLetsBonkTokens, getMeteoraTokens } from './multi-launchpad-api';
 
 export interface UsePumpTokensOptions {
@@ -23,7 +24,8 @@ export interface UsePumpTokensReturn {
  */
 export function usePumpTokens({
   columnType,
-  refreshInterval = 3000, // 3 секунды
+  refreshInterval = 5000, // 5 секунд по умолчанию
+  enableWebSocket = true,
   filters,
 }: UsePumpTokensOptions): UsePumpTokensReturn {
   const [tokens, setTokens] = useState<TokenMarketData[]>([]);
@@ -33,25 +35,27 @@ export function usePumpTokens({
   const [wsConnected, setWsConnected] = useState(false);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const wsCallbackRef = useRef<(() => void) | null>(null);
 
   // Функция загрузки токенов
   const loadTokens = useCallback(async () => {
     try {
+      setIsLoading(true);
       setError(null);
 
       let newTokens: TokenMarketData[];
 
       switch (columnType) {
         case 'new': {
-          // Pump.fun API теперь автоматически использует DexScreener fallback
-          const pumpFunTokens = await pumpFunApi.getNewTokens(20);
-          
-          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            getPumpSwapTokens(10),
-            getLetsBonkTokens(10),
-            getMeteoraTokens(10),
+          // Загружаем токены из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getNewTokens(12),
+            getPumpSwapTokens(6),
+            getLetsBonkTokens(6),
+            getMeteoraTokens(6),
           ]);
 
+          // Объединяем и сортируем по времени создания (новые сверху)
           const allTokens = [
             ...pumpFunTokens,
             ...pumpSwapTokens,
@@ -59,22 +63,19 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
-          // Сортировка по createdTimestamp (новые первыми)
+          // Сортируем по createdTimestamp (новые первыми)
           newTokens = allTokens
-            .filter(t => t.createdTimestamp)
             .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
             .slice(0, 20);
-          
-          console.log(`[New] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         case 'soon': {
-          const pumpFunTokens = await pumpFunApi.getSoonTokens(20);
-          
-          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            getPumpSwapTokens(10),
-            getLetsBonkTokens(10),
-            getMeteoraTokens(10),
+          // Загружаем трендовые токены из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getSoonTokens(10),
+            getPumpSwapTokens(5),
+            getLetsBonkTokens(5),
+            getMeteoraTokens(5),
           ]);
 
           const allTokens = [
@@ -84,6 +85,16 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
+          // Если фильтры не заданы — добавляем свежие токены в начало списка
+          if (!filters || Object.keys(filters).length === 0) {
+            try {
+              const fresh = await pumpFunApi.getNewTokens(6);
+              allTokens.unshift(...fresh);
+            } catch (e) {
+              // ignore
+            }
+          }
+          // Убираем дубликаты по mint
           const seen = new Set<string>();
           newTokens = allTokens
             .filter(t => {
@@ -91,6 +102,7 @@ export function usePumpTokens({
               seen.add(t.mint);
               return true;
             })
+            // Сортируем по объему (трендовые первыми)
             .sort((a, b) => {
               const parseVol = (v: string) => {
                 const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
@@ -99,17 +111,15 @@ export function usePumpTokens({
               return parseVol(b.volume24h) - parseVol(a.volume24h);
             })
             .slice(0, 20);
-          
-          console.log(`[Soon] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         case 'migration': {
-          const pumpFunTokens = await pumpFunApi.getMigrationTokens(20);
-          
-          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            getPumpSwapTokens(10),
-            getLetsBonkTokens(10),
-            getMeteoraTokens(10),
+          // Загружаем токены близкие к миграции из всех лаунчпадов параллельно
+          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
+            pumpFunApi.getMigrationTokens(10),
+            getPumpSwapTokens(5),
+            getLetsBonkTokens(5),
+            getMeteoraTokens(5),
           ]);
 
           const allTokens = [
@@ -119,6 +129,19 @@ export function usePumpTokens({
             ...meteoraTokens,
           ];
 
+          // Если фильтры не заданы — добавляем только что мигрировавшие токены
+          if (!filters || Object.keys(filters).length === 0) {
+            try {
+              const fresh = await pumpFunApi.getNewTokens(6);
+              const migratedFresh = fresh.filter(t => Boolean((t as any).complete));
+              if (migratedFresh.length > 0) {
+                allTokens.unshift(...migratedFresh);
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          // Убираем дубликаты по mint
           const seen = new Set<string>();
           newTokens = allTokens
             .filter(t => {
@@ -126,6 +149,7 @@ export function usePumpTokens({
               seen.add(t.mint);
               return true;
             })
+            // Сортируем по капитализации (высокие первыми — ближе к миграции)
             .sort((a, b) => {
               const parseMC = (v: string) => {
                 const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
@@ -134,8 +158,6 @@ export function usePumpTokens({
               return parseMC(b.mc) - parseMC(a.mc);
             })
             .slice(0, 20);
-          
-          console.log(`[Migration] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
           break;
         }
         default:
@@ -147,27 +169,77 @@ export function usePumpTokens({
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to load tokens'));
       console.error(`Error loading ${columnType} tokens:`, err);
+    } finally {
+      setIsLoading(false);
     }
   }, [columnType]);
 
-  // Эффект для загрузки токенов
+  // Подключение к WebSocket для реального времени
+  const connectWebSocket = useCallback(() => {
+    if (!enableWebSocket) return;
+
+    // Подписка на события создания токенов
+    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken }) => {
+      if (columnType === 'new' && event.type === 'create') {
+        setTokens(prev => {
+          const newToken = pumpFunApi.convertToMarketData(event.token, 1);
+          return [newToken, ...prev.slice(0, 19)];
+        });
+        setLastUpdate(new Date());
+      }
+    };
+
+    pumpWebSocket.on('create', handleTokenCreate);
+    wsCallbackRef.current = () => {
+      pumpWebSocket.off('create', handleTokenCreate);
+    };
+
+    // Подключаемся если еще не подключены
+    const status = pumpWebSocket.getStatus();
+    setWsConnected(status.connected);
+
+    if (!status.connected) {
+      pumpWebSocket.connect();
+    }
+
+    // Слушаем изменения статуса подключения
+    const checkConnection = setInterval(() => {
+      const currentStatus = pumpWebSocket.getStatus();
+      setWsConnected(currentStatus.connected);
+    }, 2000);
+
+    intervalRef.current = checkConnection as unknown as NodeJS.Timeout;
+  }, [enableWebSocket, columnType]);
+
+  // Отключение от WebSocket
+  const disconnectWebSocket = useCallback(() => {
+    if (wsCallbackRef.current) {
+      wsCallbackRef.current();
+      wsCallbackRef.current = null;
+    }
+  }, []);
+
+  // Эффект для загрузки токенов при монтировании
   useEffect(() => {
-    setIsLoading(true);
     loadTokens();
     
-    const intervalId = setInterval(() => {
-      setIsLoading(true);
-      loadTokens();
-    }, refreshInterval);
+    // Устанавливаем интервал для периодического обновления
+    intervalRef.current = setInterval(loadTokens, refreshInterval);
+
+    // Пытаемся подключить WebSocket
+    connectWebSocket();
 
     return () => {
-      clearInterval(intervalId);
+      // Очистка при размонтировании
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      disconnectWebSocket();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnType, refreshInterval]);
+  }, [loadTokens, refreshInterval, connectWebSocket, disconnectWebSocket]);
 
+  // Функция для ручного обновления
   const refresh = useCallback(async () => {
-    setIsLoading(true);
     await loadTokens();
   }, [loadTokens]);
 
