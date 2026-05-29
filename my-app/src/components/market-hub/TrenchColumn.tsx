@@ -42,7 +42,7 @@ export default function TrenchColumn({
   };
 
   return (
-    <div className="bg-card rounded-lg border p-3">
+    <div className="bg-card rounded-lg border p-3 flex flex-col h-full overflow-hidden">
       {/* Column Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -78,7 +78,7 @@ export default function TrenchColumn({
       </div>
 
       {/* Trench Cards */}
-      <div className="space-y-2">
+      <div className="space-y-2 overflow-y-auto min-h-0 flex-1">
         {isLoading && tokens.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
