@@ -438,17 +438,9 @@ export default function Header() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Wallets</span>
-                    {wallets.length > 3 && (
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-xs font-semibold text-teal-500 hover:text-teal-400"
-                      >
-                        {wallets.length - 3} more
-                      </button>
-                    )}
                   </div>
                   <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-                    {wallets.slice(0, 3).map((wallet) => {
+                    {wallets.map((wallet) => {
                       const isActive = activeWalletId === wallet.id;
                       const bal = walletBalances[wallet.id];
                       return (
