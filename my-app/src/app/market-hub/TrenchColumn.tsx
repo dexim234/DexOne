@@ -25,11 +25,10 @@ export default function TrenchColumn({
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
 
-  const { tokens, isLoading, error, refresh, lastUpdate, wsConnected } = usePumpTokens({
+  const { tokens, isLoading, error, refresh, lastUpdate } = usePumpTokens({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
-    enableWebSocket: true,
-    filters: appliedFilters,
+    filters: appliedFilters || {},
   });
 
   const handleManualRefresh = async () => {
@@ -81,9 +80,9 @@ export default function TrenchColumn({
         <div className="flex items-center gap-2">
           <span>{tokens.length} токенов</span>
           {enableAutoRefresh && (
-            <span className={`flex items-center gap-1 ${wsConnected ? 'text-green-500' : 'text-orange-500'}`}>
-              <span className={`h-2 w-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-orange-500'}`}></span>
-              {wsConnected ? 'Live' : 'Polling'}
+            <span className="flex items-center gap-1 text-green-500">
+              <span className="h-2 w-2 rounded-full bg-green-500"></span>
+              Live
             </span>
           )}
         </div>
@@ -91,6 +90,7 @@ export default function TrenchColumn({
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatLastUpdate(lastUpdate)}
+            <span className={`h-1.5 w-1.5 rounded-full ${isLoading ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}></span>
           </span>
         )}
       </div>
