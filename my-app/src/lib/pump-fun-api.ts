@@ -73,6 +73,19 @@ export interface PumpToken {
   watchers?: number;
   watcher_count?: number;
   watch_count?: number;
+  // Минутные данные для makers/volume
+  makers1m?: number;
+  makers_1m?: number;
+  volume1m?: number;
+  volume_1m?: number;
+  makers3m?: number;
+  makers_3m?: number;
+  volume3m?: number;
+  volume_3m?: number;
+  makers5m?: number;
+  makers_5m?: number;
+  volume5m?: number;
+  volume_5m?: number;
 }
 
 // Интерфейс для ответа API
@@ -136,6 +149,13 @@ export interface TokenMarketData {
   botTraders?: string;
   dexTaxBuy?: string;
   dexTaxSell?: string;
+  // Минутные данные для makers/volume
+  makers1m?: string;
+  volume1m?: string;
+  makers3m?: string;
+  volume3m?: string;
+  makers5m?: string;
+  volume5m?: string;
 }
 
 export class PumpFunApiService {
@@ -362,6 +382,12 @@ export class PumpFunApiService {
       botTraders: getField('botTraders', 'bot_traders'),
       dexTaxBuy: getField('dexTaxBuy', 'dex_tax_buy'),
       dexTaxSell: getField('dexTaxSell', 'dex_tax_sell'),
+      makers1m: getField('makers1m', 'makers_1m'),
+      volume1m: getNumField('volume1m', 'volume_1m') !== undefined ? formatVolume(getNumField('volume1m', 'volume_1m')) : '-',
+      makers3m: getField('makers3m', 'makers_3m'),
+      volume3m: getNumField('volume3m', 'volume_3m') !== undefined ? formatVolume(getNumField('volume3m', 'volume_3m')) : '-',
+      makers5m: getField('makers5m', 'makers_5m'),
+      volume5m: getNumField('volume5m', 'volume_5m') !== undefined ? formatVolume(getNumField('volume5m', 'volume_5m')) : '-',
     };
   }
 
