@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 // Типы данных для токенов Pump.fun
 export interface PumpToken {
   uri?: string;
@@ -186,8 +188,6 @@ export class PumpFunApiService {
     const config: any = {
       headers: {
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
       }
     };
 
@@ -202,19 +202,17 @@ export class PumpFunApiService {
    * Получить URL для запроса (с прокси или напрямую)
    */
   private getApiUrl(path: string, params?: URLSearchParams): string {
-    const cb = `_cb=${Date.now()}`;
     if (this.useProxy) {
       const proxyUrl = '/api/pump-proxy';
       const fullParams = new URLSearchParams(params?.toString() || '');
       fullParams.set('endpoint', path);
-      return `${proxyUrl}?${fullParams.toString()}&${cb}`;
+      return `${proxyUrl}?${fullParams.toString()}`;
     }
     
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {
       url.search = params.toString();
     }
-    url.searchParams.set('_cb', Date.now().toString());
     return url.toString();
   }
 
@@ -234,30 +232,16 @@ export class PumpFunApiService {
     }
 
     const url = this.getApiUrl('/coins', urlSearchParams);
-    
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
-      cache: 'no-store',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Pump.fun API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
     
     // Обработка разных форматов ответа
-    if (Array.isArray(data)) {
+    if (Array.isArray(response.data)) {
       return {
-        coins: data,
+        coins: response.data,
         hasNextPage: false,
       };
     }
-    return data;
+    return response.data;
   }
 
   /**
@@ -290,20 +274,8 @@ export class PumpFunApiService {
   async getCoinById(mint: string): Promise<PumpToken | null> {
     try {
       const url = this.getApiUrl(`/coins/${mint}`);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-        cache: 'no-store',
-      });
-      
-      if (!response.ok) {
-        return null;
-      }
-      
-      return await response.json();
+      const response = await axios.get<PumpToken>(url, this.getAxiosConfig());
+      return response.data;
     } catch (error) {
       console.error(`Error fetching coin ${mint}:`, error);
       return null;
@@ -475,71 +447,38 @@ export class PumpFunApiService {
   /**
    * Получить токены для колонки "New" (самые свежие)
    */
-  async getNewTokens(limit: number = 50): Promise<TokenMarketData[]> {
+  async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
     try {
       const response = await this.getNewCoins(limit);
       const coins = response.coins || [];
-      
-      // Если Pump.fun вернул данные - возвращаем их
-      if (coins.length > 0) {
-        console.log(`[PumpFun] Loaded ${coins.length} tokens from Pump.fun API`);
-        return coins.map((token, index) => 
-          this.convertToMarketData(token, index + 1)
-        );
-      }
-      
-      // Fallback на DexScreener напрямую
-      console.log('[PumpFun] No tokens from Pump.fun, falling back to DexScreener...');
-      return await this.fetchDexScreenerFallback(limit);
+      return coins.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
     } catch (error) {
-      console.error('Error loading new tokens from Pump.fun:', error);
-      
-      // Fallback на DexScreener
-      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
-      try {
-        return await this.fetchDexScreenerFallback(limit);
-      } catch (dexError) {
-        console.error('DexScreener fallback also failed:', dexError);
-        return [];
-      }
+      console.error('Error loading new tokens:', error);
+      return [];
     }
   }
 
   /**
    * Получить токены для колонки "Soon" (предстоящие/популярные)
    */
-  async getSoonTokens(limit: number = 50): Promise<TokenMarketData[]> {
+  async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
     try {
       const trending = await this.getTrendingCoins(limit);
-      
-      if (trending.length > 0) {
-        console.log(`[PumpFun] Loaded ${trending.length} trending tokens from Pump.fun API`);
-        return trending.map((token, index) => 
-          this.convertToMarketData(token, index + 1)
-        );
-      }
-      
-      // Fallback на DexScreener напрямую
-      console.log('[PumpFun] No trending tokens from Pump.fun, falling back to DexScreener...');
-      return await this.fetchDexScreenerFallback(limit);
+      return trending.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
     } catch (error) {
-      console.error('Error loading soon tokens from Pump.fun:', error);
-      
-      // Fallback на DexScreener
-      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
-      try {
-        return await this.fetchDexScreenerFallback(limit);
-      } catch (dexError) {
-        console.error('DexScreener fallback also failed:', dexError);
-        return [];
-      }
+      console.error('Error loading soon tokens:', error);
+      return [];
     }
   }
 
   /**
    * Получить токены для колонки "Migration" (готовящиеся к миграции)
    */
-  async getMigrationTokens(limit: number = 50): Promise<TokenMarketData[]> {
+  async getMigrationTokens(limit: number = 20): Promise<TokenMarketData[]> {
     try {
       // Токены с высокой капитализацией, близкие к миграции
       const response = await this.getCoins({
@@ -556,110 +495,13 @@ export class PumpFunApiService {
         token => (token.marketCap || 0) >= migrationThreshold
       );
 
-      if (migrationTokens.length > 0) {
-        console.log(`[PumpFun] Loaded ${migrationTokens.length} migration tokens from Pump.fun API`);
-        return migrationTokens.map((token, index) => 
-          this.convertToMarketData(token, index + 1)
-        );
-      }
-      
-      // Fallback на DexScreener напрямую
-      console.log('[PumpFun] No migration tokens from Pump.fun, falling back to DexScreener...');
-      return await this.fetchDexScreenerFallback(limit);
-    } catch (error) {
-      console.error('Error loading migration tokens from Pump.fun:', error);
-      
-      // Fallback на DexScreener
-      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
-      try {
-        return await this.fetchDexScreenerFallback(limit);
-      } catch (dexError) {
-        console.error('DexScreener fallback also failed:', dexError);
-        return [];
-      }
-    }
-  }
-
-  /**
-   * Fallback на DexScreener API
-   */
-  private async fetchDexScreenerFallback(limit: number): Promise<TokenMarketData[]> {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      
-      const response = await fetch(
-        `/api/dexscreener-proxy?endpoint=search&q=solana&order=createdAt&_cb=${Date.now()}`,
-        { signal: controller.signal, cache: 'no-store' }
+      return migrationTokens.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
       );
-      clearTimeout(timeout);
-      
-      if (!response.ok) {
-        throw new Error(`DexScreener fallback failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.pairs && Array.isArray(data.pairs)) {
-        const solanaPairs = data.pairs
-          .filter((p: any) => p.chainId === 'solana')
-          .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
-          .slice(0, limit);
-
-        console.log(`[DexScreener Fallback] Loaded ${solanaPairs.length} tokens`);
-
-        // Простая конвертация для fallback
-        return solanaPairs.map((pair: any, index: number) => ({
-          rank: (index + 1).toString(),
-          logo: pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
-          name: pair.baseToken?.name || 'Unknown',
-          symbol: pair.baseToken?.symbol || '',
-          mint: pair.baseToken?.address || '',
-          mc: this.formatNumber(pair.marketCap || pair.fdv || 0),
-          mcChange: `${(pair.priceChange?.h24 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
-          volume24h: this.formatNumber(pair.volume?.h24 || 0),
-          volumeChange: '0.00%',
-          priceChange1h: `${(pair.priceChange?.h1 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h1 || 0).toFixed(2)}%`,
-          priceChange24h: `${(pair.priceChange?.h24 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
-          priceChange7d: '0.00%',
-          trades: ((pair.txns?.h24?.buys || 0) + (pair.txns?.h24?.sells || 0)).toString(),
-          holders: '-',
-          isVerified: pair.info?.verified || false,
-          imageUrl: pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
-          createdTimestamp: pair.pairCreatedAt ? Math.floor(pair.pairCreatedAt / 1000) : undefined,
-          twitter: pair.info?.socials?.find((s: any) => s.type === 'twitter')?.url,
-          telegram: pair.info?.socials?.find((s: any) => s.type === 'telegram')?.url,
-          website: pair.info?.socials?.find((s: any) => s.type === 'website')?.url,
-          source: 'pumpfun' as LaunchpadSource,
-          kingOfTheHillRank: '-',
-          kingOfTheHillTotal: '-',
-          watchers: pair.fdw?.toString() || '-',
-          replies: '-',
-          replyRate: '-',
-          buySellRatio: '-',
-          fomoScore: '-',
-          devHold: '-',
-          top10Hold: '-',
-          lpBurn: '-',
-          snipersCount: '-',
-          bundlersCount: '-',
-          freshWallets: '-',
-          botTraders: '-',
-          dexTaxBuy: '-',
-          dexTaxSell: '-',
-        }));
-      }
-    } catch (e) {
-      console.warn('DexScreener fallback failed:', e);
+    } catch (error) {
+      console.error('Error loading migration tokens:', error);
+      return [];
     }
-    return [];
-  }
-
-  private formatNumber(num: number): string {
-    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
-    if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
-    if (num === 0) return '$0';
-    return `$${num.toFixed(2)}`;
   }
 
   /**
@@ -667,14 +509,10 @@ export class PumpFunApiService {
    */
   async getTokenImage(metadataUri: string): Promise<string | null> {
     try {
-      const response = await fetch(metadataUri, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-        cache: 'no-store',
+      const response = await axios.get(metadataUri, {
+        timeout: 5000,
       });
-      const data = await response.json();
-      return data.image || null;
+      return response.data.image || null;
     } catch (error) {
       console.error('Error fetching token image:', error);
       return null;
