@@ -101,9 +101,15 @@ export default function Header() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [showMenuSettings, setShowMenuSettings] = useState(false);
-  const [menuItems, setMenuItems] = useState(navItems.map(item => item.href));
-  const [footerItems, setFooterItems] = useState<string[]>([]);
-
+  const [headerMenuVisible, setHeaderMenuVisible] = useState<string[]>(() => {
+    const saved = localStorage.getItem('header-menu-visible');
+    return saved ? JSON.parse(saved) : navItems.map(item => item.href);
+  });
+  const [footerMenuVisible, setFooterMenuVisible] = useState<string[]>(() => {
+    const saved = localStorage.getItem('footer-menu-visible');
+    return saved ? JSON.parse(saved) : ['Tracker', 'Smart', 'Alerts', 'Calls', 'MarketView', 'XTracker'];
+  });
+  
   // Auth form states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -280,7 +286,7 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
-          {navItems.map((item) => {
+          {navItems.filter(item => headerMenuVisible.includes(item.href)).map((item) => {
             return (
               <Link
                 key={item.href}
@@ -430,10 +436,18 @@ export default function Header() {
               {/* Your Wallets */}
               {wallets?.length > 0 && (
                 <div className="mb-4">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
-                    Your Wallets
-                  </span>
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Wallets</span>
+                    {wallets.length > 3 && (
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-semibold text-teal-500 hover:text-teal-400"
+                      >
+                        {wallets.length - 3} more
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
                     {wallets.slice(0, 3).map((wallet) => {
                       const isActive = activeWalletId === wallet.id;
                       const bal = walletBalances[wallet.id];
@@ -485,91 +499,159 @@ export default function Header() {
                         </DropdownMenuItem>
                       );
                     })}
-                    {wallets.length > 3 && (
-                      <div className="px-3 py-2 text-xs text-muted-foreground text-center">
-                        +{wallets.length - 3} more wallets...
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
+
+              {/* Wallet Connections */}
+              <div className="mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                  Connect Wallet
+                </span>
+                <div className="space-y-2">
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
+                      <Image 
+                        src="/phantom.webp" 
+                        alt="Phantom" 
+                        width={28} 
+                        height={28}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Phantom</div>
+                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
+                      <Image 
+                        src="/Solflare.svg" 
+                        alt="Solflare" 
+                        width={32} 
+                        height={32}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Solflare</div>
+                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+                </div>
+              </div>
 
               {/* Sign Up / Log In */}
               <div className="mb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
                   Authentication
                 </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('login');
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                      authMode === 'login'
-                        ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
-                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
-                    }`}
+                <div className="space-y-2">
+                  {/* Phantom */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <LogIn className="h-4 w-4" />
-                    Log In
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('signup');
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                      authMode === 'signup'
-                        ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
-                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
-                    }`}
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
+                      <Image 
+                        src="/phantom.webp" 
+                        alt="Phantom" 
+                        width={28} 
+                        height={28}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Phantom</div>
+                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+                  
+                  {/* Solflare */}
+                  <DropdownMenuItem 
+                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <UserPlus className="h-4 w-4" />
-                    Sign Up
-                  </button>
+                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
+                      <Image 
+                        src="/Solflare.svg" 
+                        alt="Solflare" 
+                        width={32} 
+                        height={32}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-foreground">Solflare</div>
+                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
+                  </DropdownMenuItem>
+
+                  {/* Sign Up / Log In Toggle */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAuthModal(true);
+                        setAuthMode('login');
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        authMode === 'login'
+                          ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
+                          : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      Log In
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAuthModal(true);
+                        setAuthMode('signup');
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        authMode === 'signup'
+                          ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
+                          : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Sign Up
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Menu Settings */}
-              <div className="mb-4">
-                <DropdownMenuItem 
-                  className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenuSettings(true);
-                  }}
-                >
-                  <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
-                    <Settings className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm text-foreground">Menu Settings</div>
-                    <div className="text-xs text-muted-foreground">Customize navigation</div>
-                  </div>
-                </DropdownMenuItem>
-              </div>
-              {/* Account actions */}
               <DropdownMenuSeparator className="my-3" />
-              <div className="space-y-1">
-                <Link href="/profile" className="block">
-                  <DropdownMenuItem className="gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-accent/50">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-sm">Profile</span>
-                  </DropdownMenuItem>
-                </Link>
-                <DropdownMenuItem 
-                  onClick={handleLogout}
-                  className="gap-2 cursor-pointer px-3 py-2 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                >
-                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span className="font-medium text-sm">Logout</span>
-                </DropdownMenuItem>
-              </div>
+              <DropdownMenuItem 
+                className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenuSettings(true);
+                }}
+              >
+                <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                  <Settings className="h-5 w-5 text-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm text-foreground">Menu Settings</div>
+                  <div className="text-xs text-muted-foreground">Customize navigation</div>
+                </div>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -772,42 +854,78 @@ export default function Header() {
               Show or hide menu items in header and footer
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Header Navigation */}
             <div>
-              <Label className="text-sm font-semibold mb-2 block">Header Navigation</Label>
+              <Label className="text-sm font-semibold mb-3 block">Header Navigation</Label>
               <div className="space-y-2">
                 {navItems.map((item) => (
-                  <label key={item.href} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={menuItems.includes(item.href)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setMenuItems([...menuItems, item.href]);
+                  <div key={item.href} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50">
+                        <item.icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">{t(item.transKey)}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (headerMenuVisible.includes(item.href)) {
+                          setHeaderMenuVisible(headerMenuVisible.filter(href => href !== item.href));
                         } else {
-                          setMenuItems(menuItems.filter(href => href !== item.href));
+                          setHeaderMenuVisible([...headerMenuVisible, item.href]);
                         }
                       }}
-                      className="rounded border-muted-foreground/30"
-                    />
-                    <item.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t(item.transKey)}</span>
-                  </label>
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        headerMenuVisible.includes(item.href) ? 'bg-teal-500' : 'bg-muted'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                          headerMenuVisible.includes(item.href) ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
             
+            {/* Footer Widgets */}
             <div className="pt-4 border-t border-border/30">
-              <Label className="text-sm font-semibold mb-2 block">Footer Widgets</Label>
-              <p className="text-xs text-muted-foreground mb-2">Configure footer widget visibility</p>
-              {/* TODO: Add footer item toggles */}
+              <Label className="text-sm font-semibold mb-3 block">Footer Widgets</Label>
+              <div className="space-y-2">
+                {['Tracker', 'Smart', 'Alerts', 'Calls', 'MarketView', 'XTracker'].map((label) => (
+                  <div key={label} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <span className="text-sm font-medium">{label}</span>
+                    <button
+                      onClick={() => {
+                        if (footerMenuVisible.includes(label)) {
+                          setFooterMenuVisible(footerMenuVisible.filter(l => l !== label));
+                        } else {
+                          setFooterMenuVisible([...footerMenuVisible, label]);
+                        }
+                      }}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        footerMenuVisible.includes(label) ? 'bg-teal-500' : 'bg-muted'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                          footerMenuVisible.includes(label) ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <Button
               onClick={() => {
-                localStorage.setItem('menu-items', JSON.stringify(menuItems));
-                localStorage.setItem('footer-items', JSON.stringify(footerItems));
+                localStorage.setItem('header-menu-visible', JSON.stringify(headerMenuVisible));
+                localStorage.setItem('footer-menu-visible', JSON.stringify(footerMenuVisible));
                 setShowMenuSettings(false);
+                window.location.reload();
               }}
               className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
             >
