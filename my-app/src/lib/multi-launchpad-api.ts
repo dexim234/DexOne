@@ -4,12 +4,11 @@ import { TokenMarketData, LaunchpadSource } from './pump-fun-api';
 // Токены, мигрировавшие или запущенные на PumpSwap (DEX от Pump.fun)
 export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
-    // Пробуем получить через DexScreener пулы PumpSwap
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=pumpswap',
-      { signal: controller.signal }
+      `/api/dexscreener-proxy?endpoint=search&q=pumpswap&_cb=${Date.now()}`,
+      { signal: controller.signal, cache: 'no-store' }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -30,12 +29,11 @@ export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarket
 // === LetsBonk API ===
 export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
-    // Пробуем получить через DexScreener пулы с letsbonk
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=letsbonk',
-      { signal: controller.signal }
+      `/api/dexscreener-proxy?endpoint=search&q=letsbonk&_cb=${Date.now()}`,
+      { signal: controller.signal, cache: 'no-store' }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -56,12 +54,11 @@ export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarket
 // === Meteora API ===
 export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketData[]> {
   try {
-    // Пробуем получить через DexScreener пулы Meteora
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const response = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=meteora',
-      { signal: controller.signal }
+      `/api/dexscreener-proxy?endpoint=search&q=meteora&_cb=${Date.now()}`,
+      { signal: controller.signal, cache: 'no-store' }
     );
     clearTimeout(timeout);
     const data = await response.json();
@@ -82,8 +79,7 @@ export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketD
 // === DexScreener Pair → TokenMarketData ===
 function convertDexPairToMarketData(pair: any, rank: number, source: LaunchpadSource): TokenMarketData {
   const base = pair.baseToken || {};
-  const quote = pair.quoteToken || {};
-  const mc = pair.marketCap || pair.fdv || pair.priceUsd * 1_000_000_000 || 0;
+  const mc = pair.marketCap || pair.fdv || (pair.priceUsd ? parseFloat(pair.priceUsd) * 1_000_000_000 : 0) || 0;
   const vol = pair.volume?.h24 || 0;
 
   const formatNum = (num: number): string => {
@@ -94,7 +90,7 @@ function convertDexPairToMarketData(pair: any, rank: number, source: LaunchpadSo
 
   return {
     rank: rank.toString(),
-    logo: base.iconUrl || pair.imageUrl || '/placeholder.png',
+    logo: base.iconUrl || pair.info?.imageUrl || '/placeholder.png',
     name: base.name || 'Unknown',
     symbol: base.symbol || '',
     mint: base.address || '',
@@ -108,13 +104,12 @@ function convertDexPairToMarketData(pair: any, rank: number, source: LaunchpadSo
     trades: (pair.txns?.h24?.buys + pair.txns?.h24?.sells || 0).toString(),
     holders: '-',
     isVerified: false,
-    imageUrl: base.iconUrl || pair.imageUrl || '/placeholder.png',
+    imageUrl: base.iconUrl || pair.info?.imageUrl || '/placeholder.png',
     createdTimestamp: pair.pairCreatedAt ? Math.floor(pair.pairCreatedAt / 1000) : undefined,
     twitter: undefined,
     telegram: undefined,
     website: undefined,
     source,
-    // Аналитические метрики недоступны в DexScreener — показываем "-"
     kingOfTheHillRank: '-',
     kingOfTheHillTotal: '-',
     watchers: '-',
