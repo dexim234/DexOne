@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent, BarChart3 } from "lucide-react";
+import { Wallet, ChevronDown, Monitor, List as ListIcon, Zap, Droplets, Activity, TrendingUp, TrendingDown, Users, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent, BarChart3, MessageCircle, BadgeCheck, Rocket, Brain } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 import { FilterDialog } from "@/components/market-hub/FilterDialog";
 import {
@@ -14,24 +13,34 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const DISPLAY_METRICS = [
-  { id: "volume", label: "Volume", icon: Zap },
+ { id: "mc", label: "MC", icon: BarChart3 },
   { id: "liquidity", label: "Liquidity", icon: Droplets },
-  { id: "transactions", label: "Transactions", icon: Activity },
+  { id: "volume", label: "Volume", icon: Zap },
   { id: "ath", label: "ATH", icon: TrendingUp },
+  { id: "dropFromAth", label: "Drop From ATH", icon: TrendingDown },
   { id: "makersVol", label: "Makers / Vol", icon: Users },
-  { id: "priceChange", label: "Price Change %", icon: PieChart },
-  { id: "devTokensHistory", label: "Dev Tokens History", icon: Clock },
-  { id: "holders", label: "Holders", icon: Users2 },
-  { id: "botTraders", label: "Bot Traders", icon: Bot },
-  { id: "botFee", label: "Bot Fee", icon: DollarSign },
+  { id: "priceChange", label: "Price Change %", icon: Percent },
+  { id: "holdersCount", label: "Holders", icon: Users2 },
+  { id: "top10HoldersPct", label: "Top-10 Holders %", icon: Award },
+  { id: "botTradersCount", label: "Bot Traders", icon: Bot },
+  { id: "botTradersPct", label: "Bot Traders %", icon: Bot },
+  { id: "sniperCount", label: "Sniper", icon: Crosshair },
+  { id: "sniperPct", label: "Sniper %", icon: Crosshair },
+  { id: "freshWalletsCount", label: "Fresh Wallets", icon: UserPlus },
+  { id: "freshWalletsPct", label: "Fresh Wallets %", icon: UserPlus },
+  { id: "bundleCount", label: "Bundle", icon: Package },
+  { id: "bundlePct", label: "Bundle %", icon: Package },
+  { id: "devHoldPct", label: "Dev Hold %", icon: UserX },
   { id: "globalFees", label: "Global Fees", icon: Wallet },
-  { id: "top10Hold", label: "Top 10 Hold", icon: Award },
-  { id: "devHold", label: "Dev Hold", icon: UserX },
-  { id: "bundlers", label: "Bundlers", icon: Package },
-  { id: "snipers", label: "Snipers", icon: Crosshair },
-  { id: "freshWallets", label: "Fresh Wallets", icon: UserPlus },
+  { id: "botFee", label: "Bot Fee", icon: DollarSign },
   { id: "lpBurn", label: "LP Burn", icon: Flame },
-  { id: "dexTax", label: "DEX Tax", icon: Percent },
+  { id: "dexTax", label: "Dex Tax", icon: Percent },
+  { id: "transactions", label: "Transactions", icon: Activity },
+  { id: "socials", label: "Socials", icon: MessageCircle },
+  { id: "time", label: "Time", icon: Clock },
+  { id: "dexPaid", label: "DexPaid", icon: BadgeCheck },
+  { id: "dexBoost", label: "DexBoost", icon: Rocket },
+  { id: "smartMoney", label: "SmartMoney", icon: Brain },
 ];
 
 export default function MarketHubPage() {
@@ -49,7 +58,7 @@ export default function MarketHubPage() {
     }
     return "1m";
   });
-  const [appliedFilters, setAppliedFilters] = useState<any>({});
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     localStorage.setItem("selectedMetrics", JSON.stringify(selectedMetrics));
@@ -176,10 +185,21 @@ export default function MarketHubPage() {
 
       {/* Three Columns of Trenches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-0 flex-1">
-        {/* New Column - получает новые токены в реальном времени */}
+        {/* New Column */}
         <TrenchColumn
           title="New"
           columnType="new"
+          enableAutoRefresh={true}
+          refreshInterval={3000}
+          selectedMetrics={selectedMetrics}
+          appliedFilters={appliedFilters}
+          timeFrame={timeframe}
+        />
+
+        {/* Soon Column */}
+        <TrenchColumn
+          title="Soon"
+          columnType="soon"
           enableAutoRefresh={true}
           refreshInterval={5000}
           selectedMetrics={selectedMetrics}
@@ -187,23 +207,12 @@ export default function MarketHubPage() {
           timeFrame={timeframe}
         />
 
-        {/* Soon Column - получает трендовые токены */}
-        <TrenchColumn
-          title="Soon"
-          columnType="soon"
-          enableAutoRefresh={true}
-          refreshInterval={10000}
-          selectedMetrics={selectedMetrics}
-          appliedFilters={appliedFilters}
-          timeFrame={timeframe}
-        />
-
-        {/* Migration Column - получает токены близкие к миграции */}
+        {/* Migration Column */}
         <TrenchColumn
           title="Migration"
           columnType="migration"
           enableAutoRefresh={true}
-          refreshInterval={15000}
+          refreshInterval={8000}
           selectedMetrics={selectedMetrics}
           appliedFilters={appliedFilters}
           timeFrame={timeframe}
