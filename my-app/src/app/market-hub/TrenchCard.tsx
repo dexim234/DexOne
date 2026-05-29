@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { formatSolanaAddress, getSolanaExplorerUrl } from "@/lib/solana-config";
+import { Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, Flame, Percent } from "lucide-react";
 
 interface TrenchCardProps {
   rank: string;
@@ -19,6 +20,8 @@ interface TrenchCardProps {
   isVerified?: boolean;
   mint?: string;
   imageUrl?: string;
+  selectedMetrics?: string[];
+  timeFrame?: string;
 }
 
 export default function TrenchCard({
@@ -37,6 +40,8 @@ export default function TrenchCard({
   isVerified = false,
   mint,
   imageUrl,
+  selectedMetrics = ["volume", "holders", "priceChange"],
+  timeFrame = "3m",
 }: TrenchCardProps) {
   const isPositive = (val: string) => !val.includes("-") && val !== "0.00%" && val !== "0.00";
   const isNegative = (val: string) => val.includes("-");
@@ -49,6 +54,13 @@ export default function TrenchCard({
   };
 
   const displayImage = imageUrl || logo || '';
+
+  const formatTimeframeLabel = (tf: string) => {
+    if (tf === "1m") return "1m";
+    if (tf === "3m") return "3m";
+    if (tf === "5m") return "5m";
+    return tf;
+  };
 
   return (
     <div 
