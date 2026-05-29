@@ -30,6 +30,11 @@ import {
   Plus,
   DollarSign,
   Check,
+  LogIn,
+  UserPlus,
+  Settings,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -44,6 +49,14 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
 import { useTranslation } from "@/contexts/TranslationContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useUser } from "@/contexts/UserContext";
 
 const navItems = [
@@ -85,6 +98,18 @@ export default function Header() {
   const [balance, setBalance] = useState<number>(0);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
   const [clipboardToken, setClipboardToken] = useState<{ address: string; name?: string } | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [showMenuSettings, setShowMenuSettings] = useState(false);
+  const [menuItems, setMenuItems] = useState(navItems.map(item => item.href));
+  const [footerItems, setFooterItems] = useState<string[]>([]);
+
+  // Auth form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load wallets from UserContext
   React.useEffect(() => {
@@ -361,18 +386,16 @@ export default function Header() {
                     </div>
                     <span className="text-sm font-semibold text-foreground">Theme</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setTheme(theme === "dark" ? "light" : "dark");
                     }}
-                    className="h-8 gap-1.5 px-3 rounded-xl"
+                    className="h-8 w-8 rounded-lg bg-muted/50 hover:bg-muted transition-colors flex items-center justify-center"
                   >
-                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  </Button>
+                    <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-foreground" />
+                    <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-foreground absolute" />
+                  </button>
                 </div>
 
                 {/* Language selector */}
@@ -411,7 +434,7 @@ export default function Header() {
                     Your Wallets
                   </span>
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                    {wallets.map((wallet) => {
+                    {wallets.slice(0, 3).map((wallet) => {
                       const isActive = activeWalletId === wallet.id;
                       const bal = walletBalances[wallet.id];
                       return (
@@ -462,88 +485,72 @@ export default function Header() {
                         </DropdownMenuItem>
                       );
                     })}
+                    {wallets.length > 3 && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+                        +{wallets.length - 3} more wallets...
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Wallet connections */}
+              {/* Sign Up / Log In */}
               <div className="mb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
                   Authentication
                 </span>
-                <div className="space-y-2">
-                  <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                    onClick={(e) => e.stopPropagation()}
+                <div className="flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('login');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      authMode === 'login'
+                        ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                    }`}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#AB9FF2]">
-                      <Image 
-                        src="/phantom.webp" 
-                        alt="Phantom" 
-                        width={28} 
-                        height={28}
-                        className="object-contain"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Phantom</div>
-                      <div className="text-xs text-muted-foreground">Popular Solana wallet</div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                    onClick={(e) => e.stopPropagation()}
+                    <LogIn className="h-4 w-4" />
+                    Log In
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAuthModal(true);
+                      setAuthMode('signup');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      authMode === 'signup'
+                        ? 'bg-gradient-to-r from-teal-500 to-purple-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                    }`}
                   >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden">
-                      <Image 
-                        src="/Solflare.svg" 
-                        alt="Solflare" 
-                        width={32} 
-                        height={32}
-                        className="object-contain"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Solflare</div>
-                      <div className="text-xs text-muted-foreground">Native Solana wallet</div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem 
-                    className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-[#24A1DE]">
-                      {telegramIcon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-foreground">Telegram</div>
-                      <div className="text-xs text-muted-foreground">Auth via Telegram</div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
-                  </DropdownMenuItem>
-
-                  {/* Add wallet button */}
-                  <Link href="/assets" onClick={() => {}} className="block">
-                    <DropdownMenuItem 
-                      className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden bg-gradient-to-br from-teal-500 to-purple-600">
-                        <Plus className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm text-foreground">Add wallet</div>
-                        <div className="text-xs text-muted-foreground">Create or import a wallet</div>
-                      </div>
-                    </DropdownMenuItem>
-                  </Link>
+                    <UserPlus className="h-4 w-4" />
+                    Sign Up
+                  </button>
                 </div>
               </div>
 
+              {/* Menu Settings */}
+              <div className="mb-4">
+                <DropdownMenuItem 
+                  className="gap-3 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenuSettings(true);
+                  }}
+                >
+                  <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-muted/50">
+                    <Settings className="h-5 w-5 text-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm text-foreground">Menu Settings</div>
+                    <div className="text-xs text-muted-foreground">Customize navigation</div>
+                  </div>
+                </DropdownMenuItem>
+              </div>
               {/* Account actions */}
               <DropdownMenuSeparator className="my-3" />
               <div className="space-y-1">
@@ -626,6 +633,189 @@ export default function Header() {
           </Sheet>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {authMode === 'signup' ? (
+                <>
+                  <UserPlus className="h-5 w-5 text-teal-500" />
+                  Create Account
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5 text-teal-500" />
+                  Welcome Back
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {authMode === 'signup' 
+                ? "Sign up to get started with OneDex" 
+                : "Log in to access your account"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {authMode === 'signup' && (
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Nickname</Label>
+                <Input
+                  id="nickname"
+                  placeholder="Enter your nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="border-teal-500/20"
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="border-teal-500/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={authMode === 'signup' ? "Create a password" : "Enter your password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="border-teal-500/20 pr-10"
+                />
+                <button
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              onClick={async () => {
+                if (!email || !password || (authMode === 'signup' && !nickname)) {
+                  return;
+                }
+                setIsLoading(true);
+                try {
+                  // TODO: Implement actual auth logic
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  setShowAuthModal(false);
+                  setEmail("");
+                  setPassword("");
+                  setNickname("");
+                } catch (err) {
+                  console.error("Auth failed:", err);
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  {authMode === 'signup' ? "Creating account..." : "Logging in..."}
+                </span>
+              ) : (
+                authMode === 'signup' ? "Sign Up" : "Log In"
+              )}
+            </Button>
+
+            <div className="text-center text-sm text-muted-foreground">
+              {authMode === 'signup' ? (
+                <>Already have an account?{" "}
+                  <button
+                    onClick={() => setAuthMode('login')}
+                    className="text-teal-500 hover:text-teal-400 font-semibold"
+                  >
+                    Log In
+                  </button>
+                </>
+              ) : (
+                <>Don't have an account?{" "}
+                  <button
+                    onClick={() => setAuthMode('signup')}
+                    className="text-teal-500 hover:text-teal-400 font-semibold"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Menu Settings Modal */}
+      <Dialog open={showMenuSettings} onOpenChange={setShowMenuSettings}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-teal-500" />
+              Menu Settings
+            </DialogTitle>
+            <DialogDescription>
+              Show or hide menu items in header and footer
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-semibold mb-2 block">Header Navigation</Label>
+              <div className="space-y-2">
+                {navItems.map((item) => (
+                  <label key={item.href} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={menuItems.includes(item.href)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMenuItems([...menuItems, item.href]);
+                        } else {
+                          setMenuItems(menuItems.filter(href => href !== item.href));
+                        }
+                      }}
+                      className="rounded border-muted-foreground/30"
+                    />
+                    <item.icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{t(item.transKey)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t border-border/30">
+              <Label className="text-sm font-semibold mb-2 block">Footer Widgets</Label>
+              <p className="text-xs text-muted-foreground mb-2">Configure footer widget visibility</p>
+              {/* TODO: Add footer item toggles */}
+            </div>
+
+            <Button
+              onClick={() => {
+                localStorage.setItem('menu-items', JSON.stringify(menuItems));
+                localStorage.setItem('footer-items', JSON.stringify(footerItems));
+                setShowMenuSettings(false);
+              }}
+              className="w-full bg-gradient-to-r from-teal-500 to-purple-600 hover:from-teal-600 hover:to-purple-700"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

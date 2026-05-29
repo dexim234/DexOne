@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthRequired from "@/components/AuthRequired";
 
 // Tooltip component
 function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
@@ -31,9 +33,22 @@ function Tooltip({ content, children }: { content: string; children: React.React
 }
 
 export default function RewardsPage() {
+  const { isAuthenticated } = useAuth();
   const { t, language } = useTranslation();
   const { addToast } = useToast();
   
+  if (!isAuthenticated) {
+    return (
+      <AuthRequired title="Welcome to Rewards" message="Sign in to earn rewards and complete challenges">
+        <div className="min-h-screen bg-background p-4 md:p-6">
+          <div className="max-w-7xl mx-auto space-y-4">
+            {/* Content */}
+          </div>
+        </div>
+      </AuthRequired>
+    );
+  }
+
   // Challenge state
   const [currentDay, setCurrentDay] = useState(1);
   const [todayVolume, setTodayVolume] = useState(0);

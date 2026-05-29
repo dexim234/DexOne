@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, Shield, BarChart3, Bell, Users, Brain, Play, Share2, TrendingUp, Activity, Clock, Target, Download } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthRequired from "@/components/AuthRequired";
 
 const featureCards = [
   {
@@ -85,7 +87,18 @@ const colorConfig = {
 };
 
 export default function AlertsPage() {
+  const { isAuthenticated } = useAuth();
   const [activeMode, setActiveMode] = useState<string>("Alerts");
+
+  if (!isAuthenticated) {
+    return (
+      <AuthRequired title="Welcome to Alerts" message="Sign in to access alert features">
+        <div className="container mx-auto px-4 py-8">
+          {/* Content */}
+        </div>
+      </AuthRequired>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

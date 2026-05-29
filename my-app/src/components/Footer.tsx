@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Activity, Brain, Bell, Megaphone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp } from "lucide-react";
+import { Activity, Brain, Bell, Megaphone, BarChart3, X as TwitterIcon, MessageCircle, Globe, BarChart2, FileText, Shield, ChevronUp, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -33,6 +33,13 @@ const widgetItems: WidgetItem[] = [
   { label: "Smart", widgetType: "smart", icon: Brain, transKey: "footer.smart" },
   { label: "Alerts", widgetType: "alerts", icon: Bell, transKey: "footer.alerts" },
   { label: "Calls", widgetType: "calls", icon: Megaphone, transKey: "footer.calls" },
+  { label: "MarketView", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView" },
+  { label: "MarketView2", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView2" },
+  { label: "MarketView3", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView3" },
+  { label: "MarketView4", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView4" },
+  { label: "MarketView5", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView5" },
+  { label: "MarketView6", widgetType: "tracker", icon: BarChart3, transKey: "footer.marketView6" },
+  { label: "XTracker", widgetType: "tracker", icon: TrendingUp, transKey: "footer.xtracker" },
 ];
 
 const linkItems: LinkItem[] = [
@@ -252,7 +259,7 @@ export default function Footer() {
                   isOpen
                     ? 'bg-teal-500/20 border-teal-500/50 text-teal-500'
                     : 'text-foreground hover:bg-accent/50 hover:scale-102 border-transparent'
-                }`}
+                } ${item.label === 'XTracker' ? 'min-w-[120px]' : ''}`}
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline tracking-tight">{t(item.transKey)}</span>

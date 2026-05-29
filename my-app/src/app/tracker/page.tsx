@@ -61,6 +61,8 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 import { searchWallet, getWalletTransactions, validateSolanaAddress, getWalletBalanceFromTransactions } from "../../lib/solana-api";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthRequired from "@/components/AuthRequired";
 import {
   WalletData,
   GroupData,
@@ -120,8 +122,19 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 export default function TrackerPage() {
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [selectedGroup, setSelectedGroup] = useState<string>("All");
+  
+  if (!isAuthenticated) {
+    return (
+      <AuthRequired title="Welcome to XTracker" message="Sign in to track wallets and positions">
+        <div className="container mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-150px)]">
+          {/* Content */}
+        </div>
+      </AuthRequired>
+    );
+  }
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [walletSearchQuery, setWalletSearchQuery] = useState<string>("");
   const [groups, setGroups] = useState<{ name: string; emoji?: string; hidden?: boolean; pinned?: boolean }[]>([]);

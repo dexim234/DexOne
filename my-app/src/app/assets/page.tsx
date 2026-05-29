@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { Wallet, Plus, Copy, Key, Trash2, Eye, EyeOff, Shield, Send, Check, ChevronDown, Calendar, ArrowLeft, ArrowRight, Info, TrendingUp, ShoppingBag, FileText, DollarSign, QrCode, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { generateSolanaWallet, getWalletsFromStorage, removeWalletFromStorage, saveWalletsToStorage, WalletData, importSolanaWallet, MIN_SOL_FOR_RENT, TRANSACTION_FEE } from "@/lib/solana-wallet-creator";
-import { useTranslation } from "@/contexts/TranslationContext";
+import { getSolBalance } from "@/lib/solana-transaction";
 import { validateSolanaAddress } from "@/lib/solana-api";
+import { sendSolTransaction } from "@/lib/solana-transaction";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { useToast } from "@/components/ui/toast";
-import { QRCodeSVG } from "qrcode.react";
-import { sendSolTransaction, getSolBalance } from "@/lib/solana-transaction";
 import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthRequired from "@/components/AuthRequired";
 
 interface WalletBalance {
   [walletId: string]: {
@@ -52,9 +55,23 @@ const months = [
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AssetsPage() {
+  const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { userId, wallets: firebaseWallets, loadWallets, createWallet, importWallet, deleteWalletLocal, setActiveWallet: setUserWallet } = useUser();
+  
+  if (!isAuthenticated) {
+    return (
+      <AuthRequired title="Welcome to Assets" message="Sign in to manage your wallets">
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-teal-500/5 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Content */}
+          </div>
+        </div>
+      </AuthRequired>
+    );
+  }
+
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [newWalletName, setNewWalletName] = useState("");

@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { UserProvider } from "@/contexts/UserContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/toast";
 import MainContent from "@/components/MainContent";
 
@@ -43,11 +44,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ToastProvider>
-            <UserProvider>
-              <WidgetProvider>
-                <MainContent>{children}</MainContent>
-              </WidgetProvider>
-            </UserProvider>
+            <AuthProvider>
+              <UserProvider>
+                <WidgetProvider>
+                  <MainContent>{children}</MainContent>
+                </WidgetProvider>
+              </UserProvider>
+            </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

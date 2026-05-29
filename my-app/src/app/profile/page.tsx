@@ -408,8 +408,8 @@ export default function ProfilePage() {
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Your Wallets</h2>
-                <div className="space-y-2">
-                  {wallets.map((wallet) => {
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {wallets.slice(0, 4).map((wallet) => {
                     const isActive = activeWalletId === wallet.id;
                     return (
                       <button
@@ -434,6 +434,11 @@ export default function ProfilePage() {
                       </button>
                     );
                   })}
+                  {wallets.length > 4 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground text-center">
+                      +{wallets.length - 4} more wallets...
+                    </div>
+                  )}
                 </div>
                 <Separator className="my-3" />
                 <Link href="/assets">
