@@ -6,6 +6,9 @@ export const revalidate = 0;
 const DEXSCREENER_BASE = 'https://api.dexscreener.com/latest/dex';
 const DEXSCREENER_PROFILES_BASE = 'https://api.dexscreener.com';
 
+// Лаунчпады для фильтрации новых токенов
+const LAUNCHPADS = ['pump.fun', 'meteora', 'pumpswap', 'bonk', 'redium', 'rediumcrrm'];
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const endpoint = searchParams.get('endpoint');
@@ -48,6 +51,20 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
+    // Если это search endpoint - фильтруем по лаунчпадам
+    if (endpoint === 'search' || endpoint.includes('search')) {
+      const filteredData = filterByLaunchpads(data);
+      return NextResponse.json(filteredData, {
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+    }
+
     return NextResponse.json(data, {
       status: 200,
       headers: {
@@ -64,6 +81,45 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Фильтрация токенов по лаунчпадам
+function filterByLaunchpads(data: any): any {
+  if (!data.pairs || !Array.isArray(data.pairs)) {
+    return data;
+  }
+
+  const filtered = data.pairs.filter((pair: any) => {
+    if (pair.chainId !== 'solana') return false;
+    
+    const dexId = (pair.dexId || '').toLowerCase();
+    const url = (pair.url || '').toLowerCase();
+    const baseName = (pair.baseToken?.name || '').toLowerCase();
+    
+    // Проверка по dexId
+    if (dexId.includes('pump')) return true;
+    if (dexId.includes('meteora')) return true;
+    if (dexId.includes('raydium')) return true; // PumpSwap и Bonk используют Raydium
+    
+    // Проверка по URL
+    if (url.includes('pump.fun')) return true;
+    if (url.includes('meteora')) return true;
+    if (url.includes('raydium')) return true;
+    
+    // Проверка по имени токена (для Redium)
+    if (baseName.includes('redium')) return true;
+    
+    return false;
+  });
+
+  // Сортировка по времени создания (новые первыми)
+  const sorted = filtered.sort((a: any, b: any) => {
+    const timeA = a.pairCreatedAt || 0;
+    const timeB = b.pairCreatedAt || 0;
+    return timeB - timeA; // Новые первыми
+  });
+
+  return { ...data, pairs: sorted };
 }
 
 export async function OPTIONS() {
