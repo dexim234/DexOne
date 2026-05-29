@@ -1,170 +1,530 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
-import { getPumpSwapTokens, getLetsBonkTokens, getMeteoraTokens } from './multi-launchpad-api';
+import axios from 'axios';
 
-export interface UsePumpTokensOptions {
-  columnType: 'new' | 'soon' | 'migration';
-  refreshInterval?: number;
-  enableWebSocket?: boolean;
-  filters?: any;
+// Типы данных для токенов Pump.fun
+export interface PumpToken {
+  uri?: string;
+  name: string;
+  symbol: string;
+  metadataUri?: string;
+  metadata_uri?: string;
+  image_uri?: string;
+  mint: string;
+  mintAuthority?: string;
+  freezeAuthority?: string | null;
+  decimals?: number;
+  createdTimestamp?: number;
+  showHowToUse?: boolean;
+  family?: string;
+  virtualSolReserves?: number;
+  virtualTokenReserves?: number;
+  realSolReserves?: number;
+  realTokenReserves?: number;
+  totalSupply?: number;
+  marketCap?: number;
+  usd_market_cap?: number;
+  price?: number;
+  priceChange1h?: number;
+  priceChange24h?: number;
+  priceChange7d?: number;
+  volume24h?: number;
+  volumeChange?: number;
+  mcChange?: number;
+  trades?: number;
+  trades24h?: number;
+  holders?: number;
+  liquidity?: number;
+  isVerified?: boolean;
+  imageUrl?: string;
+  description?: string;
+  twitter?: string;
+  creator?: string;
+  complete?: boolean;
+  // Дополнительные метрики, которые может возвращать API
+  kingOfTheHillRank?: number;
+  king_of_the_hill_rank?: number;
+  kingOfTheHillTotal?: number;
+  king_of_the_hill_total?: number;
+  replyCount?: number;
+  reply_count?: number;
+  replyRate?: number;
+  reply_rate?: number;
+  buySellRatio?: number;
+  buy_sell_ratio?: number;
+  fomoScore?: number;
+  fomo_score?: number;
+  devHold?: number;
+  dev_hold?: number;
+  top10Hold?: number;
+  top_10_hold?: number;
+  lpBurn?: number;
+  lp_burn?: number;
+  snipersCount?: number;
+  snipers_count?: number;
+  bundlersCount?: number;
+  bundlers_count?: number;
+  freshWallets?: number;
+  fresh_wallets?: number;
+  botTraders?: number;
+  bot_traders?: number;
+  dexTaxBuy?: number;
+  dex_tax_buy?: number;
+  dexTaxSell?: number;
+  dex_tax_sell?: number;
+  watchers?: number;
+  watcher_count?: number;
+  watch_count?: number;
+  // Минутные данные для makers/volume
+  makers1m?: number;
+  makers_1m?: number;
+  volume1m?: number;
+  volume_1m?: number;
+  makers3m?: number;
+  makers_3m?: number;
+  volume3m?: number;
+  volume_3m?: number;
+  makers5m?: number;
+  makers_5m?: number;
+  volume5m?: number;
+  volume_5m?: number;
 }
 
-export interface UsePumpTokensReturn {
-  tokens: TokenMarketData[];
-  isLoading: boolean;
-  error: Error | null;
-  refresh: () => Promise<void>;
-  lastUpdate: Date | null;
-  wsConnected: boolean;
+// Интерфейс для ответа API
+export interface PumpCoinsResponse {
+  coins: PumpToken[];
+  hasNextPage: boolean;
+  endCursor?: string;
 }
 
-/**
- * Хук для получения токенов Pump.fun с поддержкой реального времени
- */
-export function usePumpTokens({
-  columnType,
-  refreshInterval = 3000, // 3 секунды
-  filters,
-}: UsePumpTokensOptions): UsePumpTokensReturn {
-  const [tokens, setTokens] = useState<TokenMarketData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+// Интерфейс для параметров запроса
+export interface PumpCoinsParams {
+  orderBy?: 'createdAt' | 'marketCap' | 'volume24h' | 'trades';
+  orderDirection?: 'asc' | 'desc';
+  limit?: number;
+  cursor?: string;
+  createdAtGte?: number;
+  createdAtLte?: number;
+}
 
-  // Функция загрузки токенов
-  const loadTokens = useCallback(async () => {
-    try {
-      setError(null);
+// Интерфейс для данных токена в формате TrenchCard
+export type LaunchpadSource = 'pumpfun' | 'pumpswap' | 'letsbonk' | 'meteora';
 
-      let newTokens: TokenMarketData[];
+export interface TokenMarketData {
+  rank: string;
+  logo: string;
+  name: string;
+  symbol: string;
+  mint: string;
+  mc: string;
+  mcChange: string;
+  volume24h: string;
+  volumeChange: string;
+  priceChange1h: string;
+  priceChange24h: string;
+  priceChange7d: string;
+  trades: string;
+  holders: string;
+  isVerified: boolean;
+  imageUrl?: string;
+  metadataUri?: string;
+  createdTimestamp?: number;
+  twitter?: string;
+  telegram?: string;
+  website?: string;
+  source?: LaunchpadSource;
+  complete?: boolean;
+  // Дополнительные метрики для карточки
+  kingOfTheHillRank?: string;
+  kingOfTheHillTotal?: string;
+  watchers?: string;
+  replies?: string;
+  replyRate?: string;
+  buySellRatio?: string;
+  fomoScore?: string;
+  devHold?: string;
+  top10Hold?: string;
+  lpBurn?: string;
+  snipersCount?: string;
+  bundlersCount?: string;
+  freshWallets?: string;
+  botTraders?: string;
+  dexTaxBuy?: string;
+  dexTaxSell?: string;
+  // Минутные данные для makers/volume
+  makers1m?: string;
+  volume1m?: string;
+  makers3m?: string;
+  volume3m?: string;
+  makers5m?: string;
+  volume5m?: string;
+}
 
-      switch (columnType) {
-        case 'new': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getNewTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
-          ]);
+export class PumpFunApiService {
+  private baseUrl: string;
+  private authToken: string | null = null;
+  public useProxy: boolean = true; // Использовать прокси для обхода CORS
 
-          const allTokens = [
-            ...pumpFunTokens,
-            ...pumpSwapTokens,
-            ...letsBonkTokens,
-            ...meteoraTokens,
-          ];
+  constructor(baseUrl: string = 'https://frontend-api-v3.pump.fun') {
+    this.baseUrl = baseUrl;
+  }
 
-          newTokens = allTokens
-            .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
-            .slice(0, 20);
-          break;
-        }
-        case 'soon': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getSoonTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
-          ]);
+  /**
+   * Включить/выключить прокси
+   */
+  setProxyEnabled(enabled: boolean) {
+    this.useProxy = enabled;
+  }
 
-          const allTokens = [
-            ...pumpFunTokens,
-            ...pumpSwapTokens,
-            ...letsBonkTokens,
-            ...meteoraTokens,
-          ];
+  /**
+   * Установить токен авторизации
+   */
+  setAuthToken(token: string) {
+    this.authToken = token;
+  }
 
-          const seen = new Set<string>();
-          newTokens = allTokens
-            .filter(t => {
-              if (seen.has(t.mint)) return false;
-              seen.add(t.mint);
-              return true;
-            })
-            .sort((a, b) => {
-              const parseVol = (v: string) => {
-                const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
-                return isNaN(num) ? 0 : num;
-              };
-              return parseVol(b.volume24h) - parseVol(a.volume24h);
-            })
-            .slice(0, 20);
-          break;
-        }
-        case 'migration': {
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getMigrationTokens(15),
-            getPumpSwapTokens(8),
-            getLetsBonkTokens(8),
-            getMeteoraTokens(8),
-          ]);
-
-          const allTokens = [
-            ...pumpFunTokens,
-            ...pumpSwapTokens,
-            ...letsBonkTokens,
-            ...meteoraTokens,
-          ];
-
-          const seen = new Set<string>();
-          newTokens = allTokens
-            .filter(t => {
-              if (seen.has(t.mint)) return false;
-              seen.add(t.mint);
-              return true;
-            })
-            .sort((a, b) => {
-              const parseMC = (v: string) => {
-                const num = parseFloat(v.replace(/[$,]/g, '').replace('M', '000000').replace('K', '000'));
-                return isNaN(num) ? 0 : num;
-              };
-              return parseMC(b.mc) - parseMC(a.mc);
-            })
-            .slice(0, 20);
-          break;
-        }
-        default:
-          newTokens = [];
+  /**
+   * Получить общие настройки API
+   */
+  private getAxiosConfig() {
+    const config: any = {
+      headers: {
+        'Accept': 'application/json',
       }
-
-      setTokens(newTokens);
-      setLastUpdate(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load tokens'));
-      console.error(`Error loading ${columnType} tokens:`, err);
-    }
-  }, [columnType]);
-
-  // Эффект для загрузки токенов
-  useEffect(() => {
-    setIsLoading(true);
-    loadTokens();
-    
-    const intervalId = setInterval(() => {
-      setIsLoading(true);
-      loadTokens();
-    }, refreshInterval);
-
-    return () => {
-      clearInterval(intervalId);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnType, refreshInterval]);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    await loadTokens();
-  }, [loadTokens]);
+    if (this.authToken) {
+      config.headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
 
-  return {
-    tokens,
-    isLoading,
-    error,
-    refresh,
-    lastUpdate,
-    wsConnected,
-  };
+    return config;
+  }
+
+  /**
+   * Получить URL для запроса (с прокси или напрямую)
+   */
+  private getApiUrl(path: string, params?: URLSearchParams): string {
+    const cb = `_cb=${Date.now()}`;
+    if (this.useProxy) {
+      const proxyUrl = '/api/pump-proxy';
+      const fullParams = new URLSearchParams(params?.toString() || '');
+      fullParams.set('endpoint', path);
+      return `${proxyUrl}?${fullParams.toString()}&${cb}`;
+    }
+    
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) {
+      url.search = params.toString();
+    }
+    url.searchParams.set('_cb', Date.now().toString());
+    return url.toString();
+  }
+
+  /**
+   * Получить список токенов с фильтрами
+   */
+  async getCoins(params?: PumpCoinsParams): Promise<PumpCoinsResponse> {
+    const urlSearchParams = new URLSearchParams();
+    
+    if (params) {
+      if (params.orderBy) urlSearchParams.append('orderBy', params.orderBy);
+      if (params.orderDirection) urlSearchParams.append('orderDirection', params.orderDirection);
+      if (params.limit) urlSearchParams.append('limit', params.limit.toString());
+      if (params.cursor) urlSearchParams.append('cursor', params.cursor);
+      if (params.createdAtGte) urlSearchParams.append('createdAtGte', params.createdAtGte.toString());
+      if (params.createdAtLte) urlSearchParams.append('createdAtLte', params.createdAtLte.toString());
+    }
+
+    const url = this.getApiUrl('/coins', urlSearchParams);
+    const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
+    
+    // Обработка разных форматов ответа
+    if (Array.isArray(response.data)) {
+      return {
+        coins: response.data,
+        hasNextPage: false,
+      };
+    }
+    return response.data;
+  }
+
+  /**
+   * Получить трендовые токены (топ по объему)
+   */
+  async getTrendingCoins(limit: number = 50): Promise<PumpToken[]> {
+    const response = await this.getCoins({
+      orderBy: 'volume24h',
+      orderDirection: 'desc',
+      limit,
+    });
+    return response.coins || [];
+  }
+    
+  /**
+   * Получить новые токены (созданные недавно)
+   */
+  async getNewCoins(limit: number = 50, cursor?: string): Promise<PumpCoinsResponse> {
+    return this.getCoins({
+      orderBy: 'createdAt',
+      orderDirection: 'desc',
+      limit,
+      cursor,
+    });
+  }
+    
+  /**
+   * Получить токены по конкретному ID/mint address
+   */
+  async getCoinById(mint: string): Promise<PumpToken | null> {
+    try {
+      const url = this.getApiUrl(`/coins/${mint}`);
+      const response = await axios.get<PumpToken>(url, this.getAxiosConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching coin ${mint}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Получить несколько токенов по массиву mint addresses
+   */
+  async getCoinsByIds(mints: string[]): Promise<PumpToken[]> {
+    const promises = mints.map(mint => this.getCoinById(mint));
+    const results = await Promise.all(promises);
+    return results.filter((token): token is PumpToken => token !== null);
+  }
+
+  /**
+   * Преобразовать PumpToken в формат TokenMarketData для карточек
+   */
+  convertToMarketData(token: PumpToken, rank: number): TokenMarketData {
+    const formatNumber = (num?: number): string => {
+      if (num === undefined || num === null) return '0';
+      if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+      if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
+      return `$${num.toFixed(2)}`;
+    };
+
+    const formatPercent = (val?: number): string => {
+      if (val === undefined || val === null) return '0.00%';
+      return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
+    };
+
+    const formatVolume = (num?: number): string => {
+      if (num === undefined || num === null) return '$0';
+      if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+      if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
+      return `$${num.toFixed(2)}`;
+    };
+
+    const imageUrl = this.getTokenImageUrl(token);
+
+    const anyToken = token as any;
+    const marketCap = anyToken.usd_market_cap || token.marketCap || token.virtualSolReserves || 0;
+    
+    // Хелпер для получения значения из нескольких возможных полей
+    const getField = (...fields: string[]): string => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null) {
+          return String(val);
+        }
+      }
+      return '-';
+    };
+
+    // Хелпер для получения числового значения
+    const getNumField = (...fields: string[]): number | undefined => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null && !isNaN(Number(val))) {
+          return Number(val);
+        }
+      }
+      return undefined;
+    };
+
+    return {
+      rank: rank.toString(),
+      logo: imageUrl,
+      name: token.name || token.symbol || 'Unknown',
+      symbol: token.symbol || '',
+      mint: token.mint,
+      mc: formatNumber(marketCap),
+      mcChange: formatPercent(token.mcChange || token.priceChange24h),
+      volume24h: formatVolume(token.volume24h),
+      volumeChange: formatPercent(token.volumeChange),
+      priceChange1h: formatPercent(token.priceChange1h),
+      priceChange24h: formatPercent(token.priceChange24h),
+      priceChange7d: formatPercent(token.priceChange7d),
+      trades: (token.trades || token.trades24h || 0).toString(),
+      holders: (token.holders || 0).toString(),
+      isVerified: token.isVerified || false,
+      imageUrl: imageUrl,
+      metadataUri: token.metadataUri || anyToken.metadata_uri,
+      createdTimestamp: token.createdTimestamp,
+      complete: Boolean(anyToken.complete),
+      twitter: anyToken.twitter,
+      telegram: anyToken.telegram,
+      website: anyToken.website,
+      source: 'pumpfun' as LaunchpadSource,
+      // Дополнительные метрики — реальные данные из API или "-"
+      kingOfTheHillRank: getField('kingOfTheHillRank', 'king_of_the_hill_rank'),
+      kingOfTheHillTotal: getField('kingOfTheHillTotal', 'king_of_the_hill_total') !== '-' ? getField('kingOfTheHillTotal', 'king_of_the_hill_total') : '595',
+      watchers: getField('watchers', 'watch_count', 'watcher_count'),
+      replies: getField('replyCount', 'reply_count', 'replies'),
+      replyRate: getField('replyRate', 'reply_rate'),
+      buySellRatio: getField('buySellRatio', 'buy_sell_ratio'),
+      fomoScore: getField('fomoScore', 'fomo_score'),
+      devHold: getField('devHold', 'dev_hold'),
+      top10Hold: getField('top10Hold', 'top_10_hold'),
+      lpBurn: getField('lpBurn', 'lp_burn'),
+      snipersCount: getField('snipersCount', 'snipers_count'),
+      bundlersCount: getField('bundlersCount', 'bundlers_count'),
+      freshWallets: getField('freshWallets', 'fresh_wallets'),
+      botTraders: getField('botTraders', 'bot_traders'),
+      dexTaxBuy: getField('dexTaxBuy', 'dex_tax_buy'),
+      dexTaxSell: getField('dexTaxSell', 'dex_tax_sell'),
+      makers1m: getField('makers1m', 'makers_1m'),
+      volume1m: getNumField('volume1m', 'volume_1m') !== undefined ? formatVolume(getNumField('volume1m', 'volume_1m')) : '-',
+      makers3m: getField('makers3m', 'makers_3m'),
+      volume3m: getNumField('volume3m', 'volume_3m') !== undefined ? formatVolume(getNumField('volume3m', 'volume_3m')) : '-',
+      makers5m: getField('makers5m', 'makers_5m'),
+      volume5m: getNumField('volume5m', 'volume_5m') !== undefined ? formatVolume(getNumField('volume5m', 'volume_5m')) : '-',
+    };
+  }
+
+  /**
+   * Получить URL изображения токена
+   */
+  private getTokenImageUrl(token: PumpToken): string {
+    const anyToken = token as any;
+    
+    // 1. Поле image_uri (основное поле в Pump.fun API)
+    if (anyToken.image_uri) {
+      return this.normalizeIpfsUrl(anyToken.image_uri);
+    }
+    
+    // 2. Поле imageUrl (альтернативное)
+    if (token.imageUrl) {
+      return this.normalizeIpfsUrl(token.imageUrl);
+    }
+    
+    // 3. Поле metadataUri
+    if (token.metadataUri) {
+      return this.normalizeIpfsUrl(token.metadataUri);
+    }
+    
+    // 4. Поле uri
+    if (token.uri) {
+      return this.normalizeIpfsUrl(token.uri);
+    }
+    
+    return '/placeholder.png';
+  }
+    
+  /**
+   * Нормализация IPFS URL
+   */
+  private normalizeIpfsUrl(url: string): string {
+    if (!url) return '/placeholder.png';
+    
+    // Уже HTTP(S)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // IPFS протокол
+    if (url.startsWith('ipfs://')) {
+      return `https://pump.mypinata.cloud/ipfs/${url.replace('ipfs://', '')}`;
+    }
+    
+    // Хэш IPFS (44 символа для base58)
+    if (url.length === 44 || url.length === 46) {
+      return `https://pump.mypinata.cloud/ipfs/${url}`;
+    }
+    
+    return url;
+  }
+
+  /**
+   * Получить токены для колонки "New" (самые свежие)
+   */
+  async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      const response = await this.getNewCoins(limit);
+      const coins = response.coins || [];
+      return coins.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading new tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить токены для колонки "Soon" (предстоящие/популярные)
+   */
+  async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      const trending = await this.getTrendingCoins(limit);
+      return trending.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading soon tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить токены для колонки "Migration" (готовящиеся к миграции)
+   */
+  async getMigrationTokens(limit: number = 20): Promise<TokenMarketData[]> {
+    try {
+      // Токены с высокой капитализацией, близкие к миграции
+      const response = await this.getCoins({
+        orderBy: 'marketCap',
+        orderDirection: 'desc',
+        limit,
+      });
+      
+      const coins = response.coins || [];
+      
+      // Фильтруем токены, которые близки к миграции (например, MC > 60k)
+      const migrationThreshold = 60000;
+      const migrationTokens = coins.filter(
+        token => (token.marketCap || 0) >= migrationThreshold
+      );
+
+      return migrationTokens.map((token, index) => 
+        this.convertToMarketData(token, index + 1)
+      );
+    } catch (error) {
+      console.error('Error loading migration tokens:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Получить изображение токена из metadata
+   */
+  async getTokenImage(metadataUri: string): Promise<string | null> {
+    try {
+      const response = await axios.get(metadataUri, {
+        timeout: 5000,
+      });
+      return response.data.image || null;
+    } catch (error) {
+      console.error('Error fetching token image:', error);
+      return null;
+    }
+  }
 }
+
+// Экспорт singleton instance
+export const pumpFunApi = new PumpFunApiService();
+// Принудительно включаем прокси для обхода CORS
+pumpFunApi.setProxyEnabled(true);
+// Версия API: 1.0.1
+
