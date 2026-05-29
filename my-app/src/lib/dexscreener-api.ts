@@ -2,6 +2,7 @@ export interface DexScreenerToken {
   address: string;
   name: string;
   symbol: string;
+  iconUrl?: string;
 }
 
 export interface DexScreenerTransactionStats {
@@ -125,8 +126,12 @@ class DexScreenerApiService {
     if (searchParams) {
       searchParams.forEach((value, key) => url.searchParams.set(key, value));
     }
+    url.searchParams.set('_cb', Date.now().toString());
 
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' },
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(err.error || `DexScreener proxy error: ${res.status}`);
