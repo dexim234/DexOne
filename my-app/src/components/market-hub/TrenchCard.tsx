@@ -37,6 +37,13 @@ interface TrenchCardProps {
   botTraders?: string;
   dexTaxBuy?: string;
   dexTaxSell?: string;
+  // Минутные данные для makers/volume
+  makers1m?: string;
+  volume1m?: string;
+  makers3m?: string;
+  volume3m?: string;
+  makers5m?: string;
+  volume5m?: string;
 }
 
 const LAUNCHPAD_BORDER: Record<LaunchpadSource, string> = {
@@ -71,9 +78,17 @@ export default function TrenchCard({
   lpBurn = "0",
   snipersCount = "0",
   bundlersCount = "0",
+  // Минутные данные
+  makers1m = "-",
+  volume1m = "-",
+  makers3m = "-",
+  volume3m = "-",
+  makers5m = "-",
+  volume5m = "-",
 }: TrenchCardProps) {
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [timeFrame, setTimeFrame] = useState<'1m' | '3m' | '5m'>('3m');
 
   useEffect(() => {
     setImageLoaded(false);
@@ -249,24 +264,61 @@ export default function TrenchCard({
           </div>
         </div>
 
-        {/* Right: V/MC + 1M + Action button */}
+        {/* Right: TimeFrame switcher + V/MC + Makers/Volume + Action button */}
         <div className="shrink-0 flex flex-col justify-between items-end">
-          <div className="flex flex-col items-end gap-0.5 text-[11px]">
-            <span className="text-muted-foreground">V <span className="text-foreground font-semibold">{volume24h}</span></span>
-            <span className="text-muted-foreground">MC <span className="text-foreground font-semibold">{mc}</span></span>
-            {watchers !== '-' && kingOfTheHillTotal !== '-' && (
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <span>1M</span>
-                <span className="text-foreground font-medium">{watchers}/{kingOfTheHillTotal}</span>
-              </div>
-            )}
+          <div className="flex flex-col items-end gap-1 text-[11px]">
+            {/* TimeFrame switcher */}
+            <div
+              className="flex items-center rounded-lg bg-muted/60 p-0.5 gap-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(['1m', '3m', '5m'] as const).map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeFrame(tf)}
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium transition-colors ${
+                    timeFrame === tf
+                      ? 'bg-accent text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+
+            {/* V / MC */}
+            <span className="text-muted-foreground">
+              V <span className="text-foreground font-semibold">
+                {timeFrame === '1m' ? volume1m : timeFrame === '3m' ? volume3m : volume5m}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              MC <span className="text-foreground font-semibold">{mc}</span>
+            </span>
+
+            {/* Makers / Volume for selected timeframe */}
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span>{timeFrame}</span>
+              <span className="text-foreground font-medium">
+                {timeFrame === '1m' ? makers1m : timeFrame === '3m' ? makers3m : makers5m}
+                /
+                {timeFrame === '1m' ? volume1m : timeFrame === '3m' ? volume3m : volume5m}
+              </span>
+            </div>
           </div>
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 w-7 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
-          >
-            <Zap className="h-3.5 w-3.5 text-green-400" />
-          </button>
+
+          <div className="flex flex-col items-end gap-0.5 mt-1">
+            <span className="text-[10px] text-muted-foreground">
+              {timeFrame} minute Makers/Volume
+            </span>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="h-7 w-7 flex items-center justify-center rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 transition-colors"
+            >
+              <Zap className="h-3.5 w-3.5 text-green-400" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
