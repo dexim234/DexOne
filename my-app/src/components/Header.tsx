@@ -83,9 +83,7 @@ export default function Header() {
   const [search, setSearch] = React.useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [balance, setBalance] = useState<number>(0);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
-  const [isLoadingAllBalances, setIsLoadingAllBalances] = useState(false);
   const [clipboardToken, setClipboardToken] = useState<{ address: string; name?: string } | null>(null);
 
   // Load wallets from UserContext
@@ -134,16 +132,14 @@ export default function Header() {
     });
   };
 
-  // Fetch balance for all wallets
+  // Fetch balance for all wallets (with debounce to prevent flashing)
   React.useEffect(() => {
-    if (wallets.length === 0 || !userId) {
+    if (wallets?.length === 0 || !userId) {
       setWalletBalances({});
-      setIsLoadingAllBalances(false);
       return;
     }
     
-    const fetchAllBalances = async () => {
-      setIsLoadingAllBalances(true);
+    const timer = setTimeout(async () => {
       const balances: Record<string, number> = {};
       await Promise.all(
         wallets.map(async (wallet) => {
@@ -156,36 +152,32 @@ export default function Header() {
         })
       );
       setWalletBalances(balances);
-      setIsLoadingAllBalances(false);
-    };
+    }, 100); // Small delay to prevent flashing
     
-    fetchAllBalances();
+    return () => clearTimeout(timer);
   }, [wallets, userId]);
 
-  // Fetch balance when active wallet changes
+  // Fetch balance when active wallet changes (with debounce)
   React.useEffect(() => {
-    if (!activeWalletId || wallets.length === 0 || !userId) {
+    if (!activeWalletId || !wallets?.length || !userId) {
       setBalance(0);
       return;
     }
     
-    const fetchBalance = async () => {
+    const timer = setTimeout(async () => {
       const wallet = wallets.find(w => w.id === activeWalletId);
       if (!wallet) return;
       
-      setIsLoadingBalance(true);
       try {
         const solBalance = await getSolBalance(wallet.publicKey);
         setBalance(solBalance);
       } catch (err) {
         console.error("Failed to fetch balance:", err);
         setBalance(0);
-      } finally {
-        setIsLoadingBalance(false);
       }
-    };
+    }, 100); // Small delay to prevent flashing
     
-    fetchBalance();
+    return () => clearTimeout(timer);
   }, [activeWalletId, wallets, userId]);
 
   // Check clipboard for token address
@@ -346,7 +338,7 @@ export default function Header() {
               </div>
               <span className="max-w-[100px] truncate">
                 {wallets?.length > 0 && activeWalletId
-                  ? (isLoadingBalance ? "..." : `${balance.toFixed(3)} SOL`)
+                  ? `${balance.toFixed(3)} SOL`
                   : "Connect"}
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -461,9 +453,7 @@ export default function Header() {
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-semibold text-foreground">
-                              {isLoadingAllBalances
-                                ? "..."
-                                : `${(bal || 0).toFixed(3)} SOL`}
+                              ${(walletBalances[wallet.id] || 0).toFixed(3)} SOL
                             </div>
                           </div>
                         </DropdownMenuItem>
