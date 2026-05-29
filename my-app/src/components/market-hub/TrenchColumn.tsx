@@ -21,6 +21,7 @@ export default function TrenchColumn({
   enableAutoRefresh = true,
   refreshInterval = 5000,
   selectedMetrics = [],
+  appliedFilters = {},
 }: TrenchColumnProps) {
   const [sortBy, setSortBy] = useState("rank");
   const [isManualRefresh, setIsManualRefresh] = useState(false);
@@ -29,7 +30,7 @@ export default function TrenchColumn({
     columnType,
     refreshInterval: enableAutoRefresh ? refreshInterval : 0,
     enableWebSocket: true,
-    filters: appliedFilters,
+    filters: appliedFilters || {},
   });
 
   const handleManualRefresh = async () => {
