@@ -65,6 +65,23 @@ export default function Footer() {
     const saved = localStorage.getItem('footer-menu-visible');
     return saved ? JSON.parse(saved) : widgetItems.map(item => item.label);
   });
+  const [assetCardsVisible, setAssetCardsVisible] = useState<string[]>(() => {
+    const saved = localStorage.getItem('asset-cards-visible');
+    return saved ? JSON.parse(saved) : ['SOL', 'BTC', 'ETH', 'BNB'];
+  });
+
+  // Listen for localStorage changes from Menu Settings
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedFooter = localStorage.getItem('footer-menu-visible');
+      const savedAssets = localStorage.getItem('asset-cards-visible');
+      if (savedFooter) setFooterMenuVisible(JSON.parse(savedFooter));
+      if (savedAssets) setAssetCardsVisible(JSON.parse(savedAssets));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
     BTC: { price: string; change: string };
@@ -80,7 +97,6 @@ export default function Footer() {
   useEffect(() => {
     async function fetchFiatRates() {
       try {
-        // Fetch USD to other currencies from a free API
         const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
         const data = await response.json();
         setFiatRates({
@@ -90,7 +106,6 @@ export default function Footer() {
         });
       } catch (error) {
         console.error('Failed to fetch fiat rates:', error);
-        // Fallback rates
         setFiatRates({
           USD_TO_RUB: 97.5,
           USD_TO_EUR: 0.93,
@@ -100,14 +115,13 @@ export default function Footer() {
     }
     
     fetchFiatRates();
-    const interval = setInterval(fetchFiatRates, 3600000); // Update every hour
+    const interval = setInterval(fetchFiatRates, 3600000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     async function fetchCryptoPrices() {
       try {
-        // Fetch price and 24h change from Binance
         const [solRes, btcRes, ethRes, bnbRes] = await Promise.all([
           fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT'),
           fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT'),
@@ -142,7 +156,6 @@ export default function Footer() {
         });
       } catch (error) {
         console.error('Failed to fetch crypto prices from Binance:', error);
-        // Fallback prices
         setCryptoPrices({
           SOL: { price: "142.35", change: "+2.4" },
           BTC: { price: "67432.50", change: "+1.8" },
@@ -153,7 +166,7 @@ export default function Footer() {
     }
     
     fetchCryptoPrices();
-    const interval = setInterval(fetchCryptoPrices, 60000); // Update every minute
+    const interval = setInterval(fetchCryptoPrices, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -287,7 +300,7 @@ export default function Footer() {
               { coin: 'BTC', file: 'Bitcoin.svg.png', bingxLink: bingxLinks.BTC },
               { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png', bingxLink: bingxLinks.ETH },
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
-            ].map(({ coin, file, bingxLink }) => {
+            ].filter(({ coin }) => assetCardsVisible.includes(coin)).map(({ coin, file, bingxLink }) => {
               const price = cryptoPrices[coin as keyof typeof cryptoPrices];
               return (
                 <div key={coin} className="relative group">
@@ -357,7 +370,7 @@ export default function Footer() {
               { coin: 'BTC', file: 'Bitcoin.svg.png', bingxLink: bingxLinks.BTC },
               { coin: 'ETH', file: 'Ethereum_logo_2014.svg.png', bingxLink: bingxLinks.ETH },
               { coin: 'BNB', file: 'BNB,_native_cryptocurrency_for_the_Binance_Smart_Chain.svg.png', bingxLink: bingxLinks.BNB },
-            ].map(({ coin, file, bingxLink }) => {
+            ].filter(({ coin }) => assetCardsVisible.includes(coin)).map(({ coin, file, bingxLink }) => {
               const price = cryptoPrices[coin as keyof typeof cryptoPrices];
               return (
                 <a
