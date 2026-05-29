@@ -188,6 +188,8 @@ export class PumpFunApiService {
     const config: any = {
       headers: {
         'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
       }
     };
 
@@ -449,38 +451,75 @@ export class PumpFunApiService {
   /**
    * Получить токены для колонки "New" (самые свежие)
    */
-  async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
+  async getNewTokens(limit: number = 50): Promise<TokenMarketData[]> {
     try {
       const response = await this.getNewCoins(limit);
       const coins = response.coins || [];
-      return coins.map((token, index) => 
-        this.convertToMarketData(token, index + 1)
-      );
+      
+      // Если Pump.fun вернул данные - возвращаем их
+      if (coins.length > 0) {
+        console.log(`[PumpFun] Loaded ${coins.length} tokens from Pump.fun API`);
+        return coins.map((token, index) => 
+          this.convertToMarketData(token, index + 1)
+        );
+      }
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] No tokens from Pump.fun, falling back to DexScreener...');
+      const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+      return await getDexScreenerFallbackTokens(limit);
     } catch (error) {
-      console.error('Error loading new tokens:', error);
-      return [];
+      console.error('Error loading new tokens from Pump.fun:', error);
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
+      try {
+        const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+        return await getDexScreenerFallbackTokens(limit);
+      } catch (dexError) {
+        console.error('DexScreener fallback also failed:', dexError);
+        return [];
+      }
     }
   }
 
   /**
    * Получить токены для колонки "Soon" (предстоящие/популярные)
    */
-  async getSoonTokens(limit: number = 20): Promise<TokenMarketData[]> {
+  async getSoonTokens(limit: number = 50): Promise<TokenMarketData[]> {
     try {
       const trending = await this.getTrendingCoins(limit);
-      return trending.map((token, index) => 
-        this.convertToMarketData(token, index + 1)
-      );
+      
+      if (trending.length > 0) {
+        console.log(`[PumpFun] Loaded ${trending.length} trending tokens from Pump.fun API`);
+        return trending.map((token, index) => 
+          this.convertToMarketData(token, index + 1)
+        );
+      }
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] No trending tokens from Pump.fun, falling back to DexScreener...');
+      const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+      return await getDexScreenerFallbackTokens(limit);
     } catch (error) {
-      console.error('Error loading soon tokens:', error);
-      return [];
+      console.error('Error loading soon tokens from Pump.fun:', error);
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
+      try {
+        const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+        return await getDexScreenerFallbackTokens(limit);
+      } catch (dexError) {
+        console.error('DexScreener fallback also failed:', dexError);
+        return [];
+      }
     }
   }
 
   /**
    * Получить токены для колонки "Migration" (готовящиеся к миграции)
    */
-  async getMigrationTokens(limit: number = 20): Promise<TokenMarketData[]> {
+  async getMigrationTokens(limit: number = 50): Promise<TokenMarketData[]> {
     try {
       // Токены с высокой капитализацией, близкие к миграции
       const response = await this.getCoins({
@@ -497,12 +536,29 @@ export class PumpFunApiService {
         token => (token.marketCap || 0) >= migrationThreshold
       );
 
-      return migrationTokens.map((token, index) => 
-        this.convertToMarketData(token, index + 1)
-      );
+      if (migrationTokens.length > 0) {
+        console.log(`[PumpFun] Loaded ${migrationTokens.length} migration tokens from Pump.fun API`);
+        return migrationTokens.map((token, index) => 
+          this.convertToMarketData(token, index + 1)
+        );
+      }
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] No migration tokens from Pump.fun, falling back to DexScreener...');
+      const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+      return await getDexScreenerFallbackTokens(limit);
     } catch (error) {
-      console.error('Error loading migration tokens:', error);
-      return [];
+      console.error('Error loading migration tokens from Pump.fun:', error);
+      
+      // Fallback на DexScreener
+      console.log('[PumpFun] Error occurred, falling back to DexScreener...');
+      try {
+        const { getDexScreenerFallbackTokens } = await import('./multi-launchpad-api');
+        return await getDexScreenerFallbackTokens(limit);
+      } catch (dexError) {
+        console.error('DexScreener fallback also failed:', dexError);
+        return [];
+      }
     }
   }
 
