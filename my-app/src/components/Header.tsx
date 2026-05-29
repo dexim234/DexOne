@@ -4,8 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { validateSolanaAddress } from "@/lib/solana-api";
 import { getSolBalance } from "@/lib/solana-transaction";
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Search,
   Bell,
@@ -22,12 +21,8 @@ import {
   Activity,
   Brain,
   Sparkles,
-  FileText,
-  Shield,
-  MessageCircle,
   BarChart2,
   Gift,
-  Plus,
   DollarSign,
   Check,
   LogIn,
@@ -71,26 +66,7 @@ const navItems = [
   { label: "Predict HUB", href: "/predict-hub", icon: Sparkles, transKey: "nav.predictHub" },
 ];
 
-const phantomIcon = (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-    <path d="M11.25 2h1.5a8.99 8.99 0 0 1 6.36 2.64 9 9 0 0 1 0 12.72 9 9 0 0 1-12.72 0 8.99 8.99 0 0 1-2.64-6.36v-1.5a2 2 0 0 1 2-2h5.5Z"/>
-  </svg>
-);
-
-const solflareIcon = (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-    <path d="M13.8 2h-3.6l-6 18h3.6l1.4-4.2h4.8l1.4 4.2h3.6l-6-18zm-1.8 9l-2.1-6.3 2.1 6.3zm1.8 5.4h-3.6l1.8-5.4 1.8 5.4z"/>
-  </svg>
-);
-
-const telegramIcon = (
-  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.48-1.05-2.4-1.66-.69-.46-.24-1.12.14-1.51.1-.1 2.83-2.64 2.89-2.82.01-.02.03-.1.01-.14-.02-.04-.12-.02-.19-.01-.09.01-1.5.95-4.23 2.83-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .24z"/>
-  </svg>
-);
-
 export default function Header() {
-  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
   const { userId, wallets, activeWalletId, setActiveWallet, loadWallets } = useUser();
@@ -152,26 +128,24 @@ export default function Header() {
   }, [activeWalletId]);
 
   // Handle logout
-  const handleLogout = () => {
-    // Clear Firebase auth session
-    const { getAuth, signOut } = require("firebase/auth");
-    const auth = getAuth();
-    signOut(auth).then(() => {
+  const handleLogout = async () => {
+    try {
+      const { getAuth, signOut } = await import("firebase/auth");
+      const auth = getAuth();
+      await signOut(auth);
       // Clear localStorage
       localStorage.removeItem('active-wallet-id');
       localStorage.removeItem('solana-wallets');
-      
       // Reload page to reset everything
       window.location.href = "/";
-    }).catch((err: any) => {
+    } catch (err: unknown) {
       console.error("Logout failed:", err);
-    });
+    }
   };
 
   // Fetch balance for all wallets (debounced to prevent flashing)
   React.useEffect(() => {
     if (!wallets?.length || !userId) {
-      setWalletBalances({});
       return;
     }
     
@@ -183,7 +157,7 @@ export default function Header() {
             try {
               const bal = await getSolBalance(wallet.publicKey);
               balances[wallet.id] = bal;
-            } catch (err) {
+            } catch {
               balances[wallet.id] = 0;
             }
           })
@@ -195,12 +169,12 @@ export default function Header() {
     }, 500); // Longer delay to prevent flashing
     
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallets?.length, userId]);
 
   // Fetch balance when active wallet changes (debounced to prevent flashing)
   React.useEffect(() => {
     if (!activeWalletId || !wallets?.length || !userId) {
-      setBalance(0);
       return;
     }
     
@@ -218,6 +192,7 @@ export default function Header() {
     }, 500); // Longer delay to prevent flashing
     
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWalletId, wallets?.length, userId]);
 
   // Check clipboard for token address
@@ -229,7 +204,7 @@ export default function Header() {
           // It's a valid Solana address - could be a token CA
           setClipboardToken({ address: text.trim() });
         }
-      } catch (err) {
+      } catch {
         // Clipboard access denied or not supported
         console.log('Clipboard access not available');
       }
@@ -444,13 +419,13 @@ export default function Header() {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Wallets</span>
                   </div>
-                  <div className="space-y-1.5">
-                    {wallets.slice(0, 2).map((wallet) => {
+                  <div className="max-h-[152px] overflow-y-auto space-y-1 pr-0.5">
+                    {wallets.map((wallet) => {
                       const isActive = activeWalletId === wallet.id;
                       return (
                         <DropdownMenuItem
                           key={wallet.id}
-                          className={`gap-3 cursor-pointer px-3 py-2 rounded-lg transition-all ${
+                          className={`gap-3 cursor-pointer px-3 py-1.5 rounded-lg transition-all ${
                             isActive
                               ? "bg-teal-500/10 border border-teal-500/20"
                               : "hover:bg-accent/50"
@@ -495,60 +470,6 @@ export default function Header() {
                         </DropdownMenuItem>
                       );
                     })}
-                    {wallets.length > 2 && (
-                      <div className="max-h-[120px] overflow-y-auto space-y-1.5 pt-1.5 border-t border-border/30 mt-1.5">
-                        {wallets.slice(2).map((wallet) => {
-                          const isActive = activeWalletId === wallet.id;
-                          return (
-                            <DropdownMenuItem
-                              key={wallet.id}
-                              className={`gap-3 cursor-pointer px-3 py-2 rounded-lg transition-all ${
-                                isActive
-                                  ? "bg-teal-500/10 border border-teal-500/20"
-                                  : "hover:bg-accent/50"
-                              }`}
-                              onClick={() => {
-                                setActiveWallet(wallet.id);
-                              }}
-                            >
-                              <div
-                                className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${
-                                  isActive ? 'bg-gradient-to-br from-teal-500 to-purple-600' : 'bg-muted/50'
-                                }`}
-                              >
-                                <Wallet
-                                  className={`h-4 w-4 ${
-                                    isActive ? 'text-white' : 'text-muted-foreground'
-                                  }`}
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`font-semibold text-sm truncate ${
-                                      isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
-                                    }`}
-                                  >
-                                    {wallet.name}
-                                  </span>
-                                  {isActive && (
-                                    <Check className="h-3.5 w-3.5 text-teal-500 shrink-0 ml-2" />
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted-foreground font-mono truncate">
-                                  {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-4)}
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <div className="text-sm font-semibold text-foreground">
-                                  {((walletBalances[wallet.id] || 0)).toFixed(3)} SOL
-                                </div>
-                              </div>
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -620,35 +541,31 @@ export default function Header() {
                     <ChevronDown className="h-4 w-4 text-foreground rotate-90" />
                   </DropdownMenuItem>
 
-                  {/* Log In */}
-                  <DropdownMenuItem 
-                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all flex flex-col items-center justify-center text-center h-auto"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('login');
-                    }}
-                  >
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50 mb-1">
-                      <LogIn className="h-4 w-4 text-foreground" />
-                    </div>
-                    <div className="font-semibold text-xs text-foreground">Log In</div>
-                  </DropdownMenuItem>
-
-                  {/* Sign Up */}
-                  <DropdownMenuItem 
-                    className="gap-2 cursor-pointer px-3 py-2.5 rounded-lg hover:bg-accent/50 transition-all flex flex-col items-center justify-center text-center h-auto"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAuthModal(true);
-                      setAuthMode('signup');
-                    }}
-                  >
-                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50 mb-1">
-                      <UserPlus className="h-4 w-4 text-foreground" />
-                    </div>
-                    <div className="font-semibold text-xs text-foreground">Sign Up</div>
-                  </DropdownMenuItem>
+                  {/* Auth Toggle */}
+                  <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAuthModal(true);
+                        setAuthMode('login');
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      Log In
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAuthModal(true);
+                        setAuthMode('signup');
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Sign Up
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -861,7 +778,7 @@ export default function Header() {
                   </button>
                 </>
               ) : (
-                <>Don't have an account?{" "}
+                <>Don&apos;t have an account?{" "}
                   <button
                     onClick={() => setAuthMode('signup')}
                     className="text-teal-500 hover:text-teal-400 font-semibold"
