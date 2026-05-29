@@ -79,11 +79,9 @@ export default function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
-  const { userId, loadWallets } = useUser();
+  const { userId, wallets, activeWalletId, setActiveWallet, loadWallets } = useUser();
   const [search, setSearch] = React.useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [wallets, setWallets] = useState<any[]>([]);
-  const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
@@ -94,9 +92,6 @@ export default function Header() {
   React.useEffect(() => {
     if (userId) {
       loadWallets();
-    } else {
-      setWallets([]);
-      setActiveWalletId(null);
     }
   }, [userId, loadWallets]);
 
@@ -105,7 +100,7 @@ export default function Header() {
     const handleWalletChange = (e: CustomEvent) => {
       const newId = e.detail as string;
       if (newId && newId !== activeWalletId) {
-        setActiveWalletId(newId);
+        setActiveWallet(newId);
       }
     };
     window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
@@ -113,7 +108,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
     };
-  }, [activeWalletId]);
+  }, [activeWalletId, setActiveWallet]);
     
   // Save active wallet ID to localStorage when it changes
   React.useEffect(() => {
@@ -128,12 +123,6 @@ export default function Header() {
     const { getAuth, signOut } = require("firebase/auth");
     const auth = getAuth();
     signOut(auth).then(() => {
-      // Clear local state
-      setWallets([]);
-      setActiveWalletId(null);
-      setBalance(0);
-      setWalletBalances({});
-      
       // Clear localStorage
       localStorage.removeItem('active-wallet-id');
       localStorage.removeItem('solana-wallets');
@@ -439,9 +428,7 @@ export default function Header() {
                               : "hover:bg-accent/50"
                           }`}
                           onClick={() => {
-                            setActiveWalletId(wallet.id);
-                            localStorage.setItem('active-wallet-id', wallet.id);
-                            window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: wallet.id }));
+                            setActiveWallet(wallet.id);
                           }}
                         >
                           <div
