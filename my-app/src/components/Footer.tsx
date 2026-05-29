@@ -61,26 +61,25 @@ export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { openWidget, closeWidget, isWidgetOpen, widgets } = useWidgets();
-  const [footerMenuVisible, setFooterMenuVisible] = useState<string[]>(() => {
+  const [tick, setTick] = useState(0);
+
+  // Force re-render when settings change
+  useEffect(() => {
+    const handler = () => setTick(t => t + 1);
+    window.addEventListener('menuSettingsUpdated', handler);
+    return () => window.removeEventListener('menuSettingsUpdated', handler);
+  }, []);
+
+  // Read settings directly from localStorage on every render
+  const footerMenuVisible = (() => {
     const saved = localStorage.getItem('footer-menu-visible');
     return saved ? JSON.parse(saved) : widgetItems.map(item => item.label);
-  });
-  const [assetCardsVisible, setAssetCardsVisible] = useState<string[]>(() => {
+  })();
+
+  const assetCardsVisible = (() => {
     const saved = localStorage.getItem('asset-cards-visible');
     return saved ? JSON.parse(saved) : ['SOL', 'BTC', 'ETH', 'BNB'];
-  });
-
-  // Listen for settings changes from Menu Settings modal
-  useEffect(() => {
-    const handleSettingsUpdate = () => {
-      const savedFooter = localStorage.getItem('footer-menu-visible');
-      const savedAssets = localStorage.getItem('asset-cards-visible');
-      if (savedFooter) setFooterMenuVisible(JSON.parse(savedFooter));
-      if (savedAssets) setAssetCardsVisible(JSON.parse(savedAssets));
-    };
-    window.addEventListener('menuSettingsUpdated', handleSettingsUpdate);
-    return () => window.removeEventListener('menuSettingsUpdated', handleSettingsUpdate);
-  }, []);
+  })();
 
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
