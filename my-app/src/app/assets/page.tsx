@@ -106,41 +106,9 @@ export default function AssetsPage() {
     if (savedActive) {
       setActiveWalletId(savedActive);
     }
-
-    // Listen for wallet changes from other components (e.g. Header dropdown)
-    const handleWalletChange = (e: CustomEvent) => {
-      const newId = e.detail as string;
-      if (newId) {
-        setActiveWalletId(newId);
-      }
-    };
-    window.addEventListener('activeWalletChanged', handleWalletChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
-    };
   }, []);
 
-  useEffect(() => {
-    if (wallets.length > 0 && !activeWalletId) {
-      setActiveWalletId(wallets[0].id);
-    }
-  }, [wallets]);
-
-  useEffect(() => {
-    if (activeWalletId) {
-      localStorage.setItem('active-wallet-id', activeWalletId);
-    }
-  }, [activeWalletId]);
-
-  // Sync active wallet with UserContext
-  useEffect(() => {
-    if (activeWalletId && userId) {
-      setUserWallet(activeWalletId);
-    }
-  }, [activeWalletId, userId, setUserWallet]);
-
-  // Update activeWalletId when wallets from UserContext change
+  // Set initial active wallet
   useEffect(() => {
     if (wallets.length > 0 && !activeWalletId) {
       const savedActive = localStorage.getItem('active-wallet-id');
@@ -166,6 +134,13 @@ export default function AssetsPage() {
       window.removeEventListener('activeWalletChanged', handleWalletChange as EventListener);
     };
   }, [activeWalletId]);
+
+  // Sync active wallet with UserContext (only when it changes)
+  useEffect(() => {
+    if (activeWalletId && userId) {
+      setUserWallet(activeWalletId);
+    }
+  }, [activeWalletId, userId]);
 
   const saveSendPresets = (presets: SendPreset[]) => {
     try {

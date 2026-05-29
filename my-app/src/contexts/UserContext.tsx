@@ -61,15 +61,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setActiveWallet = (walletId: string) => {
     setActiveWalletId(walletId);
     localStorage.setItem('active-wallet-id', walletId);
-    
-    // Move wallet to front of list
-    setWallets(prev => {
-      const wallet = prev.find(w => w.id === walletId);
-      if (!wallet) return prev;
-      const others = prev.filter(w => w.id !== walletId);
-      return [wallet, ...others];
-    });
-    
     window.dispatchEvent(new CustomEvent('activeWalletChanged', { detail: walletId }));
   };
 
@@ -168,8 +159,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setWallets(localWallets);
       }
         
-      // Set active wallet
-      if (wallets.length > 0 && !activeWalletId) {
+      // Set active wallet only if not already set
+      if (!activeWalletId && wallets.length > 0) {
         const savedActive = localStorage.getItem('active-wallet-id');
         if (savedActive && wallets.find(w => w.id === savedActive)) {
           setActiveWalletId(savedActive);
