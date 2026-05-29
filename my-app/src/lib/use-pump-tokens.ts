@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
+import { pumpFunApi, TokenMarketData, LaunchpadSource } from './pump-fun-api';
 import { getPumpSwapTokens, getLetsBonkTokens, getMeteoraTokens } from './multi-launchpad-api';
 
 export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
   refreshInterval?: number;
-  enableWebSocket?: boolean;
   filters?: any;
 }
 
@@ -16,6 +15,74 @@ export interface UsePumpTokensReturn {
   refresh: () => Promise<void>;
   lastUpdate: Date | null;
   wsConnected: boolean;
+}
+
+// Функция для получения новых токенов через DexScreener
+async function fetchNewTokensFromDexScreener(limit: number = 50, maxAgeHours: number = 24): Promise<TokenMarketData[]> {
+  try {
+    const response = await fetch(
+      `/api/new-tokens?limit=${limit}&maxAgeHours=${maxAgeHours}&_cb=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch new tokens: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const tokens = data.tokens || [];
+
+    return tokens.map((pair: any, index: number) => ({
+      rank: (index + 1).toString(),
+      logo: pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
+      name: pair.baseToken?.name || 'Unknown',
+      symbol: pair.baseToken?.symbol || '',
+      mint: pair.baseToken?.address || '',
+      mc: formatNumber(pair.marketCap || pair.fdv || 0),
+      mcChange: `${(pair.priceChange?.h24 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
+      volume24h: formatNumber(pair.volume?.h24 || 0),
+      volumeChange: '0.00%',
+      priceChange1h: `${(pair.priceChange?.h1 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h1 || 0).toFixed(2)}%`,
+      priceChange24h: `${(pair.priceChange?.h24 || 0) >= 0 ? '+' : ''}${(pair.priceChange?.h24 || 0).toFixed(2)}%`,
+      priceChange7d: '0.00%',
+      trades: ((pair.txns?.h24?.buys || 0) + (pair.txns?.h24?.sells || 0)).toString(),
+      holders: '-',
+      isVerified: pair.info?.verified || false,
+      imageUrl: pair.info?.imageUrl || pair.info?.logo || '/placeholder.png',
+      createdTimestamp: pair.pairCreatedAt ? Math.floor(pair.pairCreatedAt / 1000) : Date.now() / 1000,
+      twitter: pair.info?.socials?.find((s: any) => s.type === 'twitter')?.url,
+      telegram: pair.info?.socials?.find((s: any) => s.type === 'telegram')?.url,
+      website: pair.info?.socials?.find((s: any) => s.type === 'website')?.url,
+      source: (pair.source || 'pumpfun') as LaunchpadSource,
+      kingOfTheHillRank: '-',
+      kingOfTheHillTotal: '-',
+      watchers: pair.fdw?.toString() || '-',
+      replies: '-',
+      replyRate: '-',
+      buySellRatio: '-',
+      fomoScore: '-',
+      devHold: '-',
+      top10Hold: '-',
+      lpBurn: '-',
+      snipersCount: '-',
+      bundlersCount: '-',
+      freshWallets: '-',
+      botTraders: '-',
+      dexTaxBuy: '-',
+      dexTaxSell: '-',
+    }));
+  } catch (error) {
+    console.error('Error fetching new tokens from DexScreener:', error);
+    return [];
+  }
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(2)}B`;
+  if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+  if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
+  if (num === 0) return '$0';
+  return `$${num.toFixed(2)}`;
 }
 
 /**
@@ -43,29 +110,13 @@ export function usePumpTokens({
 
       switch (columnType) {
         case 'new': {
-          // Pump.fun API теперь автоматически использует DexScreener fallback
-          const pumpFunTokens = await pumpFunApi.getNewTokens(20);
+          // Используем новый API который получает токены со всех лаунчпадов
+          // Фильтруем по возрасту (максимум 24 часа) и сортируем по времени создания
+          const dexScreenerTokens = await fetchNewTokensFromDexScreener(30, 24);
           
-          const [pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            getPumpSwapTokens(10),
-            getLetsBonkTokens(10),
-            getMeteoraTokens(10),
-          ]);
-
-          const allTokens = [
-            ...pumpFunTokens,
-            ...pumpSwapTokens,
-            ...letsBonkTokens,
-            ...meteoraTokens,
-          ];
-
-          // Сортировка по createdTimestamp (новые первыми)
-          newTokens = allTokens
-            .filter(t => t.createdTimestamp)
-            .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
-            .slice(0, 20);
+          console.log(`[New] Loaded ${dexScreenerTokens.length} tokens from DexScreener (all launchpads)`);
           
-          console.log(`[New] Loaded ${allTokens.length} tokens, showing top ${newTokens.length}`);
+          newTokens = dexScreenerTokens.slice(0, 20);
           break;
         }
         case 'soon': {
