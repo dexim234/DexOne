@@ -60,7 +60,7 @@ const bingxLinks = {
 export default function Footer() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { openWidget, isWidgetOpen } = useWidgets();
+  const { openWidget, closeWidget, isWidgetOpen, widgets } = useWidgets();
   const [cryptoPrices, setCryptoPrices] = useState<{
     SOL: { price: string; change: string };
     BTC: { price: string; change: string };
@@ -236,10 +236,18 @@ export default function Footer() {
           {widgetItems.map((item) => {
             const Icon = item.icon;
             const isOpen = isWidgetOpen(item.widgetType);
+            const widgetId = widgets.find(w => w.type === item.widgetType)?.id;
             return (
               <button
                 key={item.widgetType}
-                onClick={() => openWidget(item.widgetType, item.label)}
+                onClick={() => {
+                  // Toggle widget - close if open, open if closed
+                  if (isOpen && widgetId) {
+                    closeWidget(widgetId);
+                  } else {
+                    openWidget(item.widgetType, item.label);
+                  }
+                }}
                 className={`flex items-center gap-2 px-3.5 py-2 text-xs font-extrabold rounded-lg transition-all duration-300 tracking-tight border ${
                   isOpen
                     ? 'bg-teal-500/20 border-teal-500/50 text-teal-500'
