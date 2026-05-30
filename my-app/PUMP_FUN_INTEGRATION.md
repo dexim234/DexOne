@@ -25,11 +25,19 @@ NEXT_PUBLIC_PUMP_FUN_API_URL=https://frontend-api-v3.pump.fun
 
 ### `/src/lib/pump-fun-api.ts`
 Сервис для работы с Pump.fun API:
-- `getNewTokens()` - получение новых токенов
-- `getSoonTokens()` - получение трендовых токенов
-- `getMigrationTokens()` - получение токенов для миграции
-- `getCoinById()` - получение информации о конкретном токене
-- `convertToMarketData()` - конвертация данных в формат карточек
+- `getNewTokens(limit, hoursBack, options)` - получение новых токенов
+  - Фильтры: `deployed_at ≤ X часов`, `pool_created_at ≤ X`, `status = "live"`, `is_verified = true/false`
+  - Опции: `minLiquiditySol` (мин. ликвидность в SOL), `minTrades` (мин. количество сделок)
+- `getSoonTokens(limit)` - получение трендовых токенов
+- `getMigrationTokens(limit)` - получение токенов для миграции
+- `getCoinById(mint)` - получение информации о конкретном токене
+- `convertToMarketData(token, rank)` - конвертация данных в формат карточек
+
+### `/src/lib/multi-launchpad-api.ts`
+API для получения токенов с разных лаунчпадов:
+- `getPumpSwapTokens(limit, maxAgeHours)` - токены PumpSwap
+- `getLetsBonkTokens(limit, maxAgeHours)` - токены LetsBonk
+- `getMeteoraTokens(limit, maxAgeHours)` - токены Meteora
 
 ### `/src/lib/use-pump-tokens.ts`
 React хук для получения токенов с поддержкой:
@@ -44,6 +52,18 @@ React хук для получения токенов с поддержкой:
 - Explorer ссылки
 
 ## API Endpoints
+
+### `/api/new-tokens` (Backend Proxy)
+Получение новых токенов с всех лаунчпадов через DexScreener API.
+
+**Query Parameters:**
+- `limit` - количество токенов (по умолчанию 50)
+- `maxAgeHours` - максимальный возраст токена в часах (по умолчанию 24)
+
+**Пример:**
+```
+GET /api/new-tokens?limit=50&maxAgeHours=24
+```
 
 ### Frontend API v3 (Основной)
 ```
@@ -66,6 +86,19 @@ wss://ws.pump.fun
 - `trade` - торговля токеном
 - `complete` - завершение токена (миграция)
 
+## Фильтры для новых токенов
+
+Токены во вкладке "New" фильтруются по следующим критериям:
+
+1. **deployed_at ≤ X часов/дней** - токен был создан недавно
+2. **pool_created_at ≤ X** - пул ликвидности был создан недавно  
+3. **status = "live"** - токен имеет активную торговлю (есть ликвидность и сделки)
+4. **is_verified = true/false** - опциональная фильтрация по верификации
+
+**Дополнительные фильтры:**
+- `minLiquiditySol` - минимальная ликвидность в SOL (по умолчанию 0.1)
+- `minTrades` - минимальное количество сделок (по умолчанию 1)
+
 ## Использование
 
 ### Базовое использование API
@@ -73,8 +106,11 @@ wss://ws.pump.fun
 ```typescript
 import { pumpFunApi } from '@/lib/pump-fun-api';
 
-// Получить новые токены
-const newTokens = await pumpFunApi.getNewTokens(20);
+// Получить новые токены за последние 2 часа с фильтрами
+const newTokens = await pumpFunApi.getNewTokens(20, 2, {
+  minLiquiditySol: 0.1,
+  minTrades: 1
+});
 
 // Получить трендовые токены
 const trending = await pumpFunApi.getSoonTokens(20);
