@@ -260,42 +260,48 @@ export class PumpFunApiService {
    * Получить новые токены (созданные недавно)
    */
   async getNewCoins(limit: number = 50, cursor?: string): Promise<PumpCoinsResponse> {
-    // Запрашиваем токены, отсортированные по времени создания
+    // Pump.fun API не поддерживает orderBy createdAt напрямую
+    // Загружаем последние токены через стандартный endpoint
     const urlSearchParams = new URLSearchParams();
-    urlSearchParams.append('orderBy', 'createdAt');
-    urlSearchParams.append('orderDirection', 'desc');
     urlSearchParams.append('limit', limit.toString());
     if (cursor) {
       urlSearchParams.append('cursor', cursor);
     }
 
-    const url = this.getApiUrl('/v1/coins/new', urlSearchParams);
-    console.log('Fetching new coins from URL:', url);
+    const url = this.getApiUrl('/coins', urlSearchParams);
+    console.log('Fetching coins from URL:', url);
     
     try {
       const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
-      console.log('New coins response:', response.data);
+      console.log('Coins response received');
       
       // Обработка разных форматов ответа
+      let coins: PumpToken[] = [];
       if (Array.isArray(response.data)) {
-        return {
-          coins: response.data,
-          hasNextPage: false,
-        };
+        coins = response.data;
+      } else if (response.data && response.data.coins) {
+        coins = response.data.coins;
       }
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching new coins:', error);
-      // Fallback на стандартный endpoint
-      return this.getCoins({
-        orderBy: 'createdAt',
-        orderDirection: 'desc',
-        limit,
-        cursor,
+      
+      console.log('Total coins received:', coins.length);
+      
+      // Сортируем по createdTimestamp (новые первыми)
+      const sortedCoins = coins.sort((a, b) => {
+        const aTime = a.createdTimestamp || 0;
+        const bTime = b.createdTimestamp || 0;
+        return bTime - aTime;
       });
+
+      return {
+        coins: sortedCoins.slice(0, limit),
+        hasNextPage: false,
+      };
+    } catch (error) {
+      console.error('Error fetching coins:', error);
+      return { coins: [], hasNextPage: false };
     }
   }
-      
+
   /**
    * Получить токены по конкретному ID/mint address
    */

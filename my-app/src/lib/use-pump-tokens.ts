@@ -192,7 +192,7 @@ export function usePumpTokens({
     if (!enableWebSocket) return;
 
     // Подписка на события создания токенов
-    const handleTokenCreate = async (event: { type: PumpEventType; token: PumpToken; timestamp: number }) => {
+    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken; timestamp: number }) => {
       console.log('WebSocket token create event received:', {
         type: event.type,
         mint: event.token.mint,
@@ -201,28 +201,54 @@ export function usePumpTokens({
       });
       
       if (columnType === 'new' && event.type === 'create') {
-        // Запрашиваем полные данные о токене по mint адресу
-        console.log('Fetching full token data for mint:', event.token.mint);
-        const fullTokenData = await pumpFunApi.getCoinById(event.token.mint);
+        // Фильтруем очевидные несущественные токены (USDC, SOL и т.д.)
+        const mint = event.token.mint;
+        if (!mint || mint.includes('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') || // USDC
+            mint.includes('So11111111111111111111111111111111111111112') || // Wrapped SOL
+            mint.includes('JUP4LbZzAKBNoqPsL8pTqTqkGvZPqVYBmJxKxHvFpump')) { // JUP
+          console.log('Filtering out non-Pump.fun token:', mint);
+          return;
+        }
         
-        if (fullTokenData) {
-          console.log('Full token data received:', fullTokenData);
-          setTokens(prev => {
-            const newToken = pumpFunApi.convertToMarketData(fullTokenData, 1);
-            console.log('Converted full token:', newToken);
-            // Проверяем, нет ли уже этого токена в списке
-            const exists = prev.some(t => t.mint === newToken.mint);
-            if (exists) {
-              console.log('Token already exists in list, skipping');
-              return prev;
-            }
-            console.log('Adding new token to front of list:', newToken.name, newToken.mc);
-            return [newToken, ...prev.slice(0, 19)];
-          });
-          setLastUpdate(new Date());
-        } else {
-          console.log('Failed to fetch full token data, trying with partial data');
-          // Если не удалось получить полные данные, используем то что есть
+        // Проверяем, что токен имеет pump.fun формат адреса
+        if (!mint.endsWith('pump') && mint.length !== 44) {
+          console.log('Skipping non-pump.fun token:', mint);
+          return;
+        }
+
+        // Запрашиваем полные данные о токене по mint адресу
+        console.log('Fetching full token data for mint:', mint);
+        pumpFunApi.getCoinById(mint).then(fullTokenData => {
+          if (fullTokenData) {
+            console.log('Full token data received:', fullTokenData);
+            setTokens(prev => {
+              const newToken = pumpFunApi.convertToMarketData(fullTokenData, 1);
+              console.log('Converted full token:', newToken);
+              // Проверяем, нет ли уже этого токена в списке
+              const exists = prev.some(t => t.mint === newToken.mint);
+              if (exists) {
+                console.log('Token already exists in list, skipping');
+                return prev;
+              }
+              console.log('Adding new token to front of list:', newToken.name, newToken.mc);
+              return [newToken, ...prev.slice(0, 19)];
+            });
+            setLastUpdate(new Date());
+          } else {
+            console.log('Failed to fetch full token data, using partial data');
+            // Если не удалось получить полные данные, используем то что есть из WebSocket
+            setTokens(prev => {
+              const newToken = pumpFunApi.convertToMarketData(event.token, 1);
+              const exists = prev.some(t => t.mint === newToken.mint);
+              if (exists) return prev;
+              console.log('Adding partial token:', newToken.name, newToken.mc);
+              return [newToken, ...prev.slice(0, 19)];
+            });
+            setLastUpdate(new Date());
+          }
+        }).catch(err => {
+          console.error('Error fetching token data:', err);
+          // Fallback на partial данные
           setTokens(prev => {
             const newToken = pumpFunApi.convertToMarketData(event.token, 1);
             const exists = prev.some(t => t.mint === newToken.mint);
@@ -230,7 +256,7 @@ export function usePumpTokens({
             return [newToken, ...prev.slice(0, 19)];
           });
           setLastUpdate(new Date());
-        }
+        });
       }
     };
 
