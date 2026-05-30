@@ -2,7 +2,7 @@ import { TokenMarketData, LaunchpadSource } from './pump-fun-api';
 
 // === PumpSwap API ===
 // Токены, мигрировавшие или запущенные на PumpSwap (DEX от Pump.fun)
-export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarketData[]> {
+export async function getPumpSwapTokens(limit: number = 10, maxAgeHours: number = 24): Promise<TokenMarketData[]> {
   try {
     // Пробуем получить через DexScreener пулы PumpSwap
     const controller = new AbortController();
@@ -15,8 +15,15 @@ export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarket
     const data = await response.json();
 
     if (data.pairs && Array.isArray(data.pairs)) {
+      const cutoffTime = Date.now() - (maxAgeHours * 60 * 60 * 1000);
+      
       return data.pairs
-        .filter((p: any) => p.chainId === 'solana')
+        .filter((p: any) => 
+          p.chainId === 'solana' && 
+          p.pairCreatedAt && 
+          p.pairCreatedAt >= cutoffTime
+        )
+        .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
         .slice(0, limit)
         .map((pair: any, index: number) => convertDexPairToMarketData(pair, index + 1, 'pumpswap'));
     }
@@ -28,7 +35,7 @@ export async function getPumpSwapTokens(limit: number = 10): Promise<TokenMarket
 }
 
 // === LetsBonk API ===
-export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarketData[]> {
+export async function getLetsBonkTokens(limit: number = 10, maxAgeHours: number = 24): Promise<TokenMarketData[]> {
   try {
     // Пробуем получить через DexScreener пулы с letsbonk
     const controller = new AbortController();
@@ -41,8 +48,15 @@ export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarket
     const data = await response.json();
 
     if (data.pairs && Array.isArray(data.pairs)) {
+      const cutoffTime = Date.now() - (maxAgeHours * 60 * 60 * 1000);
+      
       return data.pairs
-        .filter((p: any) => p.chainId === 'solana')
+        .filter((p: any) => 
+          p.chainId === 'solana' && 
+          p.pairCreatedAt && 
+          p.pairCreatedAt >= cutoffTime
+        )
+        .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
         .slice(0, limit)
         .map((pair: any, index: number) => convertDexPairToMarketData(pair, index + 1, 'letsbonk'));
     }
@@ -54,7 +68,7 @@ export async function getLetsBonkTokens(limit: number = 10): Promise<TokenMarket
 }
 
 // === Meteora API ===
-export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketData[]> {
+export async function getMeteoraTokens(limit: number = 10, maxAgeHours: number = 24): Promise<TokenMarketData[]> {
   try {
     // Пробуем получить через DexScreener пулы Meteora
     const controller = new AbortController();
@@ -67,8 +81,15 @@ export async function getMeteoraTokens(limit: number = 10): Promise<TokenMarketD
     const data = await response.json();
 
     if (data.pairs && Array.isArray(data.pairs)) {
+      const cutoffTime = Date.now() - (maxAgeHours * 60 * 60 * 1000);
+      
       return data.pairs
-        .filter((p: any) => p.chainId === 'solana')
+        .filter((p: any) => 
+          p.chainId === 'solana' && 
+          p.pairCreatedAt && 
+          p.pairCreatedAt >= cutoffTime
+        )
+        .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0))
         .slice(0, limit)
         .map((pair: any, index: number) => convertDexPairToMarketData(pair, index + 1, 'meteora'));
     }

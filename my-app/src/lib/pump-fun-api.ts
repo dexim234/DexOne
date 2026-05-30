@@ -481,9 +481,17 @@ export class PumpFunApiService {
   /**
    * Получить токены для колонки "New" (самые свежие)
    * Фильтр: только что запущены, есть ликвидность, идут первые сделки
-   * deployed_at ≤ X часов/дней, pool_created_at ≤ X, status = "live"
+   * deployed_at ≤ X часов/дней, pool_created_at ≤ X, status = "live", is_verified = true/false
    */
-  async getNewTokens(limit: number = 20, hoursBack: number = 24): Promise<TokenMarketData[]> {
+  async getNewTokens(
+    limit: number = 20, 
+    hoursBack: number = 24,
+    options?: {
+      isVerified?: boolean;
+      minLiquiditySol?: number;
+      minTrades?: number;
+    }
+  ): Promise<TokenMarketData[]> {
     try {
       const now = Math.floor(Date.now() / 1000);
       const maxAge = hoursBack * 60 * 60; // конвертируем часы в секунды
@@ -493,42 +501,83 @@ export class PumpFunApiService {
       const response = await this.getCoins({
         orderBy: 'createdAt',
         orderDirection: 'desc',
-        limit: limit * 2, // запрашиваем больше для фильтрации
+        limit: limit * 3, // запрашиваем больше для фильтрации
       });
       
       const allCoins = response.coins || [];
       
       // Фильтруем токены по условиям:
       // 1. deployed_at / createdAt ≤ X часов назад
-      // 2. Есть ликвидность (virtualSolReserves > 0 или realSolReserves > 0)
-      // 3. status = "live" (имеют торговую активность)
-      // 4. is_verified может быть true или false
+      // 2. pool_created_at ≤ X (то же что createdAt для pump.fun)
+      // 3. Есть ликвидность (virtualSolReserves > 0 или realSolReserves > 0)
+      // 4. status = "live" (имеют торговую активность)
+      // 5. is_verified = true/false (опционально)
       const filteredTokens = allCoins.filter(token => {
         const anyToken = token as any;
         const createdAt = token.createdTimestamp || anyToken.createdAt || 0;
         
-        // Проверка возраста токена
+        // Проверка возраста токена (deployed_at ≤ X часов)
         if (createdAt === 0 || createdAt > now) return false;
         const age = now - createdAt;
-        if (age > maxAge) return false;
+        if (age > maxAge) {
+          console.log(`Token ${token.name} too old: ${age / 3600}h`);
+          return false;
+        }
+        
+        // Проверка pool_created_at (для pump.fun это то же что createdAt)
+        const poolCreatedAt = anyToken.pool_created_at || anyToken.poolCreatedAt || createdAt;
+        if (poolCreatedAt !== createdAt && (poolCreatedAt === 0 || poolCreatedAt > now)) {
+          return false;
+        }
+        
+        // Проверка is_verified (если задан фильтр)
+        if (options?.isVerified !== undefined) {
+          const isVerified = token.isVerified || anyToken.is_verified || false;
+          if (isVerified !== options.isVerified) {
+            return false;
+          }
+        }
         
         // Проверка ликвидности (должны быть резервы)
-        const hasLiquidity = 
-          (token.virtualSolReserves || 0) > 0 || 
-          (token.realSolReserves || 0) > 0 ||
-          (anyToken.virtual_sol_reserves || 0) > 0 ||
-          (anyToken.real_sol_reserves || 0) > 0;
+        const virtualSolReserves = token.virtualSolReserves || anyToken.virtual_sol_reserves || 0;
+        const realSolReserves = token.realSolReserves || anyToken.real_sol_reserves || 0;
+        const hasLiquidity = virtualSolReserves > 0 || realSolReserves > 0;
         
-        if (!hasLiquidity) return false;
+        if (!hasLiquidity) {
+          console.log(`Token ${token.name} has no liquidity`);
+          return false;
+        }
         
-        // Проверка на наличие первых сделок (trades > 0 или volume > 0)
-        const hasTrades = 
-          (token.trades || token.trades24h || 0) > 0 ||
-          (token.volume24h || 0) > 0 ||
-          (anyToken.real_token_reserves || 0) > 0;
+        // Минимальная ликвидность в SOL (если задана)
+        if (options?.minLiquiditySol !== undefined) {
+          const totalLiquiditySol = virtualSolReserves + realSolReserves;
+          if (totalLiquiditySol < options.minLiquiditySol) {
+            console.log(`Token ${token.name} liquidity ${totalLiquiditySol} SOL < ${options.minLiquiditySol} SOL`);
+            return false;
+          }
+        }
         
-        // Считаем токен "live" если есть ликвидность или сделки
-        return hasLiquidity || hasTrades;
+        // Проверка на наличие первых сделок (status = "live")
+        const trades = token.trades || token.trades24h || anyToken.trades || 0;
+        const volume24h = token.volume24h || anyToken.volume_24h || 0;
+        const hasTrades = trades > 0 || volume24h > 0;
+        
+        // Минимальное количество сделок (если задано)
+        if (options?.minTrades !== undefined) {
+          if (trades < options.minTrades) {
+            console.log(`Token ${token.name} has ${trades} trades < ${options.minTrades}`);
+            return false;
+          }
+        }
+        
+        // Считаем токен "live" если есть ликвидность и хотя бы 1 сделка
+        const isLive = hasLiquidity && hasTrades;
+        if (!isLive) {
+          console.log(`Token ${token.name} not live: liquidity=${hasLiquidity}, trades=${hasTrades}`);
+          return false;
+        }
+        
+        return true;
       });
 
       // Сортируем по времени создания (самые новые первыми)
@@ -537,6 +586,8 @@ export class PumpFunApiService {
         const bTime = b.createdTimestamp || 0;
         return bTime - aTime;
       });
+
+      console.log(`[getNewTokens] Filtered ${filteredTokens.length} tokens, returning top ${Math.min(limit, sortedTokens.length)}`);
 
       // Берем нужное количество и конвертируем
       return sortedTokens.slice(0, limit).map((token, index) => 

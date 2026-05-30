@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { pumpFunApi, TokenMarketData, PumpToken } from './pump-fun-api';
 import { pumpWebSocket, PumpEventType } from './pump-websocket';
 import { getPumpSwapTokens, getLetsBonkTokens, getMeteoraTokens } from './multi-launchpad-api';
+import { collectNewTokens } from './token-collector';
 
 export interface UsePumpTokensOptions {
   columnType: 'new' | 'soon' | 'migration';
@@ -47,39 +48,77 @@ export function usePumpTokens({
 
       switch (columnType) {
         case 'new': {
-          console.log('Loading NEW tokens...');
-          // Загружаем новые токены из всех лаунчпадов параллельно
-          // Для pumpfun используем 2 часа назад для более свежих токенов
-          const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getNewTokens(12, 2),
-            getPumpSwapTokens(6),
-            getLetsBonkTokens(6),
-            getMeteoraTokens(6),
-          ]);
-
-          console.log('PumpFun tokens loaded:', pumpFunTokens.length);
-          console.log('PumpFun token names:', pumpFunTokens.map(t => `${t.name} - ${t.mc}`));
-
-          // Объединяем и сортируем по времени создания (новые сверху)
-          const allTokens = [
-            ...pumpFunTokens,
-            ...pumpSwapTokens,
-            ...letsBonkTokens,
-            ...meteoraTokens,
-          ];
-
-          // Сортируем по createdTimestamp (новые первыми)
-          newTokens = allTokens
-            .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
-            .slice(0, 20);
+          console.log('Loading NEW tokens from multiple sources...');
           
-          console.log('Total tokens after merge and sort:', newTokens.length);
-          console.log('Top 3 new tokens:', newTokens.slice(0, 3).map(t => ({
+          // Используем новый коллектор для получения токенов из multiple источников
+          const collectedTokens = await collectNewTokens({
+            maxAgeHours: 2,
+            limit: 20,
+            enableSecurityChecks: true,
+            sources: ['pumpfun', 'dexscreener']
+          });
+
+          console.log(`Collected ${collectedTokens.length} tokens after security filtering`);
+          console.log('Top tokens:', collectedTokens.slice(0, 3).map(t => ({
             name: t.name,
-            mc: t.mc,
-            timestamp: t.createdTimestamp,
-            time: t.createdTimestamp ? new Date(t.createdTimestamp * 1000).toLocaleString() : 'N/A'
+            symbol: t.symbol,
+            mc: t.marketCap,
+            security: t.security
           })));
+
+          // Конвертируем CollectedToken в TokenMarketData
+          newTokens = collectedTokens.map((token, index) => ({
+            rank: (index + 1).toString(),
+            logo: token.imageUrl || '/placeholder.png',
+            name: token.name,
+            symbol: token.symbol,
+            mint: token.mint,
+            mc: token.marketCap >= 1_000_000 
+              ? `$${(token.marketCap / 1_000_000).toFixed(2)}M` 
+              : token.marketCap >= 1_000 
+                ? `$${(token.marketCap / 1_000).toFixed(2)}K`
+                : `$${token.marketCap.toFixed(2)}`,
+            mcChange: '0.00%',
+            volume24h: token.volumeUsd >= 1_000_000 
+              ? `$${(token.volumeUsd / 1_000_000).toFixed(2)}M`
+              : token.volumeUsd >= 1_000 
+                ? `$${(token.volumeUsd / 1_000).toFixed(2)}K`
+                : `$${token.volumeUsd.toFixed(2)}`,
+            volumeChange: '0.00%',
+            priceChange1h: '0.00%',
+            priceChange24h: '0.00%',
+            priceChange7d: '0.00%',
+            trades: token.tradesCount.toString(),
+            holders: '-',
+            isVerified: token.isVerified || false,
+            createdTimestamp: token.deployedAt,
+            source: token.source.name as any,
+            // Аналитические метрики
+            kingOfTheHillRank: '-',
+            kingOfTheHillTotal: '-',
+            watchers: '-',
+            replies: '-',
+            replyRate: '-',
+            buySellRatio: '-',
+            fomoScore: '-',
+            devHold: token.security.mintAuthRenounced ? '0' : '-',
+            top10Hold: token.security.topHoldersPercent?.toFixed(2) || '-',
+            lpBurn: token.security.lpLocked ? '100' : '0',
+            snipersCount: '-',
+            bundlersCount: '-',
+            freshWallets: '-',
+            botTraders: '-',
+            dexTaxBuy: '-',
+            dexTaxSell: '-',
+            makers1m: '-',
+            volume1m: '-',
+            makers3m: '-',
+            volume3m: '-',
+            makers5m: '-',
+            volume5m: '-',
+          }));
+          
+          console.log('Converted to TokenMarketData:', newTokens.length);
           break;
         }
         case 'soon': {
