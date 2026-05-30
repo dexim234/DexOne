@@ -260,14 +260,42 @@ export class PumpFunApiService {
    * Получить новые токены (созданные недавно)
    */
   async getNewCoins(limit: number = 50, cursor?: string): Promise<PumpCoinsResponse> {
-    return this.getCoins({
-      orderBy: 'createdAt',
-      orderDirection: 'desc',
-      limit,
-      cursor,
-    });
-  }
+    // Запрашиваем токены, отсортированные по времени создания
+    const urlSearchParams = new URLSearchParams();
+    urlSearchParams.append('orderBy', 'createdAt');
+    urlSearchParams.append('orderDirection', 'desc');
+    urlSearchParams.append('limit', limit.toString());
+    if (cursor) {
+      urlSearchParams.append('cursor', cursor);
+    }
+
+    const url = this.getApiUrl('/v1/coins/new', urlSearchParams);
+    console.log('Fetching new coins from URL:', url);
     
+    try {
+      const response = await axios.get<PumpCoinsResponse | PumpToken[]>(url, this.getAxiosConfig());
+      console.log('New coins response:', response.data);
+      
+      // Обработка разных форматов ответа
+      if (Array.isArray(response.data)) {
+        return {
+          coins: response.data,
+          hasNextPage: false,
+        };
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching new coins:', error);
+      // Fallback на стандартный endpoint
+      return this.getCoins({
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit,
+        cursor,
+      });
+    }
+  }
+      
   /**
    * Получить токены по конкретному ID/mint address
    */

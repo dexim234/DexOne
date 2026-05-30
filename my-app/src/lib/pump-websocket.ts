@@ -124,45 +124,52 @@ export class PumpWebSocketClient {
           console.log('WebSocket message received:', data);
           
           // Определяем тип события на основе полей данных
+          // PumpPortal использует txType вместо event
           let eventType: PumpEventType | null = null;
           
-          // Событие создания нового токена
-          if (data.event === 'newTokenCreation' || data.event === 'create') {
+          // Событие создания нового токена (txType = 'create')
+          if (data.txType === 'create' || data.event === 'newTokenCreation' || data.event === 'create') {
             eventType = 'create';
           } 
-          // События торговли
-          else if (data.event === 'buy' || data.event === 'sell' || data.event === 'trade') {
+          // События торговли (buy/sell)
+          else if (data.txType === 'buy' || data.txType === 'sell' || data.event === 'buy' || data.event === 'sell' || data.event === 'trade') {
             eventType = 'trade';
           }
           // Завершение bonding curve (миграция)
-          else if (data.event === 'complete' || data.event === 'bondingCurveComplete' || data.event === 'bonding_curve_complete') {
+          else if (data.txType === 'complete' || data.event === 'complete' || data.event === 'bondingCurveComplete' || data.event === 'bonding_curve_complete') {
             eventType = 'complete';
           }
           
           if (eventType) {
+            console.log('Detected event type:', eventType, 'for mint:', data.mint);
+            
             // Преобразуем данные в формат PumpToken
+            // Для create событий нужны дополнительные данные
             const token: PumpToken = {
               mint: data.mint || data.tokenMint || data.address,
-              name: data.name,
-              symbol: data.symbol,
-              uri: data.uri,
-              image_uri: data.uri,
+              name: data.name || `Token-${data.mint?.slice(0, 4)}`,
+              symbol: data.symbol || '???',
+              uri: data.uri || data.metadata,
+              image_uri: data.uri || data.metadata,
               createdTimestamp: data.timestamp || Math.floor(Date.now() / 1000),
-              virtualSolReserves: data.virtualSolReserves || data.sol_reserve,
-              virtualTokenReserves: data.virtualTokenReserves || data.token_reserve,
-              realSolReserves: data.realSolReserves || data.sol_reserve,
-              realTokenReserves: data.realTokenReserves || data.token_reserve,
-              marketCap: data.marketCap || data.mc,
+              virtualSolReserves: data.virtualSolReserves || data.sol_reserve || 0,
+              virtualTokenReserves: data.virtualTokenReserves || data.token_reserve || 0,
+              realSolReserves: data.realSolReserves || data.sol_reserve || 0,
+              realTokenReserves: data.realTokenReserves || data.token_reserve || 0,
+              marketCap: data.marketCap || data.mc || 0,
               usd_market_cap: data.usd_market_cap,
-              volume24h: data.volume24h || data.volume,
-              trades: data.trades || data.trade_count,
-              holders: data.holders,
+              volume24h: data.volume24h || data.volume || 0,
+              trades: data.trades || data.trade_count || 1,
+              holders: data.holders || 1,
               isVerified: data.isVerified || data.verified || false,
             };
+            
+            console.log('Converted token:', token);
             
             // Вызов всех коллбеков для этого типа события
             const callbacks = this.callbacks.get(eventType);
             if (callbacks) {
+              console.log('Calling', callbacks.length, 'callbacks for event:', eventType);
               callbacks.forEach(cb => cb({ 
                 type: eventType, 
                 token, 

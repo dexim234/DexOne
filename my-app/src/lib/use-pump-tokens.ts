@@ -192,31 +192,45 @@ export function usePumpTokens({
     if (!enableWebSocket) return;
 
     // Подписка на события создания токенов
-    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken; timestamp: number }) => {
+    const handleTokenCreate = async (event: { type: PumpEventType; token: PumpToken; timestamp: number }) => {
       console.log('WebSocket token create event received:', {
         type: event.type,
+        mint: event.token.mint,
         name: event.token.name,
         symbol: event.token.symbol,
-        mint: event.token.mint,
-        timestamp: event.token.createdTimestamp,
-        eventTimestamp: event.timestamp,
-        rawToken: event.token,
       });
       
       if (columnType === 'new' && event.type === 'create') {
-        setTokens(prev => {
-          const newToken = pumpFunApi.convertToMarketData(event.token, 1);
-          console.log('Converted new token:', newToken);
-          // Проверяем, нет ли уже этого токена в списке
-          const exists = prev.some(t => t.mint === newToken.mint);
-          if (exists) {
-            console.log('Token already exists in list, skipping');
-            return prev;
-          }
-          console.log('Adding new token to front of list');
-          return [newToken, ...prev.slice(0, 19)];
-        });
-        setLastUpdate(new Date());
+        // Запрашиваем полные данные о токене по mint адресу
+        console.log('Fetching full token data for mint:', event.token.mint);
+        const fullTokenData = await pumpFunApi.getCoinById(event.token.mint);
+        
+        if (fullTokenData) {
+          console.log('Full token data received:', fullTokenData);
+          setTokens(prev => {
+            const newToken = pumpFunApi.convertToMarketData(fullTokenData, 1);
+            console.log('Converted full token:', newToken);
+            // Проверяем, нет ли уже этого токена в списке
+            const exists = prev.some(t => t.mint === newToken.mint);
+            if (exists) {
+              console.log('Token already exists in list, skipping');
+              return prev;
+            }
+            console.log('Adding new token to front of list:', newToken.name, newToken.mc);
+            return [newToken, ...prev.slice(0, 19)];
+          });
+          setLastUpdate(new Date());
+        } else {
+          console.log('Failed to fetch full token data, trying with partial data');
+          // Если не удалось получить полные данные, используем то что есть
+          setTokens(prev => {
+            const newToken = pumpFunApi.convertToMarketData(event.token, 1);
+            const exists = prev.some(t => t.mint === newToken.mint);
+            if (exists) return prev;
+            return [newToken, ...prev.slice(0, 19)];
+          });
+          setLastUpdate(new Date());
+        }
       }
     };
 
