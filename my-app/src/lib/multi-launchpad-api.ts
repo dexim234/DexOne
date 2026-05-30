@@ -114,24 +114,31 @@ function convertDexPairToMarketData(pair: any, rank: number, source: LaunchpadSo
     telegram: undefined,
     website: undefined,
     source,
-    // Аналитические метрики недоступны в DexScreener — показываем "-"
-    kingOfTheHillRank: '-',
-    kingOfTheHillTotal: '-',
-    watchers: '-',
-    replies: '-',
-    replyRate: '-',
-    buySellRatio: '-',
-    fomoScore: '-',
-    devHold: '-',
-    top10Hold: '-',
-    lpBurn: '-',
-    snipersCount: '-',
-    bundlersCount: '-',
-    freshWallets: '-',
-    botTraders: '-',
-    dexTaxBuy: '-',
-    dexTaxSell: '-',
-  };
+      // Аналитические метрики недоступны в DexScreener — показываем "-"
+      kingOfTheHillRank: '-',
+      kingOfTheHillTotal: '-',
+      watchers: '-',
+      replies: '-',
+      replyRate: '-',
+      buySellRatio: '-',
+      fomoScore: '-',
+      devHold: '-',
+      top10Hold: '-',
+      lpBurn: '-',
+      snipersCount: '-',
+      bundlersCount: '-',
+      freshWallets: '-',
+      botTraders: '-',
+      dexTaxBuy: '-',
+      dexTaxSell: '-',
+      makers1m: '-',
+      volume1m: '-',
+      makers3m: '-',
+      volume3m: '-',
+      makers5m: '-',
+      volume5m: '-',
+    };
+  });
 }
 
 // === Fallback generators ===
@@ -193,6 +200,12 @@ function generateFallbackTokens(source: LaunchpadSource, limit: number): TokenMa
       botTraders: '-',
       dexTaxBuy: '-',
       dexTaxSell: '-',
+      makers1m: '-',
+      volume1m: '-',
+      makers3m: '-',
+      volume3m: '-',
+      makers5m: '-',
+      volume5m: '-',
     };
   });
 }
