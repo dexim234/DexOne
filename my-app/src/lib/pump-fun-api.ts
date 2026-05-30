@@ -446,12 +446,66 @@ export class PumpFunApiService {
 
   /**
    * Получить токены для колонки "New" (самые свежие)
+   * Фильтр: только что запущены, есть ликвидность, идут первые сделки
+   * deployed_at ≤ X часов/дней, pool_created_at ≤ X, status = "live"
    */
-  async getNewTokens(limit: number = 20): Promise<TokenMarketData[]> {
+  async getNewTokens(limit: number = 20, hoursBack: number = 24): Promise<TokenMarketData[]> {
     try {
-      const response = await this.getNewCoins(limit);
-      const coins = response.coins || [];
-      return coins.map((token, index) => 
+      const now = Math.floor(Date.now() / 1000);
+      const maxAge = hoursBack * 60 * 60; // конвертируем часы в секунды
+      const minCreatedTime = now - maxAge;
+
+      // Запрашиваем новые токены с фильтром по времени создания
+      const response = await this.getCoins({
+        orderBy: 'createdAt',
+        orderDirection: 'desc',
+        limit: limit * 2, // запрашиваем больше для фильтрации
+      });
+      
+      const allCoins = response.coins || [];
+      
+      // Фильтруем токены по условиям:
+      // 1. deployed_at / createdAt ≤ X часов назад
+      // 2. Есть ликвидность (virtualSolReserves > 0 или realSolReserves > 0)
+      // 3. status = "live" (имеют торговую активность)
+      // 4. is_verified может быть true или false
+      const filteredTokens = allCoins.filter(token => {
+        const anyToken = token as any;
+        const createdAt = token.createdTimestamp || anyToken.createdAt || 0;
+        
+        // Проверка возраста токена
+        if (createdAt === 0 || createdAt > now) return false;
+        const age = now - createdAt;
+        if (age > maxAge) return false;
+        
+        // Проверка ликвидности (должны быть резервы)
+        const hasLiquidity = 
+          (token.virtualSolReserves || 0) > 0 || 
+          (token.realSolReserves || 0) > 0 ||
+          (anyToken.virtual_sol_reserves || 0) > 0 ||
+          (anyToken.real_sol_reserves || 0) > 0;
+        
+        if (!hasLiquidity) return false;
+        
+        // Проверка на наличие первых сделок (trades > 0 или volume > 0)
+        const hasTrades = 
+          (token.trades || token.trades24h || 0) > 0 ||
+          (token.volume24h || 0) > 0 ||
+          (anyToken.real_token_reserves || 0) > 0;
+        
+        // Считаем токен "live" если есть ликвидность или сделки
+        return hasLiquidity || hasTrades;
+      });
+
+      // Сортируем по времени создания (самые новые первыми)
+      const sortedTokens = filteredTokens.sort((a, b) => {
+        const aTime = a.createdTimestamp || 0;
+        const bTime = b.createdTimestamp || 0;
+        return bTime - aTime;
+      });
+
+      // Берем нужное количество и конвертируем
+      return sortedTokens.slice(0, limit).map((token, index) => 
         this.convertToMarketData(token, index + 1)
       );
     } catch (error) {
