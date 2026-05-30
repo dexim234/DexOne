@@ -47,6 +47,7 @@ export function usePumpTokens({
 
       switch (columnType) {
         case 'new': {
+          console.log('Loading NEW tokens...');
           // Загружаем новые токены из всех лаунчпадов параллельно
           // Для pumpfun используем 2 часа назад для более свежих токенов
           const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
@@ -55,6 +56,9 @@ export function usePumpTokens({
             getLetsBonkTokens(6),
             getMeteoraTokens(6),
           ]);
+
+          console.log('PumpFun tokens loaded:', pumpFunTokens.length);
+          console.log('PumpFun token names:', pumpFunTokens.map(t => `${t.name} - ${t.mc}`));
 
           // Объединяем и сортируем по времени создания (новые сверху)
           const allTokens = [
@@ -68,6 +72,14 @@ export function usePumpTokens({
           newTokens = allTokens
             .sort((a, b) => (b.createdTimestamp || 0) - (a.createdTimestamp || 0))
             .slice(0, 20);
+          
+          console.log('Total tokens after merge and sort:', newTokens.length);
+          console.log('Top 3 new tokens:', newTokens.slice(0, 3).map(t => ({
+            name: t.name,
+            mc: t.mc,
+            timestamp: t.createdTimestamp,
+            time: t.createdTimestamp ? new Date(t.createdTimestamp * 1000).toLocaleString() : 'N/A'
+          })));
           break;
         }
         case 'soon': {
@@ -180,10 +192,28 @@ export function usePumpTokens({
     if (!enableWebSocket) return;
 
     // Подписка на события создания токенов
-    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken }) => {
+    const handleTokenCreate = (event: { type: PumpEventType; token: PumpToken; timestamp: number }) => {
+      console.log('WebSocket token create event received:', {
+        type: event.type,
+        name: event.token.name,
+        symbol: event.token.symbol,
+        mint: event.token.mint,
+        timestamp: event.token.createdTimestamp,
+        eventTimestamp: event.timestamp,
+        rawToken: event.token,
+      });
+      
       if (columnType === 'new' && event.type === 'create') {
         setTokens(prev => {
           const newToken = pumpFunApi.convertToMarketData(event.token, 1);
+          console.log('Converted new token:', newToken);
+          // Проверяем, нет ли уже этого токена в списке
+          const exists = prev.some(t => t.mint === newToken.mint);
+          if (exists) {
+            console.log('Token already exists in list, skipping');
+            return prev;
+          }
+          console.log('Adding new token to front of list');
           return [newToken, ...prev.slice(0, 19)];
         });
         setLastUpdate(new Date());
@@ -198,8 +228,10 @@ export function usePumpTokens({
     // Подключаемся если еще не подключены
     const status = pumpWebSocket.getStatus();
     setWsConnected(status.connected);
+    console.log('WebSocket connection status:', status);
 
     if (!status.connected) {
+      console.log('Initiating WebSocket connection to PumpPortal...');
       pumpWebSocket.connect();
     }
 
@@ -207,7 +239,10 @@ export function usePumpTokens({
     const checkConnection = setInterval(() => {
       const currentStatus = pumpWebSocket.getStatus();
       setWsConnected(currentStatus.connected);
-    }, 2000);
+      if (columnType === 'new') {
+        console.log('[' + new Date().toLocaleTimeString() + '] WebSocket connected:', currentStatus.connected);
+      }
+    }, 3000);
 
     intervalRef.current = checkConnection as unknown as NodeJS.Timeout;
   }, [enableWebSocket, columnType]);
