@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent, BarChart3 } from "lucide-react";
+import { Wallet, Eye, EyeOff, ChevronDown, Monitor, List as ListIcon, Grid3x3, Zap, Droplets, Activity, TrendingUp, Users, PieChart, Clock, Users2, Bot, DollarSign, Award, UserX, Package, Crosshair, UserPlus, Flame, Percent, BarChart3, TrendingDown, Target, Globe, Crown } from "lucide-react";
 import TrenchColumn from "@/components/market-hub/TrenchColumn";
 import { FilterDialog } from "@/components/market-hub/FilterDialog";
 import {
@@ -14,24 +14,33 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const DISPLAY_METRICS = [
-  { id: "volume", label: "Volume", icon: Zap },
+  { id: "mc", label: "MC", icon: BarChart3 },
   { id: "liquidity", label: "Liquidity", icon: Droplets },
-  { id: "transactions", label: "Transactions", icon: Activity },
+  { id: "volume", label: "Volume", icon: Zap },
   { id: "ath", label: "ATH", icon: TrendingUp },
+  { id: "dropFromAth", label: "Drop From ATH", icon: TrendingDown },
   { id: "makersVol", label: "Makers / Vol", icon: Users },
-  { id: "priceChange", label: "Price Change %", icon: PieChart },
-  { id: "devTokensHistory", label: "Dev Tokens History", icon: Clock },
+  { id: "priceChange", label: "Price Change %", icon: Percent },
   { id: "holders", label: "Holders", icon: Users2 },
+  { id: "top10Hold", label: "Top-10 Hold %", icon: Award },
   { id: "botTraders", label: "Bot Traders", icon: Bot },
   { id: "botFee", label: "Bot Fee", icon: DollarSign },
-  { id: "globalFees", label: "Global Fees", icon: Wallet },
-  { id: "top10Hold", label: "Top 10 Hold", icon: Award },
-  { id: "devHold", label: "Dev Hold", icon: UserX },
-  { id: "bundlers", label: "Bundlers", icon: Package },
   { id: "snipers", label: "Snipers", icon: Crosshair },
+  { id: "sniperPercent", label: "Sniper %", icon: Target },
   { id: "freshWallets", label: "Fresh Wallets", icon: UserPlus },
+  { id: "freshWalletPercent", label: "Fresh %", icon: Clock },
+  { id: "bundlers", label: "Bundlers", icon: Package },
+  { id: "bundlePercent", label: "Bundle %", icon: Package },
+  { id: "devHold", label: "Dev Hold %", icon: UserX },
+  { id: "globalFees", label: "Global Fees", icon: Wallet },
   { id: "lpBurn", label: "LP Burn", icon: Flame },
-  { id: "dexTax", label: "DEX Tax", icon: Percent },
+  { id: "dexTax", label: "Dex Tax", icon: Percent },
+  { id: "transactions", label: "Transactions", icon: Activity },
+  { id: "socials", label: "Socials", icon: Globe },
+  { id: "time", label: "Time", icon: Clock },
+  { id: "dexPaid", label: "Dex Paid", icon: DollarSign },
+  { id: "dexBoost", label: "Dex Boost", icon: Zap },
+  { id: "smartMoney", label: "Smart Money", icon: Crown },
 ];
 
 export default function MarketHubPage() {
