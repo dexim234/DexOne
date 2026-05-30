@@ -47,9 +47,10 @@ export function usePumpTokens({
 
       switch (columnType) {
         case 'new': {
-          // Загружаем токены из всех лаунчпадов параллельно
+          // Загружаем новые токены из всех лаунчпадов параллельно
+          // Для pumpfun используем 2 часа назад для более свежих токенов
           const [pumpFunTokens, pumpSwapTokens, letsBonkTokens, meteoraTokens] = await Promise.all([
-            pumpFunApi.getNewTokens(12),
+            pumpFunApi.getNewTokens(12, 2),
             getPumpSwapTokens(6),
             getLetsBonkTokens(6),
             getMeteoraTokens(6),
