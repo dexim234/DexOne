@@ -34,7 +34,7 @@ export function usePumpTokens({
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const wsCallbackRef = useRef<(() => void) | null>(null);
 
   // Функция загрузки токенов
@@ -284,7 +284,7 @@ export function usePumpTokens({
       }
     }, 3000);
 
-    intervalRef.current = checkConnection as ReturnType<typeof setInterval>;
+    intervalRef.current = checkConnection as unknown as NodeJS.Timeout;
   }, [enableWebSocket, columnType]);
 
   // Отключение от WebSocket

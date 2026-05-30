@@ -282,7 +282,7 @@ export class PumpWebSocketClient {
     }, this.config.reconnectInterval);
   }
 
-  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
 }
 
 // Singleton instance

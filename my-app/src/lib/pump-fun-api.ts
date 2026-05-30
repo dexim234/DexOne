@@ -72,6 +72,7 @@ export interface PumpToken {
   dex_tax_sell?: number;
   watchers?: number;
   watcher_count?: number;
+  watch_count?: number;
   // Минутные данные для makers/volume
   makers1m?: number;
   makers_1m?: number;
@@ -85,13 +86,6 @@ export interface PumpToken {
   makers_5m?: number;
   volume5m?: number;
   volume_5m?: number;
-  // Данные из WebSocket событий
-  initialBuy?: number;
-  txType?: string;
-  timestamp?: number;
-  metadata?: string;
-  sol_reserve?: number;
-  token_reserve?: number;
 }
 
 // Интерфейс для ответа API
@@ -309,50 +303,17 @@ export class PumpFunApiService {
   }
 
   /**
-   * Получить токен по конкретному ID/mint address
+   * Получить токены по конкретному ID/mint address
    */
   async getCoinById(mint: string): Promise<PumpToken | null> {
     try {
-      if (!mint) {
-        console.log('Mint address is empty');
-        return null;
-      }
-
-      // Используем прямой запрос к API без прокси для конкретного токена
-      const url = `${this.baseUrl}/v1/coins/${mint}`;
-      console.log('Fetching coin from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        console.log(`Coin ${mint} not found or API error: ${response.status}`);
-        return null;
-      }
-
-      const data = await response.json();
-      console.log('Coin data received:', data);
-      
-      // API может возвращать объект с полем coin или сам токен
-      const token = data.coin || data.token || data;
-      
-      if (!token || typeof token !== 'object') {
-        console.log('Invalid token data structure');
-        return null;
-      }
-      
-      return token as PumpToken;
+      const url = this.getApiUrl(`/coins/${mint}`);
+      const response = await axios.get<PumpToken>(url, this.getAxiosConfig());
+      return response.data;
     } catch (error) {
       console.error(`Error fetching coin ${mint}:`, error);
       return null;
     }
-  }
   }
 
   /**
@@ -390,60 +351,77 @@ export class PumpFunApiService {
     const imageUrl = this.getTokenImageUrl(token);
 
     const anyToken = token as any;
+    const marketCap = anyToken.usd_market_cap || token.marketCap || token.virtualSolReserves || 0;
     
-    // Для токенов из WebSocket initialBuy содержит начальные SOL в пуле
-    const initialBuySol = anyToken.initialBuy || 0;
-    // Примерная MC = initialBuy * 2 (так как начальный пул 50/50)
-    const solPrice = 140; // примерная цена SOL
-    const marketCap = initialBuySol > 0 ? (initialBuySol * solPrice * 2) : (anyToken.usd_market_cap || token.marketCap || 0);
-    
+    // Хелпер для получения значения из нескольких возможных полей
+    const getField = (...fields: string[]): string => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null) {
+          return String(val);
+        }
+      }
+      return '-';
+    };
+
+    // Хелпер для получения числового значения
+    const getNumField = (...fields: string[]): number | undefined => {
+      for (const field of fields) {
+        const val = anyToken[field];
+        if (val !== undefined && val !== null && !isNaN(Number(val))) {
+          return Number(val);
+        }
+      }
+      return undefined;
+    };
+
     return {
       rank: rank.toString(),
       logo: imageUrl,
       name: token.name || token.symbol || 'Unknown',
-      symbol: token.symbol || '???',
+      symbol: token.symbol || '',
       mint: token.mint,
       mc: formatNumber(marketCap),
       mcChange: formatPercent(token.mcChange || token.priceChange24h),
-      volume24h: formatVolume(token.volume24h || initialBuySol * solPrice),
+      volume24h: formatVolume(token.volume24h),
       volumeChange: formatPercent(token.volumeChange),
       priceChange1h: formatPercent(token.priceChange1h),
       priceChange24h: formatPercent(token.priceChange24h),
       priceChange7d: formatPercent(token.priceChange7d),
-      trades: (token.trades || token.trades24h || 1).toString(),
-      holders: (token.holders || 1).toString(),
+      trades: (token.trades || token.trades24h || 0).toString(),
+      holders: (token.holders || 0).toString(),
       isVerified: token.isVerified || false,
       imageUrl: imageUrl,
       metadataUri: token.metadataUri || anyToken.metadata_uri,
-      createdTimestamp: token.createdTimestamp || anyToken.timestamp || Math.floor(Date.now() / 1000),
+      createdTimestamp: token.createdTimestamp,
       complete: Boolean(anyToken.complete),
       twitter: anyToken.twitter,
       telegram: anyToken.telegram,
       website: anyToken.website,
       source: 'pumpfun' as LaunchpadSource,
-      // Дополнительные метрики
-      kingOfTheHillRank: anyToken.kingOfTheHillRank || anyToken.king_of_the_hill_rank || '-',
-      kingOfTheHillTotal: anyToken.kingOfTheHillTotal || anyToken.king_of_the_hill_total || '-',
-      watchers: anyToken.watchers || anyToken.watch_count || anyToken.watcher_count || '-',
-      replies: anyToken.replyCount || anyToken.reply_count || anyToken.replies || '-',
-      replyRate: anyToken.replyRate || anyToken.reply_rate || '-',
-      buySellRatio: anyToken.buySellRatio || anyToken.buy_sell_ratio || '-',
-      fomoScore: anyToken.fomoScore || anyToken.fomo_score || '-',
-      devHold: anyToken.devHold || anyToken.dev_hold || '-',
-      top10Hold: anyToken.top10Hold || anyToken.top_10_hold || '-',
-      lpBurn: anyToken.lpBurn || anyToken.lp_burn || '-',
-      snipersCount: anyToken.snipersCount || anyToken.snipers_count || '-',
-      bundlersCount: anyToken.bundlersCount || anyToken.bundlers_count || '-',
-      freshWallets: anyToken.freshWallets || anyToken.fresh_wallets || '-',
-      botTraders: anyToken.botTraders || anyToken.bot_traders || '-',
-      dexTaxBuy: anyToken.dexTaxBuy || anyToken.dex_tax_buy || '-',
-      dexTaxSell: anyToken.dexTaxSell || anyToken.dex_tax_sell || '-',
-      makers1m: anyToken.makers1m || anyToken.makers_1m || '-',
-      volume1m: (anyToken.volume1m || anyToken.volume_1m || 0) > 0 ? formatVolume(Number(anyToken.volume1m || anyToken.volume_1m || 0)) : '-',
-      makers3m: anyToken.makers3m || anyToken.makers_3m || '-',
-      volume3m: (anyToken.volume3m || anyToken.volume_3m || 0) > 0 ? formatVolume(Number(anyToken.volume3m || anyToken.volume_3m || 0)) : '-',
-      makers5m: anyToken.makers5m || anyToken.makers_5m || '-',
-      volume5m: (anyToken.volume5m || anyToken.volume_5m || 0) > 0 ? formatVolume(Number(anyToken.volume5m || anyToken.volume_5m || 0)) : '-',
+      // Дополнительные метрики — реальные данные из API или "-"
+      kingOfTheHillRank: getField('kingOfTheHillRank', 'king_of_the_hill_rank'),
+      kingOfTheHillTotal: getField('kingOfTheHillTotal', 'king_of_the_hill_total') !== '-' ? getField('kingOfTheHillTotal', 'king_of_the_hill_total') : '595',
+      watchers: getField('watchers', 'watch_count', 'watcher_count'),
+      replies: getField('replyCount', 'reply_count', 'replies'),
+      replyRate: getField('replyRate', 'reply_rate'),
+      buySellRatio: getField('buySellRatio', 'buy_sell_ratio'),
+      fomoScore: getField('fomoScore', 'fomo_score'),
+      devHold: getField('devHold', 'dev_hold'),
+      top10Hold: getField('top10Hold', 'top_10_hold'),
+      lpBurn: getField('lpBurn', 'lp_burn'),
+      snipersCount: getField('snipersCount', 'snipers_count'),
+      bundlersCount: getField('bundlersCount', 'bundlers_count'),
+      freshWallets: getField('freshWallets', 'fresh_wallets'),
+      botTraders: getField('botTraders', 'bot_traders'),
+      dexTaxBuy: getField('dexTaxBuy', 'dex_tax_buy'),
+      dexTaxSell: getField('dexTaxSell', 'dex_tax_sell'),
+      makers1m: getField('makers1m', 'makers_1m'),
+      volume1m: getNumField('volume1m', 'volume_1m') !== undefined ? formatVolume(getNumField('volume1m', 'volume_1m')) : '-',
+      makers3m: getField('makers3m', 'makers_3m'),
+      volume3m: getNumField('volume3m', 'volume_3m') !== undefined ? formatVolume(getNumField('volume3m', 'volume_3m')) : '-',
+      makers5m: getField('makers5m', 'makers_5m'),
+      volume5m: getNumField('volume5m', 'volume_5m') !== undefined ? formatVolume(getNumField('volume5m', 'volume_5m')) : '-',
     };
   }
 
