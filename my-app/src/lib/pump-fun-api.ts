@@ -72,7 +72,6 @@ export interface PumpToken {
   dex_tax_sell?: number;
   watchers?: number;
   watcher_count?: number;
-  watch_count?: number;
   // Минутные данные для makers/volume
   makers1m?: number;
   makers_1m?: number;
@@ -86,6 +85,13 @@ export interface PumpToken {
   makers_5m?: number;
   volume5m?: number;
   volume_5m?: number;
+  // Данные из WebSocket событий
+  initialBuy?: number;
+  txType?: string;
+  timestamp?: number;
+  metadata?: string;
+  sol_reserve?: number;
+  token_reserve?: number;
 }
 
 // Интерфейс для ответа API
@@ -307,6 +313,11 @@ export class PumpFunApiService {
    */
   async getCoinById(mint: string): Promise<PumpToken | null> {
     try {
+      if (!mint) {
+        console.log('Mint address is empty');
+        return null;
+      }
+
       // Используем прямой запрос к API без прокси для конкретного токена
       const url = `${this.baseUrl}/v1/coins/${mint}`;
       console.log('Fetching coin from:', url);
@@ -330,6 +341,12 @@ export class PumpFunApiService {
       
       // API может возвращать объект с полем coin или сам токен
       const token = data.coin || data.token || data;
+      
+      if (!token || typeof token !== 'object') {
+        console.log('Invalid token data structure');
+        return null;
+      }
+      
       return token as PumpToken;
     } catch (error) {
       console.error(`Error fetching coin ${mint}:`, error);
@@ -422,11 +439,11 @@ export class PumpFunApiService {
       dexTaxBuy: anyToken.dexTaxBuy || anyToken.dex_tax_buy || '-',
       dexTaxSell: anyToken.dexTaxSell || anyToken.dex_tax_sell || '-',
       makers1m: anyToken.makers1m || anyToken.makers_1m || '-',
-      volume1m: anyToken.volume1m || anyToken.volume_1m ? formatVolume(Number(anyToken.volume1m || anyToken.volume_1m)) : '-',
+      volume1m: (anyToken.volume1m || anyToken.volume_1m || 0) > 0 ? formatVolume(Number(anyToken.volume1m || anyToken.volume_1m || 0)) : '-',
       makers3m: anyToken.makers3m || anyToken.makers_3m || '-',
-      volume3m: anyToken.volume3m || anyToken.volume_3m ? formatVolume(Number(anyToken.volume3m || anyToken.volume_3m)) : '-',
+      volume3m: (anyToken.volume3m || anyToken.volume_3m || 0) > 0 ? formatVolume(Number(anyToken.volume3m || anyToken.volume_3m || 0)) : '-',
       makers5m: anyToken.makers5m || anyToken.makers_5m || '-',
-      volume5m: anyToken.volume5m || anyToken.volume_5m ? formatVolume(Number(anyToken.volume5m || anyToken.volume_5m)) : '-',
+      volume5m: (anyToken.volume5m || anyToken.volume_5m || 0) > 0 ? formatVolume(Number(anyToken.volume5m || anyToken.volume_5m || 0)) : '-',
     };
   }
 
