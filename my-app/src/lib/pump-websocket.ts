@@ -55,7 +55,7 @@ export class PumpWebSocketClient {
   private config: Required<PumpWebSocketConfig>;
 
   constructor(config?: PumpWebSocketConfig) {
-    this.url = config?.url || 'wss://ws.pump.fun';
+    this.url = config?.url || 'wss://pumpportal.fun/api/data';
     this.config = {
       url: this.url,
       autoReconnect: config?.autoReconnect ?? true,
@@ -108,28 +108,67 @@ export class PumpWebSocketClient {
         this.isConnected = true;
         this.reconnectAttempts = 0;
         
-        console.log('Pump.fun WebSocket connected');
+        console.log('PumpPortal WebSocket connected');
         this.config.onConnect();
 
-        // Подписаться на все события
-        this.subscribe();
+        // Подписаться на события создания новых токенов
+        this.subscribeNewToken();
+        this.subscribeTrades();
       };
 
       this.ws.onmessage = (event) => {
         try {
-          const message: PumpWebSocketMessage = JSON.parse(event.data);
+          // PumpPortal отправляет JSON объекты напрямую
+          const data = JSON.parse(event.data);
           
-          if (message.method === 'notification') {
-            const { token, type, timestamp } = message.params.result;
+          console.log('WebSocket message received:', data);
+          
+          // Определяем тип события на основе полей данных
+          let eventType: PumpEventType | null = null;
+          
+          // Событие создания нового токена
+          if (data.event === 'newTokenCreation' || data.event === 'create') {
+            eventType = 'create';
+          } 
+          // События торговли
+          else if (data.event === 'buy' || data.event === 'sell' || data.event === 'trade') {
+            eventType = 'trade';
+          }
+          // Завершение bonding curve (миграция)
+          else if (data.event === 'complete' || data.event === 'bondingCurveComplete' || data.event === 'bonding_curve_complete') {
+            eventType = 'complete';
+          }
+          
+          if (eventType) {
+            // Преобразуем данные в формат PumpToken
+            const token: PumpToken = {
+              mint: data.mint || data.tokenMint || data.address,
+              name: data.name,
+              symbol: data.symbol,
+              uri: data.uri,
+              image_uri: data.uri,
+              createdTimestamp: data.timestamp || Math.floor(Date.now() / 1000),
+              virtualSolReserves: data.virtualSolReserves || data.sol_reserve,
+              virtualTokenReserves: data.virtualTokenReserves || data.token_reserve,
+              realSolReserves: data.realSolReserves || data.sol_reserve,
+              realTokenReserves: data.realTokenReserves || data.token_reserve,
+              marketCap: data.marketCap || data.mc,
+              usd_market_cap: data.usd_market_cap,
+              volume24h: data.volume24h || data.volume,
+              trades: data.trades || data.trade_count,
+              holders: data.holders,
+              isVerified: data.isVerified || data.verified || false,
+            };
             
             // Вызов всех коллбеков для этого типа события
-            const callbacks = this.callbacks.get(type as PumpEventType);
+            const callbacks = this.callbacks.get(eventType);
             if (callbacks) {
-              callbacks.forEach(cb => cb({ type, token, timestamp }));
+              callbacks.forEach(cb => cb({ 
+                type: eventType, 
+                token, 
+                timestamp: data.timestamp || Math.floor(Date.now() / 1000) 
+              }));
             }
-            
-            // Также вызываем коллбеки для 'all' если есть
-            const allCallbacks = this.callbacks.get('create' as PumpEventType);
           }
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
@@ -191,17 +230,36 @@ export class PumpWebSocketClient {
   }
 
   /**
-   * Подписаться на события
+   * Подписаться на создание новых токенов
    */
-  private subscribe(): void {
+  private subscribeNewToken(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
-        method: 'subscribe',
-        params: { 
-          types: ['create', 'trade', 'complete', 'bonding_curve_complete'] 
-        }
+        method: 'subscribeNewToken',
       }));
+      console.log('Subscribed to new token creation events');
     }
+  }
+
+  /**
+   * Подписаться на сделки
+   */
+  private subscribeTrades(): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        method: 'subscribeTokenTrade',
+        keys: [], // Пустой массив = все токены
+      }));
+      console.log('Subscribed to token trade events');
+    }
+  }
+
+  /**
+   * Подписаться на события (устаревшее, используется для обратной совместимости)
+   */
+  private subscribe(): void {
+    this.subscribeNewToken();
+    this.subscribeTrades();
   }
 
   /**
