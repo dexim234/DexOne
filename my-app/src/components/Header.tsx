@@ -445,22 +445,17 @@ export default function Header() {
                               }`}
                             />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span
-                                className={`font-semibold text-sm truncate ${
-                                  isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
-                                }`}
-                              >
-                                {wallet.name}
-                              </span>
-                              {isActive && (
-                                <Check className="h-3.5 w-3.5 text-teal-500 shrink-0 ml-2" />
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-mono truncate">
-                              {wallet.publicKey.slice(0, 6)}...{wallet.publicKey.slice(-4)}
-                            </div>
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <span
+                              className={`font-semibold text-sm truncate ${
+                                isActive ? 'text-teal-600 dark:text-teal-400' : 'text-foreground'
+                              }`}
+                            >
+                              {wallet.name}
+                            </span>
+                            {isActive && (
+                              <Check className="h-3.5 w-3.5 text-teal-500 shrink-0 ml-2" />
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <div className="text-sm font-semibold text-foreground">
